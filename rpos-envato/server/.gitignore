@@ -1,0 +1,54 @@
+# OS X
+.DS_Store*
+Icon?
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+.directory
+*~
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+
+# Public uploads
+public/images
+
+# npm
+node_modules
+package-lock.json
+*.log
+*.gz
+
+# Coveralls
+coverage
+
+# Benchmarking
+benchmarks/graphs
+
+# Locales (generated)
+src/locales
+
+# TypeScript build output
+dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# TypeORM
+ormconfig.json
+
+# Temporary files
+tmp/
+temp/
+src/common/firebase/*.json
