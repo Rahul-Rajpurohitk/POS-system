@@ -1,5 +1,0 @@
-export const auth = require('./auth')
-export const admin = require('./admin')
-export const manager = require('./manager')
-export const staff = require('./staff')
-export const validator = require('./validator')

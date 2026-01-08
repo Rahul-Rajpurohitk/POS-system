@@ -11,6 +11,7 @@ import { initializeQueues, shutdownQueues } from './queues';
 import { cacheService } from './services/cache.service';
 import { realtimeService } from './services/realtime.service';
 import { config } from './config';
+import logger, { logInfo, logError } from './config/logger';
 
 const PORT = config.port;
 
@@ -19,19 +20,18 @@ const PORT = config.port;
  */
 async function startServer(): Promise<void> {
   try {
-    console.log('Starting POS Server...');
-    console.log(`Environment: ${config.env}`);
+    logInfo('Starting POS Server...', { environment: config.env });
 
     // Initialize databases
-    console.log('Connecting to databases...');
+    logInfo('Connecting to databases...');
     await initializeDatabases();
 
     // Initialize Redis cache
-    console.log('Connecting to Redis...');
+    logInfo('Connecting to Redis...');
     await cacheService.connect();
 
     // Initialize queue system
-    console.log('Initializing queue system...');
+    logInfo('Initializing queue system...');
     await initializeQueues();
 
     // Create Express app
@@ -41,22 +41,24 @@ async function startServer(): Promise<void> {
     const server = http.createServer(app);
 
     // Initialize WebSocket server
-    console.log('Initializing WebSocket server...');
+    logInfo('Initializing WebSocket server...');
     realtimeService.initialize(server);
 
     // Start HTTP server
     server.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log(`Health check: http://localhost:${PORT}/health`);
-      console.log(`WebSocket: ws://localhost:${PORT}`);
+      logInfo('Server started successfully', {
+        port: PORT,
+        healthCheck: `http://localhost:${PORT}/health`,
+        webSocket: `ws://localhost:${PORT}`,
+      });
     });
 
     // Graceful shutdown
     const gracefulShutdown = async (signal: string) => {
-      console.log(`\n${signal} received. Starting graceful shutdown...`);
+      logInfo(`${signal} received. Starting graceful shutdown...`, { signal });
 
       server.close(async () => {
-        console.log('HTTP server closed');
+        logInfo('HTTP server closed');
 
         try {
           // Shutdown queue system
@@ -68,17 +70,17 @@ async function startServer(): Promise<void> {
           // Close database connections
           await closeDatabases();
 
-          console.log('Graceful shutdown completed');
+          logInfo('Graceful shutdown completed');
           process.exit(0);
         } catch (error) {
-          console.error('Error during shutdown:', error);
+          logError(error as Error, { context: 'Shutdown' });
           process.exit(1);
         }
       });
 
       // Force exit after 30 seconds
       setTimeout(() => {
-        console.error('Forced shutdown after timeout');
+        logger.error('Forced shutdown after timeout');
         process.exit(1);
       }, 30000);
     };
@@ -89,16 +91,16 @@ async function startServer(): Promise<void> {
 
     // Handle uncaught errors
     process.on('uncaughtException', (error) => {
-      console.error('Uncaught Exception:', error);
+      logError(error, { context: 'Uncaught Exception' });
       gracefulShutdown('uncaughtException');
     });
 
     process.on('unhandledRejection', (reason, promise) => {
-      console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+      logger.error('Unhandled Rejection', { reason, promise: String(promise) });
     });
 
   } catch (error) {
-    console.error('Failed to start server:', error);
+    logError(error as Error, { context: 'Server startup failed' });
     process.exit(1);
   }
 }
