@@ -17,6 +17,9 @@ Desktop.ini
 .env.local
 .env.development
 .env.production
+.env.test
+# But keep the example file
+!.env.example
 
 # Public uploads
 public/images

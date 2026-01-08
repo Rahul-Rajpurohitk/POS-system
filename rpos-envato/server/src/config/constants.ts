@@ -23,8 +23,8 @@ export const Constants = {
   LogType,
 
   // JWT
-  JWTSecret: process.env.JWT_SECRET || '94rEvCERhR',
-  JWTExpiresIn: '7d',
+  JWTSecret: process.env.JWT_SECRET!,
+  JWTExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
 
   // Pagination
   DEFAULT_PAGE: 1,
@@ -49,8 +49,8 @@ export const Constants = {
   // Bcrypt
   SALT_ROUNDS: 10,
 
-  // Default Social Password
-  DEFAULT_SOCIAL_PASSWORD: process.env.DEFAULT_SOCIAL_PASSWORD || 'w6ohXfbg85',
+  // Default Social Password (for OAuth users without password)
+  DEFAULT_SOCIAL_PASSWORD: process.env.DEFAULT_SOCIAL_PASSWORD!,
 };
 
 export default Constants;

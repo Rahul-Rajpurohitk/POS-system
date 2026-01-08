@@ -8,7 +8,9 @@ import passport from 'passport';
 import path from 'path';
 
 import routes from './routes';
-import { notFound, errorHandler } from './middlewares/error.middleware';
+import { notFoundHandler, errorHandler } from './middlewares/errorHandler.middleware';
+import { generalLimiter } from './middlewares/rateLimit.middleware';
+import logger, { stream } from './config/logger';
 import './middlewares/auth.middleware'; // Initialize passport strategy
 
 /**
@@ -17,24 +19,39 @@ import './middlewares/auth.middleware'; // Initialize passport strategy
 export function createApp(): Application {
   const app = express();
 
+  // Trust proxy (for rate limiting behind reverse proxy)
+  app.set('trust proxy', 1);
+
   // Security Middleware
   app.use(helmet());
+
+  // CORS Configuration
+  const corsOrigins = process.env.CORS_ORIGIN?.split(',') || '*';
   app.use(cors({
-    origin: process.env.CORS_ORIGIN || '*',
-    credentials: true,
+    origin: corsOrigins,
+    credentials: process.env.CORS_CREDENTIALS === 'true',
   }));
 
+  // Rate Limiting (apply to all routes)
+  app.use(generalLimiter);
+
   // Request Parsing
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  app.use(express.json({ limit: process.env.MAX_FILE_SIZE || '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: process.env.MAX_FILE_SIZE || '10mb' }));
   app.use(cookieParser());
 
-  // Logging
+  // Logging with Winston
   if (process.env.NODE_ENV === 'development') {
-    app.use(morgan('dev'));
+    app.use(morgan('dev', { stream }));
   } else {
-    app.use(morgan('combined'));
+    app.use(morgan('combined', { stream }));
   }
+
+  // Log application start
+  logger.info('Express application initialized', {
+    environment: process.env.NODE_ENV,
+    port: process.env.PORT,
+  });
 
   // Passport
   app.use(passport.initialize());
@@ -46,7 +63,7 @@ export function createApp(): Application {
   app.use('/', routes);
 
   // Error Handling
-  app.use(notFound);
+  app.use(notFoundHandler);
   app.use(errorHandler);
 
   return app;
