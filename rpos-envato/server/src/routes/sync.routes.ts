@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { body, param, query } from 'express-validator';
 import { checkValidation } from '../middlewares/validator.middleware';
 import { auth } from '../middlewares/auth.middleware';
+import { createLimiter, readLimiter } from '../middlewares/rateLimit.middleware';
+import { catchAsync } from '../middlewares/errorHandler.middleware';
 import * as syncController from '../controllers/sync.controller';
 
 const router = Router();

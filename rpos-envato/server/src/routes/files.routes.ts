@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { param, query } from 'express-validator';
 import { checkValidation } from '../middlewares/validator.middleware';
 import { auth } from '../middlewares/auth.middleware';
+import { uploadLimiter, readLimiter, createLimiter } from '../middlewares/rateLimit.middleware';
+import { catchAsync } from '../middlewares/errorHandler.middleware';
 import * as filesController from '../controllers/files.controller';
 
 const router = Router();
@@ -9,46 +11,51 @@ const router = Router();
 // All routes require authentication
 router.use(auth);
 
-// POST /files/upload - Upload single image
+// POST /files/upload - Upload single image (strict rate limit)
 router.post(
   '/upload',
+  uploadLimiter,
   filesController.upload.single('image'),
-  filesController.uploadImage
+  catchAsync(filesController.uploadImage)
 );
 
-// POST /files/upload-multiple - Upload multiple images
+// POST /files/upload-multiple - Upload multiple images (strict rate limit)
 router.post(
   '/upload-multiple',
+  uploadLimiter,
   filesController.upload.array('images', 10),
-  filesController.uploadMultiple
+  catchAsync(filesController.uploadMultiple)
 );
 
 // GET /files - List files
 router.get(
   '/',
+  readLimiter,
   [
     query('page').optional().isInt({ min: 1 }),
     query('limit').optional().isInt({ min: 1, max: 100 }),
     query('type').optional().isIn(['image', 'document', 'other']),
   ],
   checkValidation,
-  filesController.listFiles
+  catchAsync(filesController.listFiles)
 );
 
 // GET /files/:id - Get file by ID
 router.get(
   '/:id',
+  readLimiter,
   [param('id').isUUID().withMessage('Invalid file ID')],
   checkValidation,
-  filesController.getFile
+  catchAsync(filesController.getFile)
 );
 
 // DELETE /files/:id - Delete file
 router.delete(
   '/:id',
+  createLimiter,
   [param('id').isUUID().withMessage('Invalid file ID')],
   checkValidation,
-  filesController.deleteFile
+  catchAsync(filesController.deleteFile)
 );
 
 export default router;

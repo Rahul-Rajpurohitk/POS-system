@@ -3,6 +3,8 @@ import { body, param, query } from 'express-validator';
 import { checkValidation } from '../middlewares/validator.middleware';
 import { auth } from '../middlewares/auth.middleware';
 import { managerOnly } from '../middlewares/role.middleware';
+import { createLimiter, readLimiter } from '../middlewares/rateLimit.middleware';
+import { catchAsync } from '../middlewares/errorHandler.middleware';
 import * as suppliersController from '../controllers/suppliers.controller';
 
 const router = Router();
