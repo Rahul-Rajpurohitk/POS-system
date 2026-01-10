@@ -10,6 +10,7 @@ import { initializeDatabases, closeDatabases } from './config/database';
 import { initializeQueues, shutdownQueues } from './queues';
 import { cacheService } from './services/cache.service';
 import { realtimeService } from './services/realtime.service';
+import { emailService } from './services/email.service';
 import { config } from './config';
 import logger, { logInfo, logError } from './config/logger';
 
@@ -33,6 +34,10 @@ async function startServer(): Promise<void> {
     // Initialize queue system
     logInfo('Initializing queue system...');
     await initializeQueues();
+
+    // Initialize email service
+    logInfo('Initializing email service...');
+    await emailService.initialize();
 
     // Create Express app
     const app = createApp();
