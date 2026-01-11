@@ -48,6 +48,11 @@ export enum RealtimeEvent {
   SYNC_RESPONSE = 'sync:response',
   HEARTBEAT = 'heartbeat',
   TERMINAL_STATUS = 'terminal:status',
+
+  // Analytics events
+  ANALYTICS_UPDATE = 'analytics:update',
+  ANALYTICS_DASHBOARD_REFRESH = 'analytics:dashboard:refresh',
+  ANALYTICS_METRICS_UPDATE = 'analytics:metrics:update',
 }
 
 // Payload interfaces
@@ -353,6 +358,42 @@ class RealtimeService {
     product: { id: string; name: string; price?: number; stock?: number }
   ): void {
     this.broadcastToBusiness(businessId, event, product);
+  }
+
+  /**
+   * Emit analytics update
+   * Called when orders are completed/cancelled to trigger dashboard refresh
+   */
+  emitAnalyticsUpdate(
+    businessId: string,
+    updateType: 'order' | 'payment' | 'stock' | 'customer',
+    metrics?: {
+      todaySales?: number;
+      todayOrders?: number;
+      currentHourSales?: number;
+    }
+  ): void {
+    this.broadcastToBusiness(businessId, RealtimeEvent.ANALYTICS_UPDATE, {
+      updateType,
+      metrics,
+      refreshRequired: true,
+    });
+  }
+
+  /**
+   * Emit real-time metrics update
+   * For live dashboard updates without full refresh
+   */
+  emitMetricsUpdate(
+    businessId: string,
+    metrics: {
+      todaySales: number;
+      todayOrders: number;
+      currentHourSales: number;
+      lastOrderTime: string | null;
+    }
+  ): void {
+    this.broadcastToBusiness(businessId, RealtimeEvent.ANALYTICS_METRICS_UPDATE, metrics);
   }
 
   // ============ UTILITY METHODS ============

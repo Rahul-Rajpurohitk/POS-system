@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { RefreshControl } from 'react-native';
 import { YStack, XStack, Text, ScrollView, Button } from 'tamagui';
 import {
@@ -14,12 +14,16 @@ import {
   UserCheck,
   Package,
   AlertTriangle,
+  Wifi,
+  WifiOff,
 } from '@tamagui/lucide-icons';
 import { Card, CardHeader } from '@/components/ui';
 import { LineChart, BarChart, PieChart } from '@/components/charts';
 import { useEnhancedDashboard, usePeakHoursAnalysis } from '@/features/analytics';
 import { useSettingsStore } from '@/store';
 import { formatCurrency } from '@/utils';
+import { useAnalyticsRealtime } from '@/hooks';
+import type { AnalyticsMetricsPayload, AnalyticsUpdatePayload } from '@/hooks';
 import type { MoreScreenProps } from '@/navigation/types';
 import type { ReportPeriod, DashboardInsight } from '@/features/analytics/types';
 
@@ -166,6 +170,7 @@ export default function AnalyticsDashboardScreen({
 }: MoreScreenProps<'AnalyticsDashboard'>) {
   const { settings } = useSettingsStore();
   const [period, setPeriod] = useState<ReportPeriod>('today');
+  const [realtimeMetrics, setRealtimeMetrics] = useState<AnalyticsMetricsPayload | null>(null);
 
   const {
     data: dashboard,
@@ -179,7 +184,57 @@ export default function AnalyticsDashboardScreen({
     isLoading: peakHoursLoading,
   } = usePeakHoursAnalysis();
 
+  // Handle real-time metrics update
+  const handleMetricsUpdate = useCallback((metrics: AnalyticsMetricsPayload) => {
+    // Only update if viewing "today" period
+    if (period === 'today') {
+      setRealtimeMetrics(metrics);
+    }
+  }, [period]);
+
+  // Handle analytics update notification (triggers refresh)
+  const handleAnalyticsUpdate = useCallback((payload: AnalyticsUpdatePayload) => {
+    if (payload.refreshRequired && period === 'today') {
+      // Optionally update metrics immediately if provided
+      if (payload.metrics) {
+        setRealtimeMetrics((prev) => ({
+          todaySales: payload.metrics?.todaySales ?? prev?.todaySales ?? 0,
+          todayOrders: payload.metrics?.todayOrders ?? prev?.todayOrders ?? 0,
+          currentHourSales: payload.metrics?.currentHourSales ?? prev?.currentHourSales ?? 0,
+          lastOrderTime: prev?.lastOrderTime ?? null,
+        }));
+      }
+      // Trigger a background refresh
+      refetchDashboard();
+    }
+  }, [period, refetchDashboard]);
+
+  // Connect to real-time updates (only for "today" view)
+  const { isConnected } = useAnalyticsRealtime({
+    onMetricsUpdate: handleMetricsUpdate,
+    onAnalyticsUpdate: handleAnalyticsUpdate,
+    enabled: period === 'today',
+  });
+
   const isRefreshing = dashboardLoading;
+
+  // Use real-time metrics if available, otherwise fall back to dashboard data
+  const displayMetrics = useMemo(() => {
+    if (period === 'today' && realtimeMetrics) {
+      return {
+        todaySales: realtimeMetrics.todaySales,
+        todayOrders: realtimeMetrics.todayOrders,
+        currentHourSales: realtimeMetrics.currentHourSales,
+        todayCustomers: dashboard?.realTimeMetrics?.todayCustomers ?? 0,
+      };
+    }
+    return {
+      todaySales: dashboard?.realTimeMetrics?.todaySales ?? 0,
+      todayOrders: dashboard?.realTimeMetrics?.todayOrders ?? 0,
+      currentHourSales: dashboard?.realTimeMetrics?.currentHourSales ?? 0,
+      todayCustomers: dashboard?.realTimeMetrics?.todayCustomers ?? 0,
+    };
+  }, [period, realtimeMetrics, dashboard?.realTimeMetrics]);
 
   // Prepare hourly data for chart
   const hourlyChartData = useMemo(() => {
@@ -223,26 +278,48 @@ export default function AnalyticsDashboardScreen({
       }
     >
       <YStack padding="$4" gap="$4">
-        {/* Period Selector */}
-        <XStack gap="$2">
-          {PERIOD_OPTIONS.map((option) => (
-            <Button
-              key={option.value}
-              size="$3"
-              backgroundColor={period === option.value ? '$primary' : '$backgroundPress'}
-              color={period === option.value ? 'white' : '$color'}
-              onPress={() => setPeriod(option.value)}
-            >
-              {option.label}
-            </Button>
-          ))}
+        {/* Period Selector with Connection Status */}
+        <XStack justifyContent="space-between" alignItems="center">
+          <XStack gap="$2">
+            {PERIOD_OPTIONS.map((option) => (
+              <Button
+                key={option.value}
+                size="$3"
+                backgroundColor={period === option.value ? '$primary' : '$backgroundPress'}
+                color={period === option.value ? 'white' : '$color'}
+                onPress={() => setPeriod(option.value)}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </XStack>
+          {/* Real-time connection indicator */}
+          {period === 'today' && (
+            <XStack alignItems="center" gap="$1">
+              {isConnected ? (
+                <>
+                  <Wifi size={14} color="$success" />
+                  <Text fontSize="$2" color="$success">
+                    Live
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <WifiOff size={14} color="$colorSecondary" />
+                  <Text fontSize="$2" color="$colorSecondary">
+                    Offline
+                  </Text>
+                </>
+              )}
+            </XStack>
+          )}
         </XStack>
 
         {/* KPI Cards */}
         <XStack flexWrap="wrap" gap="$3">
           <KPICard
             title="Revenue"
-            value={formatCurrency(dashboard?.realTimeMetrics.todaySales || 0, settings.currency)}
+            value={formatCurrency(displayMetrics.todaySales, settings.currency)}
             trend={
               dashboard?.comparisons.vsYesterday
                 ? formatTrend(dashboard.comparisons.vsYesterday.percentChange)
@@ -257,27 +334,25 @@ export default function AnalyticsDashboardScreen({
           />
           <KPICard
             title="Orders"
-            value={String(dashboard?.realTimeMetrics.todayOrders || 0)}
+            value={String(displayMetrics.todayOrders)}
             trend={
               dashboard?.comparisons.vsYesterday
                 ? `${dashboard.comparisons.vsYesterday.orders} yesterday`
                 : undefined
             }
             trendUp={
-              dashboard?.realTimeMetrics.todayOrders
-                ? dashboard.realTimeMetrics.todayOrders >= (dashboard.comparisons.vsYesterday?.orders || 0)
-                : undefined
+              displayMetrics.todayOrders >= (dashboard?.comparisons.vsYesterday?.orders || 0)
             }
             icon={<ShoppingCart size={20} color="white" />}
           />
           <KPICard
             title="Customers"
-            value={String(dashboard?.realTimeMetrics.todayCustomers || 0)}
+            value={String(displayMetrics.todayCustomers)}
             icon={<Users size={20} color="white" />}
           />
           <KPICard
             title="Current Hour"
-            value={formatCurrency(dashboard?.realTimeMetrics.currentHourSales || 0, settings.currency)}
+            value={formatCurrency(displayMetrics.currentHourSales, settings.currency)}
             icon={<Clock size={20} color="white" />}
           />
         </XStack>
