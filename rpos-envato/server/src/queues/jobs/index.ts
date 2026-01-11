@@ -13,3 +13,9 @@ export {
   LowStockNotificationData,
   PasswordResetData,
 } from './NotificationJob';
+export {
+  AnalyticsJob,
+  AnalyticsJobData,
+  RefreshAnalyticsData,
+  WarmCacheData,
+} from './AnalyticsJob';

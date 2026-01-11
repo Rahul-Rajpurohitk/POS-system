@@ -31,6 +31,7 @@ import eodRoutes from './eod.routes';
 import giftcardsRoutes from './giftcards.routes';
 import loyaltyRoutes from './loyalty.routes';
 import syncRoutes from './sync.routes';
+import analyticsAdvancedRoutes from './analytics-advanced.routes';
 
 const router = Router();
 
@@ -212,6 +213,7 @@ router.use('/customers', customersRoutes);
 router.use('/coupons', couponsRoutes);
 router.use('/payments', paymentsRoutes);
 router.use('/analytics', analyticsRoutes);
+router.use('/analytics/v2', analyticsAdvancedRoutes);
 router.use('/receipts', receiptsRoutes);
 
 // Business & Files

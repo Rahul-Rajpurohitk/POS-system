@@ -2,7 +2,7 @@ import React from 'react';
 import { YStack, XStack, Text, ScrollView, Avatar } from 'tamagui';
 import {
   User, Ticket, Users, BarChart3, Settings, HelpCircle,
-  ChevronRight, LogOut
+  ChevronRight, LogOut, TrendingUp
 } from '@tamagui/lucide-icons';
 import { Button, Card, ConfirmModal } from '@/components/ui';
 import { useAuthStore } from '@/store';
@@ -30,9 +30,16 @@ const menuItems: MenuItem[] = [
     route: 'Customers',
   },
   {
+    icon: <TrendingUp size={24} color="white" />,
+    title: 'Analytics',
+    subtitle: 'Advanced insights and forecasting',
+    route: 'AnalyticsDashboard',
+    color: '$success',
+  },
+  {
     icon: <BarChart3 size={24} color="white" />,
     title: 'Reports',
-    subtitle: 'Sales analytics and insights',
+    subtitle: 'Sales reports and summaries',
     route: 'Reports',
   },
   {

@@ -4,6 +4,7 @@ export const QUEUE_NAMES = {
   INVENTORY: 'inventory',
   REPORTS: 'reports',
   NOTIFICATIONS: 'notifications',
+  ANALYTICS: 'analytics',
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
@@ -30,6 +31,15 @@ export const JOB_NAMES = {
   SEND_ORDER_CONFIRMATION: 'send-order-confirmation',
   SEND_LOW_STOCK_NOTIFICATION: 'send-low-stock-notification',
   SEND_PASSWORD_RESET: 'send-password-reset',
+
+  // Analytics Jobs
+  REFRESH_ABC_CLASSIFICATION: 'refresh-abc-classification',
+  REFRESH_RFM_SEGMENTATION: 'refresh-rfm-segmentation',
+  REFRESH_PEAK_HOURS: 'refresh-peak-hours',
+  REFRESH_INVENTORY_INTELLIGENCE: 'refresh-inventory-intelligence',
+  REFRESH_CUSTOMER_COHORTS: 'refresh-customer-cohorts',
+  WARM_ANALYTICS_CACHE: 'warm-analytics-cache',
+  INVALIDATE_TIME_SENSITIVE: 'invalidate-time-sensitive',
 } as const;
 
 export type JobName = (typeof JOB_NAMES)[keyof typeof JOB_NAMES];

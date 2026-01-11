@@ -4,7 +4,7 @@ import { User } from '../entities/User.entity';
 import { Role } from '../types/enums';
 
 /**
- * Manager middleware - Only allows manager role
+ * Manager middleware - Only allows manager role (full passport auth)
  */
 export const manager = (req: Request, res: Response, next: NextFunction): void => {
   passport.authenticate('Bearer', { session: false }, (err: Error, user: User) => {
@@ -36,6 +36,42 @@ export const manager = (req: Request, res: Response, next: NextFunction): void =
 
     next();
   })(req, res, next);
+};
+
+/**
+ * Manager check middleware - Use after authenticate middleware
+ * Allows both MANAGER and ADMIN roles
+ */
+export const isManager = (req: Request, res: Response, next: NextFunction): void => {
+  const userRole = req.userInfo?.role;
+
+  if (userRole !== Role.MANAGER && userRole !== Role.ADMIN) {
+    res.status(403).json({
+      success: false,
+      message: 'Manager access required',
+    });
+    return;
+  }
+
+  next();
+};
+
+/**
+ * Admin check middleware - Use after authenticate middleware
+ * Only allows ADMIN role
+ */
+export const isAdmin = (req: Request, res: Response, next: NextFunction): void => {
+  const userRole = req.userInfo?.role;
+
+  if (userRole !== Role.ADMIN) {
+    res.status(403).json({
+      success: false,
+      message: 'Admin access required',
+    });
+    return;
+  }
+
+  next();
 };
 
 export default manager;

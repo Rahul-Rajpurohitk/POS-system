@@ -54,6 +54,13 @@ export type MoreStackParamList = {
   Printers: undefined;
   Profile: undefined;
   ChangePassword: undefined;
+  // Analytics Screens
+  AnalyticsDashboard: undefined;
+  RevenueAnalytics: undefined;
+  ProductAnalytics: undefined;
+  CustomerAnalytics: undefined;
+  StaffAnalytics: undefined;
+  InventoryIntelligence: undefined;
 };
 
 // Root Stack

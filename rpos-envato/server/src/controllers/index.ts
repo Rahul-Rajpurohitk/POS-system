@@ -25,3 +25,6 @@ export * as eodController from './eod.controller';
 export * as giftcardsController from './giftcards.controller';
 export * as loyaltyController from './loyalty.controller';
 export * as syncController from './sync.controller';
+
+// Advanced analytics controller
+export * as analyticsAdvancedController from './analytics-advanced.controller';

@@ -34,6 +34,15 @@ import EditStaffScreen from '@/screens/settings/EditStaffScreen';
 import PrintersScreen from '@/screens/settings/PrintersScreen';
 import ProfileScreen from '@/screens/profile/ProfileScreen';
 import ChangePasswordScreen from '@/screens/profile/ChangePasswordScreen';
+// Analytics Screens
+import {
+  AnalyticsDashboardScreen,
+  RevenueAnalyticsScreen,
+  ProductAnalyticsScreen,
+  CustomerAnalyticsScreen,
+  StaffAnalyticsScreen,
+  InventoryIntelligenceScreen,
+} from '@/screens/analytics';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const ProductStack = createNativeStackNavigator<ProductStackParamList>();
@@ -85,6 +94,13 @@ function MoreNavigator() {
       <MoreStack.Screen name="Printers" component={PrintersScreen} />
       <MoreStack.Screen name="Profile" component={ProfileScreen} />
       <MoreStack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+      {/* Analytics Screens */}
+      <MoreStack.Screen name="AnalyticsDashboard" component={AnalyticsDashboardScreen} />
+      <MoreStack.Screen name="RevenueAnalytics" component={RevenueAnalyticsScreen} />
+      <MoreStack.Screen name="ProductAnalytics" component={ProductAnalyticsScreen} />
+      <MoreStack.Screen name="CustomerAnalytics" component={CustomerAnalyticsScreen} />
+      <MoreStack.Screen name="StaffAnalytics" component={StaffAnalyticsScreen} />
+      <MoreStack.Screen name="InventoryIntelligence" component={InventoryIntelligenceScreen} />
     </MoreStack.Navigator>
   );
 }
