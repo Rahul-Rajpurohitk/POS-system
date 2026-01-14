@@ -1,7 +1,4 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import { immer } from 'zustand/middleware/immer';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { AppSettings, Language, Currency, PrinterDevice } from '@/types';
 
 interface Notification {
@@ -13,10 +10,7 @@ interface Notification {
 }
 
 interface SettingsStore {
-  // Settings state
   settings: AppSettings;
-
-  // Notifications
   notifications: Notification[];
   unreadCount: number;
 
@@ -37,6 +31,9 @@ interface SettingsStore {
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
   clearNotifications: () => void;
+
+  // Hydration
+  hydrate: () => Promise<void>;
 }
 
 const defaultSettings: AppSettings = {
@@ -49,104 +46,88 @@ const defaultSettings: AppSettings = {
   connectedPrinter: undefined,
 };
 
-export const useSettingsStore = create<SettingsStore>()(
-  persist(
-    immer((set, get) => ({
-      // Initial state
-      settings: defaultSettings,
-      notifications: [],
-      unreadCount: 0,
+export const useSettingsStore = create<SettingsStore>()((set, get) => ({
+  settings: defaultSettings,
+  notifications: [],
+  unreadCount: 0,
 
-      // Settings actions
-      updateSettings: (partial) =>
-        set((state) => {
-          Object.assign(state.settings, partial);
-        }),
-
-      setLanguage: (language) =>
-        set((state) => {
-          state.settings.language = language;
-        }),
-
-      setCurrency: (currency) =>
-        set((state) => {
-          state.settings.currency = currency;
-        }),
-
-      setTax: (tax) =>
-        set((state) => {
-          state.settings.tax = tax;
-        }),
-
-      setStoreName: (name) =>
-        set((state) => {
-          state.settings.storeName = name;
-        }),
-
-      toggleDarkMode: () =>
-        set((state) => {
-          state.settings.isDarkMode = !state.settings.isDarkMode;
-        }),
-
-      setDarkMode: (isDark) =>
-        set((state) => {
-          state.settings.isDarkMode = isDark;
-        }),
-
-      setOfflineMode: (isOffline) =>
-        set((state) => {
-          state.settings.isOfflineMode = isOffline;
-        }),
-
-      setConnectedPrinter: (device) =>
-        set((state) => {
-          state.settings.connectedPrinter = device ?? undefined;
-        }),
-
-      // Notification actions
-      setNotifications: (notifications) =>
-        set((state) => {
-          state.notifications = notifications;
-          state.unreadCount = notifications.filter((n) => !n.read).length;
-        }),
-
-      addNotification: (notification) =>
-        set((state) => {
-          state.notifications.unshift(notification);
-          if (!notification.read) {
-            state.unreadCount += 1;
-          }
-        }),
-
-      markAsRead: (id) =>
-        set((state) => {
-          const notification = state.notifications.find((n) => n.id === id);
-          if (notification && !notification.read) {
-            notification.read = true;
-            state.unreadCount -= 1;
-          }
-        }),
-
-      markAllAsRead: () =>
-        set((state) => {
-          state.notifications.forEach((n) => {
-            n.read = true;
-          });
-          state.unreadCount = 0;
-        }),
-
-      clearNotifications: () =>
-        set((state) => {
-          state.notifications = [];
-          state.unreadCount = 0;
-        }),
+  updateSettings: (partial) =>
+    set((state) => ({
+      settings: { ...state.settings, ...partial },
     })),
-    {
-      name: 'pos-settings-storage',
-      storage: createJSONStorage(() => AsyncStorage),
-    }
-  )
-);
+
+  setLanguage: (language) =>
+    set((state) => ({
+      settings: { ...state.settings, language },
+    })),
+
+  setCurrency: (currency) =>
+    set((state) => ({
+      settings: { ...state.settings, currency },
+    })),
+
+  setTax: (tax) =>
+    set((state) => ({
+      settings: { ...state.settings, tax },
+    })),
+
+  setStoreName: (name) =>
+    set((state) => ({
+      settings: { ...state.settings, storeName: name },
+    })),
+
+  toggleDarkMode: () =>
+    set((state) => ({
+      settings: { ...state.settings, isDarkMode: !state.settings.isDarkMode },
+    })),
+
+  setDarkMode: (isDark) =>
+    set((state) => ({
+      settings: { ...state.settings, isDarkMode: isDark },
+    })),
+
+  setOfflineMode: (isOffline) =>
+    set((state) => ({
+      settings: { ...state.settings, isOfflineMode: isOffline },
+    })),
+
+  setConnectedPrinter: (device) =>
+    set((state) => ({
+      settings: { ...state.settings, connectedPrinter: device || undefined },
+    })),
+
+  setNotifications: (notifications) => {
+    const unreadCount = notifications.filter((n) => !n.read).length;
+    set({ notifications, unreadCount });
+  },
+
+  addNotification: (notification) =>
+    set((state) => ({
+      notifications: [notification, ...state.notifications],
+      unreadCount: state.unreadCount + 1,
+    })),
+
+  markAsRead: (id) =>
+    set((state) => {
+      const notifications = state.notifications.map((n) =>
+        n.id === id ? { ...n, read: true } : n
+      );
+      const unreadCount = notifications.filter((n) => !n.read).length;
+      return { notifications, unreadCount };
+    }),
+
+  markAllAsRead: () =>
+    set((state) => ({
+      notifications: state.notifications.map((n) => ({ ...n, read: true })),
+      unreadCount: 0,
+    })),
+
+  clearNotifications: () => set({ notifications: [], unreadCount: 0 }),
+
+  hydrate: async () => {
+    // No-op for web
+  },
+}));
 
 // Selectors
 export const selectSettings = (state: SettingsStore) => state.settings;
