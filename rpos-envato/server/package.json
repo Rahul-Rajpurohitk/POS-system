@@ -10,6 +10,8 @@
     "migration:generate": "npm run typeorm migration:generate -- -d src/config/database.ts",
     "migration:run": "npm run typeorm migration:run -- -d src/config/database.ts",
     "migration:revert": "npm run typeorm migration:revert -- -d src/config/database.ts",
+    "seed": "ts-node -r dotenv/config src/seeds/seed.ts",
+    "seed:reset": "ts-node -r dotenv/config src/seeds/reset-seed.ts",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "test": "jest",
@@ -41,6 +43,7 @@
     "passport-jwt": "^4.0.1",
     "pg": "^8.11.3",
     "reflect-metadata": "^0.2.1",
+    "socket.io": "^4.8.3",
     "typeorm": "^0.3.17",
     "uuid": "^9.0.1",
     "winston": "^3.19.0"
