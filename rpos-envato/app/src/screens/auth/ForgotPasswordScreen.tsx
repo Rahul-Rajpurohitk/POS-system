@@ -23,6 +23,7 @@ export default function ForgotPasswordScreen({ navigation }: AuthScreenProps<'Fo
   const {
     control,
     handleSubmit,
+    getValues,
     formState: { errors },
   } = useForm<ForgotPasswordForm>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -34,8 +35,12 @@ export default function ForgotPasswordScreen({ navigation }: AuthScreenProps<'Fo
     setError(null);
 
     try {
-      await post('/auth/forgotPassword', data);
+      await post('/auth/forgot-password', data);
       setSuccess(true);
+      // Navigate to reset password screen after short delay
+      setTimeout(() => {
+        navigation.navigate('ResetPassword', { email: data.email });
+      }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send reset email');
     } finally {
@@ -87,15 +92,18 @@ export default function ForgotPasswordScreen({ navigation }: AuthScreenProps<'Fo
                 <YStack gap="$4" alignItems="center">
                   <YStack backgroundColor="$success" padding="$4" borderRadius="$2">
                     <Text color="white" textAlign="center">
-                      Password reset email sent! Check your inbox.
+                      Password reset code sent! Check your inbox.
                     </Text>
                   </YStack>
+                  <Text fontSize="$3" color="$colorSecondary" textAlign="center">
+                    Redirecting to enter your code...
+                  </Text>
                   <Button
                     variant="primary"
                     fullWidth
-                    onPress={() => navigation.navigate('Login')}
+                    onPress={() => navigation.navigate('ResetPassword', { email: getValues('email') })}
                   >
-                    <Text color="white" fontWeight="600">Back to Login</Text>
+                    <Text color="white" fontWeight="600">Enter Code Now</Text>
                   </Button>
                 </YStack>
               ) : (

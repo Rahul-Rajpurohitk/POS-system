@@ -44,6 +44,19 @@ export const syncProducts = asyncHandler(async (req: Request, res: Response) => 
 });
 
 /**
+ * Get product count
+ * GET /products/count
+ */
+export const getProductCount = asyncHandler(async (req: Request, res: Response) => {
+  const total = await productService.getProductCount(req.business!);
+
+  res.json({
+    success: true,
+    data: { total },
+  });
+});
+
+/**
  * Add new product
  * POST /products
  */

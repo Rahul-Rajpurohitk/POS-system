@@ -6,7 +6,7 @@ import { Role } from '../entities/User.entity';
  * Check if user has admin role
  */
 export const adminOnly = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  if (req.userRole !== Role.ADMIN) {
+  if (req.userInfo?.role !== Role.ADMIN) {
     return res.status(403).json({
       success: false,
       message: 'Access denied. Admin privileges required.',
@@ -19,7 +19,8 @@ export const adminOnly = (req: AuthenticatedRequest, res: Response, next: NextFu
  * Check if user has manager or admin role
  */
 export const managerOnly = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  if (req.userRole !== Role.ADMIN && req.userRole !== Role.MANAGER) {
+  const role = req.userInfo?.role;
+  if (role !== Role.ADMIN && role !== Role.MANAGER) {
     return res.status(403).json({
       success: false,
       message: 'Access denied. Manager privileges required.',
@@ -32,7 +33,8 @@ export const managerOnly = (req: AuthenticatedRequest, res: Response, next: Next
  * Check if user has staff, manager, or admin role
  */
 export const staffOnly = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  if (req.userRole !== Role.ADMIN && req.userRole !== Role.MANAGER && req.userRole !== Role.STAFF) {
+  const role = req.userInfo?.role;
+  if (role !== Role.ADMIN && role !== Role.MANAGER && role !== Role.STAFF) {
     return res.status(403).json({
       success: false,
       message: 'Access denied. Staff privileges required.',
@@ -46,7 +48,8 @@ export const staffOnly = (req: AuthenticatedRequest, res: Response, next: NextFu
  */
 export const hasRole = (...roles: Role[]) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    if (!req.userRole || !roles.includes(req.userRole as Role)) {
+    const role = req.userInfo?.role;
+    if (!role || !roles.includes(role as Role)) {
       return res.status(403).json({
         success: false,
         message: `Access denied. Required role: ${roles.join(' or ')}`,

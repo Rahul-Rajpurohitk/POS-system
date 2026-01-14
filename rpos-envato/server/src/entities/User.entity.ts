@@ -45,6 +45,21 @@ export class User {
   @Column({ type: 'varchar', length: 255, default: '', select: false })
   hash!: string;
 
+  @Column({ type: 'varchar', length: 6, nullable: true })
+  pin?: string;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  phone?: string;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  address?: string;
+
+  @Column({ name: 'email_verified', type: 'boolean', default: false })
+  emailVerified!: boolean;
+
+  @Column({ name: 'email_verification_token', type: 'varchar', length: 100, nullable: true })
+  emailVerificationToken?: string;
+
   @Column({ type: 'boolean', default: true })
   enabled!: boolean;
 
@@ -89,7 +104,7 @@ export class User {
 
   // Sanitize for response (remove sensitive fields)
   toJSON(): Partial<User> {
-    const { hash, resetCode, tempPassword, ...user } = this as any;
+    const { hash, resetCode, emailVerificationToken, tempPassword, ...user } = this as any;
     return user;
   }
 }

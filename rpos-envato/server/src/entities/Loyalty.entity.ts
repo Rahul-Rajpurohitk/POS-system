@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { Business } from './Business.entity';
 import { Customer } from './Customer.entity';
+import { User } from './User.entity';
 
 // ============ LOYALTY PROGRAM CONFIGURATION ============
 

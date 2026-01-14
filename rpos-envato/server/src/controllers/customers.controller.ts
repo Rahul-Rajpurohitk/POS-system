@@ -16,6 +16,19 @@ export const syncCustomers = asyncHandler(async (req: Request, res: Response) =>
 });
 
 /**
+ * Get customer count
+ * GET /customers/count
+ */
+export const getCustomerCount = asyncHandler(async (req: Request, res: Response) => {
+  const total = await customerService.getCustomerCount(req.business!);
+
+  res.json({
+    success: true,
+    data: { total },
+  });
+});
+
+/**
  * Add new customer
  * POST /customers
  */

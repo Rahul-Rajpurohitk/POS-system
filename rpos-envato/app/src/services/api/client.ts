@@ -6,11 +6,11 @@ import type { ApiResponse, ApiError } from '@/types';
 // API Base URL - should match your backend
 const API_BASE_URL = __DEV__
   ? Platform.select({
-      ios: 'http://localhost:3000/api',
-      android: 'http://10.0.2.2:3000/api',
-      default: 'http://localhost:3000/api',
+      ios: 'http://localhost:3000',
+      android: 'http://10.0.2.2:3000',
+      default: 'http://localhost:3000',
     })
-  : 'https://your-production-api.com/api';
+  : 'https://your-production-api.com';
 
 // Create axios instance
 const createApiClient = (): AxiosInstance => {

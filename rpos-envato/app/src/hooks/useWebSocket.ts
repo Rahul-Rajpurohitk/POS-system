@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { io, Socket } from 'socket.io-client';
+// Temporarily disabled due to import.meta ESM issue on web
+// import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '@/store';
 import { config } from '@/config';
+
+// Stub Socket type for web compatibility
+type Socket = any;
 
 // Real-time event types (must match server RealtimeEvent enum)
 export enum RealtimeEvent {
@@ -109,13 +113,17 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
     const socketUrl = config.apiUrl.replace('/api', '');
 
-    socketRef.current = io(socketUrl, {
-      auth: { token },
-      transports: ['websocket', 'polling'],
-      reconnectionAttempts,
-      reconnectionDelay,
-      autoConnect: true,
-    });
+    // Temporarily disabled for web - socket.io-client has ESM issues
+    // socketRef.current = io(socketUrl, {
+    //   auth: { token },
+    //   transports: ['websocket', 'polling'],
+    //   reconnectionAttempts,
+    //   reconnectionDelay,
+    //   autoConnect: true,
+    // });
+    console.log('WebSocket disabled for web platform');
+    setStatus('disconnected');
+    return;
 
     socketRef.current.on('connect', () => {
       console.log('WebSocket connected');

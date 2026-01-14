@@ -8,7 +8,7 @@ import type { Product } from '@/types';
 const ProductCard = styled(YStack, {
   name: 'ProductCard',
   backgroundColor: '$cardBackground',
-  borderRadius: '$2',
+  borderRadius: '$3',
   padding: '$3',
   alignItems: 'center',
   justifyContent: 'center',
@@ -19,48 +19,55 @@ const ProductCard = styled(YStack, {
 
   // Shadow
   shadowColor: '$shadowColor',
-  shadowOffset: { width: 0, height: 1 },
+  shadowOffset: { width: 0, height: 2 },
   shadowOpacity: 1,
-  shadowRadius: 2,
-  elevation: 1,
-
-  pressStyle: {
-    scale: 0.98,
-    opacity: 0.9,
-    borderColor: '$primary',
-  },
+  shadowRadius: 4,
+  elevation: 2,
 
   hoverStyle: {
-    borderColor: '$borderColorHover',
+    borderColor: '$primary',
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    transform: [{ translateY: -2 }],
+  },
+
+  pressStyle: {
+    transform: [{ scale: 0.97 }],
+    borderColor: '$primary',
   },
 
   variants: {
     size: {
       sm: {
         width: 100,
-        height: 110,
+        height: 115,
         padding: '$2',
+        borderRadius: '$2',
       },
       md: {
-        width: 130,
-        height: 136,
+        width: 135,
+        height: 145,
         padding: '$3',
+        borderRadius: '$3',
       },
       lg: {
-        width: 160,
-        height: 170,
+        width: 165,
+        height: 180,
         padding: '$4',
+        borderRadius: '$4',
       },
     },
     selected: {
       true: {
         borderColor: '$primary',
         borderWidth: 2,
+        backgroundColor: '$backgroundHover',
       },
     },
     outOfStock: {
       true: {
         opacity: 0.5,
+        cursor: 'not-allowed',
       },
     },
   } as const,
@@ -72,22 +79,25 @@ const ProductCard = styled(YStack, {
 
 const ProductImage = styled(Image, {
   name: 'ProductImage',
-  borderRadius: '$1',
+  borderRadius: '$2',
   objectFit: 'cover',
 
   variants: {
     size: {
       sm: {
-        width: 50,
-        height: 50,
+        width: 52,
+        height: 52,
+        borderRadius: '$2',
       },
       md: {
-        width: 60,
-        height: 60,
+        width: 64,
+        height: 64,
+        borderRadius: '$2',
       },
       lg: {
-        width: 80,
-        height: 80,
+        width: 88,
+        height: 88,
+        borderRadius: '$3',
       },
     },
   } as const,
@@ -100,23 +110,26 @@ const ProductImage = styled(Image, {
 const PlaceholderImage = styled(YStack, {
   name: 'PlaceholderImage',
   backgroundColor: '$backgroundPress',
-  borderRadius: '$1',
+  borderRadius: '$2',
   alignItems: 'center',
   justifyContent: 'center',
 
   variants: {
     size: {
       sm: {
-        width: 50,
-        height: 50,
+        width: 52,
+        height: 52,
+        borderRadius: '$2',
       },
       md: {
-        width: 60,
-        height: 60,
+        width: 64,
+        height: 64,
+        borderRadius: '$2',
       },
       lg: {
-        width: 80,
-        height: 80,
+        width: 88,
+        height: 88,
+        borderRadius: '$3',
       },
     },
   } as const,

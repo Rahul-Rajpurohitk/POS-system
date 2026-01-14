@@ -127,6 +127,15 @@ export class CustomerService {
   }
 
   /**
+   * Get customer count for business
+   */
+  async getCustomerCount(businessId: string): Promise<number> {
+    return this.customerRepository.count({
+      where: { businessId, enabled: true },
+    });
+  }
+
+  /**
    * Get customer order history
    */
   async getCustomerOrders(customerId: string, businessId: string) {

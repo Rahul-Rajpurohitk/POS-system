@@ -11,6 +11,9 @@ const router = Router();
 // GET /customers/sync
 router.get('/sync', staff, readLimiter, catchAsync(customersController.syncCustomers));
 
+// GET /customers/count
+router.get('/count', staff, readLimiter, catchAsync(customersController.getCustomerCount));
+
 // POST /customers
 router.post(
   '/',

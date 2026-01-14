@@ -5,6 +5,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button, Input, Card } from '@/components/ui';
+import { post } from '@/services/api/client';
 import type { MoreScreenProps } from '@/navigation/types';
 
 const schema = z.object({
@@ -21,8 +22,14 @@ const schema = z.object({
 
 type Form = z.infer<typeof schema>;
 
+interface ChangePasswordResponse {
+  success: boolean;
+  message: string;
+}
+
 export default function ChangePasswordScreen({ navigation }: MoreScreenProps<'ChangePassword'>) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -34,10 +41,15 @@ export default function ChangePasswordScreen({ navigation }: MoreScreenProps<'Ch
 
   const onSubmit = async (data: Form) => {
     setLoading(true);
+    setError(null);
     try {
-      console.log('Changing password:', data);
-      // TODO: Call API to change password
+      await post<ChangePasswordResponse>('/users/change-password', {
+        oldPassword: data.currentPassword,
+        newPassword: data.newPassword,
+      });
       navigation.goBack();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to change password');
     } finally {
       setLoading(false);
     }
@@ -64,6 +76,13 @@ export default function ChangePasswordScreen({ navigation }: MoreScreenProps<'Ch
 
       <ScrollView flex={1} padding="$4">
         <YStack gap="$4">
+          {/* Error Display */}
+          {error && (
+            <Card backgroundColor="$error" padding="$3">
+              <Text color="white" textAlign="center">{error}</Text>
+            </Card>
+          )}
+
           <Card>
             <XStack alignItems="center" gap="$3" marginBottom="$3">
               <YStack backgroundColor="$primary" padding="$2" borderRadius="$2" opacity={0.9}>

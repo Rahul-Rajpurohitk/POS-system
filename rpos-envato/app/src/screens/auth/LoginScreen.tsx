@@ -19,8 +19,12 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>;
 
 interface LoginResponse {
-  user: User;
-  token: string;
+  success: boolean;
+  message: string;
+  data: {
+    user: User;
+    token: string;
+  };
 }
 
 export default function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
@@ -46,8 +50,8 @@ export default function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
 
     try {
       const response = await post<LoginResponse>('/users/login', data);
-      setAuthHeader(response.token);
-      setAuth(response.user, response.token);
+      setAuthHeader(response.data.token);
+      setAuth(response.data.user, response.data.token);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -73,38 +77,37 @@ export default function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
           flex={1}
           justifyContent="center"
           alignItems="center"
-          maxWidth={400}
+          maxWidth={420}
           width="100%"
           alignSelf="center"
-          gap="$6"
+          gap="$5"
         >
           {/* Logo */}
-          <YStack alignItems="center" gap="$3">
+          <YStack alignItems="center" gap="$2" marginBottom="$2">
             <Image
               source={require('@assets/icons/logo.png')}
-              width={80}
-              height={80}
+              width={72}
+              height={72}
               resizeMode="contain"
             />
-            <Text fontSize="$8" fontWeight="bold" color="$primary">
+            <Text fontSize="$7" fontWeight="700" color="$primary">
               POS System
             </Text>
-            <Text fontSize="$4" color="$colorSecondary">
+            <Text fontSize="$3" color="$colorSecondary">
               Sign in to your account
             </Text>
           </YStack>
 
           {/* Login Form */}
-          <Card width="100%" padding="$5">
+          <Card width="100%" padding="$5" variant="elevated">
             <YStack gap="$4">
               {error && (
                 <YStack
                   backgroundColor="$error"
                   padding="$3"
-                  borderRadius="$2"
-                  opacity={0.9}
+                  borderRadius="$3"
                 >
-                  <Text color="white" textAlign="center">
+                  <Text color="white" textAlign="center" fontSize="$3">
                     {error}
                   </Text>
                 </YStack>
@@ -120,7 +123,7 @@ export default function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
-                    leftIcon={<Mail size={20} color="$placeholderColor" />}
+                    leftIcon={<Mail size={18} color="$placeholderColor" />}
                     value={value}
                     onChangeText={onChange}
                     onBlur={onBlur}
@@ -136,7 +139,7 @@ export default function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
                   <SecureInput
                     label="Password"
                     placeholder="Enter your password"
-                    leftIcon={<Lock size={20} color="$placeholderColor" />}
+                    leftIcon={<Lock size={18} color="$placeholderColor" />}
                     value={value}
                     onChangeText={onChange}
                     onBlur={onBlur}
@@ -170,10 +173,10 @@ export default function LoginScreen({ navigation }: AuthScreenProps<'Login'>) {
           </Card>
 
           {/* Register Link */}
-          <XStack gap="$2">
-            <Text color="$colorSecondary">Don't have an account?</Text>
+          <XStack gap="$2" alignItems="center">
+            <Text color="$colorSecondary" fontSize="$3">Don't have an account?</Text>
             <Button variant="link" onPress={() => navigation.navigate('Register')}>
-              <Text color="$primary" fontWeight="600">
+              <Text color="$primary" fontWeight="600" fontSize="$3">
                 Sign Up
               </Text>
             </Button>

@@ -55,7 +55,8 @@ export default function RegisterScreen({ navigation }: AuthScreenProps<'Register
         email: data.email,
         password: data.password,
       });
-      navigation.navigate('Login');
+      // Navigate to email verification screen
+      navigation.navigate('VerifyEmail', { email: data.email });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {

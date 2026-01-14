@@ -130,6 +130,34 @@ export const passwordResetLimiter = rateLimit({
 });
 
 /**
+ * Write operation rate limiter (for admin operations)
+ * Default: 30 requests per 15 minutes
+ */
+export const writeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // 30 requests per window
+  message: {
+    success: false,
+    message: 'Too many write requests, please slow down.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn('Write rate limit exceeded', {
+      ip: req.ip,
+      path: req.path,
+      method: req.method,
+    });
+
+    res.status(429).json({
+      success: false,
+      message: 'Too many write operations. Please wait before trying again.',
+      retryAfter: 900,
+    });
+  },
+});
+
+/**
  * File upload rate limiter
  * Default: 10 uploads per hour
  */

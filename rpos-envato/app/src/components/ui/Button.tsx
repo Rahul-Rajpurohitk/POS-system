@@ -3,22 +3,29 @@ import { styled, Button as TamaguiButton, Spinner, GetProps } from 'tamagui';
 
 const StyledButton = styled(TamaguiButton, {
   name: 'Button',
-  borderRadius: '$2',
+  borderRadius: '$3',
   paddingVertical: '$3',
   paddingHorizontal: '$4',
   flexDirection: 'row',
   alignItems: 'center',
   justifyContent: 'center',
   gap: '$2',
+  cursor: 'pointer',
+  userSelect: 'none',
 
   variants: {
     variant: {
       primary: {
         backgroundColor: '$primary',
         color: 'white',
-        pressStyle: {
-          opacity: 0.85,
+        hoverStyle: {
           backgroundColor: '$primaryHover',
+          transform: [{ scale: 1.01 }],
+        },
+        pressStyle: {
+          opacity: 0.9,
+          backgroundColor: '$primaryHover',
+          transform: [{ scale: 0.98 }],
         },
       },
       secondary: {
@@ -26,27 +33,45 @@ const StyledButton = styled(TamaguiButton, {
         borderWidth: 1,
         borderColor: '$borderColor',
         color: '$color',
+        hoverStyle: {
+          borderColor: '$borderColorHover',
+          backgroundColor: '$backgroundHover',
+        },
         pressStyle: {
           backgroundColor: '$backgroundPress',
+          transform: [{ scale: 0.98 }],
         },
       },
       danger: {
         backgroundColor: '$accent',
         color: 'white',
+        hoverStyle: {
+          backgroundColor: '$accentHover',
+          transform: [{ scale: 1.01 }],
+        },
         pressStyle: {
-          opacity: 0.85,
+          opacity: 0.9,
+          transform: [{ scale: 0.98 }],
         },
       },
       success: {
         backgroundColor: '$success',
         color: 'white',
+        hoverStyle: {
+          opacity: 0.9,
+          transform: [{ scale: 1.01 }],
+        },
         pressStyle: {
           opacity: 0.85,
+          transform: [{ scale: 0.98 }],
         },
       },
       ghost: {
         backgroundColor: 'transparent',
         color: '$color',
+        hoverStyle: {
+          backgroundColor: '$backgroundHover',
+        },
         pressStyle: {
           backgroundColor: '$backgroundPress',
         },
@@ -56,8 +81,11 @@ const StyledButton = styled(TamaguiButton, {
         color: '$primary',
         paddingVertical: 0,
         paddingHorizontal: 0,
+        hoverStyle: {
+          opacity: 0.8,
+        },
         pressStyle: {
-          opacity: 0.7,
+          opacity: 0.6,
         },
       },
     },
@@ -95,6 +123,7 @@ const StyledButton = styled(TamaguiButton, {
       true: {
         opacity: 0.5,
         pointerEvents: 'none',
+        cursor: 'not-allowed',
       },
     },
   } as const,

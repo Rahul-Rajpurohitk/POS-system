@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "lib": ["ES2020"],
+    "lib": [
+      "ES2020"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -17,17 +19,39 @@
     "jsx": "react-native",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@components/*": ["src/components/*"],
-      "@features/*": ["src/features/*"],
-      "@services/*": ["src/services/*"],
-      "@store/*": ["src/store/*"],
-      "@hooks/*": ["src/hooks/*"],
-      "@utils/*": ["src/utils/*"],
-      "@types/*": ["src/types/*"],
-      "@assets/*": ["assets/*"],
-      "@common": ["src/app/common/index"],
-      "@actions": ["src/app/actions/index"]
+      "@/*": [
+        "src/*"
+      ],
+      "@components/*": [
+        "src/components/*"
+      ],
+      "@features/*": [
+        "src/features/*"
+      ],
+      "@services/*": [
+        "src/services/*"
+      ],
+      "@store/*": [
+        "src/store/*"
+      ],
+      "@hooks/*": [
+        "src/hooks/*"
+      ],
+      "@utils/*": [
+        "src/utils/*"
+      ],
+      "@types/*": [
+        "src/types/*"
+      ],
+      "@assets/*": [
+        "assets/*"
+      ],
+      "@common": [
+        "src/app/common/index"
+      ],
+      "@actions": [
+        "src/app/actions/index"
+      ]
     }
   },
   "include": [
@@ -41,5 +65,6 @@
     "babel.config.js",
     "metro.config.js",
     "jest.config.js"
-  ]
+  ],
+  "extends": "expo/tsconfig.base"
 }

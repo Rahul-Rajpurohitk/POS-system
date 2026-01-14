@@ -6,26 +6,42 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button, Input, Card } from '@/components/ui';
 import { useAuthStore } from '@/store';
+import { put } from '@/services/api/client';
 import type { MoreScreenProps } from '@/navigation/types';
 
 const schema = z.object({
-  name: z.string().min(2, 'Name is required'),
-  email: z.string().email('Invalid email'),
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
   phone: z.string().optional(),
   address: z.string().optional(),
 });
 
 type Form = z.infer<typeof schema>;
 
+interface UpdateProfileResponse {
+  success: boolean;
+  message: string;
+  data: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    avatar: string;
+    phone?: string;
+    address?: string;
+  };
+}
+
 export default function EditProfileScreen({ navigation }: MoreScreenProps<'EditProfile'>) {
-  const { user } = useAuthStore();
+  const { user, updateUser } = useAuthStore();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const { control, handleSubmit, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema),
     defaultValues: {
-      name: user?.name || '',
-      email: user?.email || '',
+      firstName: user?.firstName || '',
+      lastName: user?.lastName || '',
       phone: user?.phone || '',
       address: user?.address || '',
     },
@@ -33,10 +49,13 @@ export default function EditProfileScreen({ navigation }: MoreScreenProps<'EditP
 
   const onSubmit = async (data: Form) => {
     setLoading(true);
+    setError(null);
     try {
-      console.log('Updating profile:', data);
-      // TODO: Call API to update profile
+      const response = await put<UpdateProfileResponse>('/users/me', data);
+      updateUser(response.data);
       navigation.goBack();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update profile');
     } finally {
       setLoading(false);
     }
@@ -99,20 +118,27 @@ export default function EditProfileScreen({ navigation }: MoreScreenProps<'EditP
             </YStack>
           </Card>
 
+          {/* Error Display */}
+          {error && (
+            <Card backgroundColor="$error" padding="$3">
+              <Text color="white" textAlign="center">{error}</Text>
+            </Card>
+          )}
+
           {/* Form */}
           <Card>
             <YStack gap="$4">
               <Controller
                 control={control}
-                name="name"
+                name="firstName"
                 render={({ field: { onChange, value } }) => (
                   <Input
-                    label="Full Name"
-                    placeholder="John Doe"
+                    label="First Name"
+                    placeholder="John"
                     leftIcon={<User size={20} color="$placeholderColor" />}
                     value={value}
                     onChangeText={onChange}
-                    error={errors.name?.message}
+                    error={errors.firstName?.message}
                     required
                   />
                 )}
@@ -120,20 +146,27 @@ export default function EditProfileScreen({ navigation }: MoreScreenProps<'EditP
 
               <Controller
                 control={control}
-                name="email"
+                name="lastName"
                 render={({ field: { onChange, value } }) => (
                   <Input
-                    label="Email"
-                    placeholder="john@example.com"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    leftIcon={<Mail size={20} color="$placeholderColor" />}
+                    label="Last Name"
+                    placeholder="Doe"
+                    leftIcon={<User size={20} color="$placeholderColor" />}
                     value={value}
                     onChangeText={onChange}
-                    error={errors.email?.message}
+                    error={errors.lastName?.message}
                     required
                   />
                 )}
+              />
+
+              {/* Email is read-only */}
+              <Input
+                label="Email"
+                value={user?.email || ''}
+                leftIcon={<Mail size={20} color="$placeholderColor" />}
+                editable={false}
+                helperText="Email cannot be changed"
               />
 
               <Controller

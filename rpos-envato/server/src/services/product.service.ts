@@ -202,6 +202,15 @@ export class ProductService {
   }
 
   /**
+   * Get product count for business
+   */
+  async getProductCount(businessId: string): Promise<number> {
+    return this.productRepository.count({
+      where: { businessId, enabled: true },
+    });
+  }
+
+  /**
    * Get product activity logs
    */
   async getProductLogs(productId: string, businessId: string, page: number = 1, limit: number = 20) {

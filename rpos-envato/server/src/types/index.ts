@@ -36,3 +36,13 @@ export interface AuthenticatedUser {
   role: string;
   businessId: string;
 }
+
+// Extended Express Request with authentication
+import { Request } from 'express';
+
+export interface AuthenticatedRequest extends Request {
+  user?: AuthenticatedUser;
+  userId?: string;
+  businessId?: string;
+  locationId?: string;
+}

@@ -2,10 +2,11 @@ import { Response } from 'express';
 import path from 'path';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
-import { asyncHandler } from '../middlewares/error.middleware';
+import { catchAsync } from '../middlewares/errorHandler.middleware';
 import { AuthenticatedRequest } from '../types';
 import { AppDataSource } from '../config/database';
-import { File, FileType } from '../entities/File.entity';
+import { File } from '../entities/File.entity';
+import { MediaType } from '../types/enums';
 import { uploadToStorage, deleteFromStorage } from '../utils/file-storage';
 
 const fileRepository = AppDataSource.getRepository(File);
@@ -41,7 +42,7 @@ export const upload = multer({
  * Upload image file
  * POST /files/upload
  */
-export const uploadImage = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+export const uploadImage = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   if (!req.file) {
     return res.status(400).json({
       success: false,
@@ -53,18 +54,15 @@ export const uploadImage = asyncHandler(async (req: AuthenticatedRequest, res: R
   const fileName = `${uuidv4()}${ext}`;
 
   // Upload to storage (local or cloud)
-  const filePath = await uploadToStorage(req.file.buffer, fileName, req.file.mimetype);
+  const result = await uploadToStorage(req.file.buffer, fileName, req.file.mimetype);
 
   // Save file record
   const file = fileRepository.create({
-    fileName,
+    path: result.url,
     originalName: req.file.originalname,
     mimeType: req.file.mimetype,
     size: req.file.size,
-    path: filePath,
-    type: FileType.IMAGE,
-    businessId: req.businessId,
-    uploadedById: req.userId,
+    type: MediaType.IMAGE,
   });
 
   await fileRepository.save(file);
@@ -74,8 +72,7 @@ export const uploadImage = asyncHandler(async (req: AuthenticatedRequest, res: R
     message: 'File uploaded successfully',
     data: {
       id: file.id,
-      fileName: file.fileName,
-      url: `/assets/${file.fileName}`,
+      url: file.path,
       mimeType: file.mimeType,
       size: file.size,
     },
@@ -86,7 +83,7 @@ export const uploadImage = asyncHandler(async (req: AuthenticatedRequest, res: R
  * Upload multiple images
  * POST /files/upload-multiple
  */
-export const uploadMultiple = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+export const uploadMultiple = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const files = req.files as Express.Multer.File[];
 
   if (!files || files.length === 0) {
@@ -102,25 +99,21 @@ export const uploadMultiple = asyncHandler(async (req: AuthenticatedRequest, res
     const ext = path.extname(file.originalname).toLowerCase();
     const fileName = `${uuidv4()}${ext}`;
 
-    const filePath = await uploadToStorage(file.buffer, fileName, file.mimetype);
+    const result = await uploadToStorage(file.buffer, fileName, file.mimetype);
 
     const fileRecord = fileRepository.create({
-      fileName,
+      path: result.url,
       originalName: file.originalname,
       mimeType: file.mimetype,
       size: file.size,
-      path: filePath,
-      type: FileType.IMAGE,
-      businessId: req.businessId,
-      uploadedById: req.userId,
+      type: MediaType.IMAGE,
     });
 
     await fileRepository.save(fileRecord);
 
     uploadedFiles.push({
       id: fileRecord.id,
-      fileName: fileRecord.fileName,
-      url: `/assets/${fileRecord.fileName}`,
+      url: fileRecord.path,
       mimeType: fileRecord.mimeType,
       size: fileRecord.size,
     });
@@ -137,11 +130,11 @@ export const uploadMultiple = asyncHandler(async (req: AuthenticatedRequest, res
  * Get file by ID
  * GET /files/:id
  */
-export const getFile = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+export const getFile = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
 
   const file = await fileRepository.findOne({
-    where: { id, businessId: req.businessId },
+    where: { id },
   });
 
   if (!file) {
@@ -155,9 +148,8 @@ export const getFile = asyncHandler(async (req: AuthenticatedRequest, res: Respo
     success: true,
     data: {
       id: file.id,
-      fileName: file.fileName,
       originalName: file.originalName,
-      url: `/assets/${file.fileName}`,
+      url: file.path,
       mimeType: file.mimeType,
       size: file.size,
       createdAt: file.createdAt,
@@ -169,12 +161,12 @@ export const getFile = asyncHandler(async (req: AuthenticatedRequest, res: Respo
  * List files
  * GET /files
  */
-export const listFiles = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+export const listFiles = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 20;
-  const type = req.query.type as FileType;
+  const type = req.query.type as MediaType;
 
-  const where: any = { businessId: req.businessId };
+  const where: any = {};
   if (type) {
     where.type = type;
   }
@@ -190,9 +182,8 @@ export const listFiles = asyncHandler(async (req: AuthenticatedRequest, res: Res
     success: true,
     data: files.map((f) => ({
       id: f.id,
-      fileName: f.fileName,
       originalName: f.originalName,
-      url: `/assets/${f.fileName}`,
+      url: f.path,
       mimeType: f.mimeType,
       size: f.size,
       createdAt: f.createdAt,
@@ -210,11 +201,11 @@ export const listFiles = asyncHandler(async (req: AuthenticatedRequest, res: Res
  * Delete file
  * DELETE /files/:id
  */
-export const deleteFile = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+export const deleteFile = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
 
   const file = await fileRepository.findOne({
-    where: { id, businessId: req.businessId },
+    where: { id },
   });
 
   if (!file) {
@@ -224,8 +215,12 @@ export const deleteFile = asyncHandler(async (req: AuthenticatedRequest, res: Re
     });
   }
 
+  // Extract key from URL for deletion
+  const urlParts = file.path.split('/');
+  const key = urlParts[urlParts.length - 1];
+
   // Delete from storage
-  await deleteFromStorage(file.path);
+  await deleteFromStorage(key);
 
   // Delete record
   await fileRepository.remove(file);
@@ -235,12 +230,3 @@ export const deleteFile = asyncHandler(async (req: AuthenticatedRequest, res: Re
     message: 'File deleted successfully',
   });
 });
-
-export default {
-  upload,
-  uploadImage,
-  uploadMultiple,
-  getFile,
-  listFiles,
-  deleteFile,
-};

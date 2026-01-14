@@ -14,7 +14,7 @@ const StyledInput = styled(TamaguiInput, {
   name: 'Input',
   borderWidth: 1,
   borderColor: '$borderColor',
-  borderRadius: '$2',
+  borderRadius: '$3',
   paddingVertical: '$3',
   paddingHorizontal: '$3',
   backgroundColor: '$backgroundStrong',
@@ -22,10 +22,12 @@ const StyledInput = styled(TamaguiInput, {
   fontSize: '$4',
   height: 48,
   placeholderTextColor: '$placeholderColor',
+  outlineWidth: 0,
 
   focusStyle: {
     borderColor: '$primary',
     borderWidth: 2,
+    outlineWidth: 0,
   },
 
   hoverStyle: {
@@ -38,6 +40,7 @@ const StyledInput = styled(TamaguiInput, {
         borderColor: '$error',
         focusStyle: {
           borderColor: '$error',
+          borderWidth: 2,
         },
       },
     },
@@ -47,18 +50,21 @@ const StyledInput = styled(TamaguiInput, {
         paddingVertical: '$2',
         paddingHorizontal: '$2',
         fontSize: '$3',
+        borderRadius: '$2',
       },
       md: {
-        height: 44,
+        height: 46,
         paddingVertical: '$3',
         paddingHorizontal: '$3',
         fontSize: '$4',
+        borderRadius: '$3',
       },
       lg: {
-        height: 52,
+        height: 54,
         paddingVertical: '$4',
         paddingHorizontal: '$4',
         fontSize: '$5',
+        borderRadius: '$3',
       },
     },
   } as const,

@@ -11,6 +11,9 @@ const router = Router();
 // GET /products/sync
 router.get('/sync', staff, readLimiter, catchAsync(productsController.syncProducts));
 
+// GET /products/count
+router.get('/count', staff, readLimiter, catchAsync(productsController.getProductCount));
+
 // GET /products
 router.get('/', staff, readLimiter, catchAsync(productsController.getProducts));
 

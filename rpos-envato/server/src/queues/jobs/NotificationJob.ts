@@ -43,6 +43,12 @@ export interface PasswordResetData extends JobData {
   userName: string;
 }
 
+export interface EmailVerificationData extends JobData {
+  email: string;
+  verificationCode: string;
+  userName: string;
+}
+
 /**
  * Notification Jobs
  */
@@ -105,6 +111,22 @@ export class NotificationJob {
     return queue.addJob(
       QUEUE_NAMES.NOTIFICATIONS,
       JOB_NAMES.SEND_PASSWORD_RESET,
+      data,
+      {
+        ...DEFAULT_JOB_OPTIONS,
+        priority: 1, // High priority
+      }
+    );
+  }
+
+  /**
+   * Dispatch an email verification job
+   */
+  static async sendEmailVerification(data: EmailVerificationData): Promise<string> {
+    const queue = QueueFactory.getProvider();
+    return queue.addJob(
+      QUEUE_NAMES.NOTIFICATIONS,
+      JOB_NAMES.SEND_EMAIL_VERIFICATION,
       data,
       {
         ...DEFAULT_JOB_OPTIONS,

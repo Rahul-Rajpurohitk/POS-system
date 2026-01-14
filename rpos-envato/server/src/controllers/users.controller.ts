@@ -15,7 +15,7 @@ const userRepository = AppDataSource.getRepository(User);
 export const getProfile = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const user = await userRepository.findOne({
     where: { id: req.userId },
-    select: ['id', 'email', 'firstName', 'lastName', 'role', 'avatar', 'createdAt'],
+    select: ['id', 'email', 'firstName', 'lastName', 'role', 'avatar', 'phone', 'address', 'createdAt'],
   });
 
   if (!user) {
@@ -36,7 +36,7 @@ export const getProfile = asyncHandler(async (req: AuthenticatedRequest, res: Re
  * PUT /users/me
  */
 export const updateProfile = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const { firstName, lastName, avatar } = req.body;
+  const { firstName, lastName, avatar, phone, address } = req.body;
 
   const user = await userRepository.findOne({
     where: { id: req.userId },
@@ -52,6 +52,8 @@ export const updateProfile = asyncHandler(async (req: AuthenticatedRequest, res:
   if (firstName !== undefined) user.firstName = firstName;
   if (lastName !== undefined) user.lastName = lastName;
   if (avatar !== undefined) user.avatar = avatar;
+  if (phone !== undefined) user.phone = phone;
+  if (address !== undefined) user.address = address;
 
   await userRepository.save(user);
 
@@ -64,6 +66,8 @@ export const updateProfile = asyncHandler(async (req: AuthenticatedRequest, res:
       firstName: user.firstName,
       lastName: user.lastName,
       avatar: user.avatar,
+      phone: user.phone,
+      address: user.address,
     },
   });
 });
@@ -77,7 +81,7 @@ export const changePassword = asyncHandler(async (req: AuthenticatedRequest, res
 
   const user = await userRepository.findOne({
     where: { id: req.userId },
-    select: ['id', 'passwordHash'],
+    select: ['id', 'hash'],
   });
 
   if (!user) {
@@ -87,7 +91,7 @@ export const changePassword = asyncHandler(async (req: AuthenticatedRequest, res
     });
   }
 
-  const isValidPassword = await bcrypt.compare(oldPassword, user.passwordHash);
+  const isValidPassword = await bcrypt.compare(oldPassword, user.hash);
   if (!isValidPassword) {
     return res.status(400).json({
       success: false,
@@ -95,7 +99,7 @@ export const changePassword = asyncHandler(async (req: AuthenticatedRequest, res
     });
   }
 
-  user.passwordHash = await bcrypt.hash(newPassword, 10);
+  user.hash = await bcrypt.hash(newPassword, 10);
   await userRepository.save(user);
 
   await auditService.log({
@@ -151,11 +155,11 @@ export const addStaff = asyncHandler(async (req: AuthenticatedRequest, res: Resp
     });
   }
 
-  const passwordHash = await bcrypt.hash(password, 10);
+  const hash = await bcrypt.hash(password, 10);
 
   const staff = userRepository.create({
     email,
-    passwordHash,
+    hash,
     firstName,
     lastName,
     pin,

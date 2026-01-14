@@ -31,6 +31,7 @@ export const JOB_NAMES = {
   SEND_ORDER_CONFIRMATION: 'send-order-confirmation',
   SEND_LOW_STOCK_NOTIFICATION: 'send-low-stock-notification',
   SEND_PASSWORD_RESET: 'send-password-reset',
+  SEND_EMAIL_VERIFICATION: 'send-email-verification',
 
   // Analytics Jobs
   REFRESH_ABC_CLASSIFICATION: 'refresh-abc-classification',
