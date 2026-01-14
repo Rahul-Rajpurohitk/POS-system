@@ -9,3 +9,5 @@ export type {
   AnalyticsMetricsPayload,
   ConnectionStatus,
 } from './useWebSocket';
+
+export { useReports } from './useReports';
