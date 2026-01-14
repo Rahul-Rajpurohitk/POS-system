@@ -14,6 +14,9 @@ router.get('/sync', staff, readLimiter, catchAsync(customersController.syncCusto
 // GET /customers/count
 router.get('/count', staff, readLimiter, catchAsync(customersController.getCustomerCount));
 
+// GET /customers
+router.get('/', staff, readLimiter, catchAsync(customersController.getCustomers));
+
 // POST /customers
 router.post(
   '/',

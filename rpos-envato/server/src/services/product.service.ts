@@ -163,26 +163,36 @@ export class ProductService {
       where.categoryId = categoryId;
     }
 
-    // Build query
+    // Use find with search if no search term, otherwise use query builder for ILIKE
+    if (!search) {
+      const [products, total] = await this.productRepository.findAndCount({
+        where,
+        relations: ['category'],
+        order: { createdAt: 'DESC' },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
+      return { products, total };
+    }
+
+    // For search, use raw query to handle ILIKE properly
     const queryBuilder = this.productRepository
       .createQueryBuilder('product')
       .leftJoinAndSelect('product.category', 'category')
-      .where('product.business_id = :businessId', { businessId })
+      .where('product.businessId = :businessId', { businessId })
       .andWhere('product.enabled = true');
 
     if (categoryId) {
-      queryBuilder.andWhere('product.category_id = :categoryId', { categoryId });
+      queryBuilder.andWhere('product.categoryId = :categoryId', { categoryId });
     }
 
-    if (search) {
-      queryBuilder.andWhere(
-        '(product.name ILIKE :search OR product.sku ILIKE :search OR product.description ILIKE :search)',
-        { search: `%${search}%` }
-      );
-    }
+    queryBuilder.andWhere(
+      '(product.name ILIKE :search OR product.sku ILIKE :search OR product.description ILIKE :search)',
+      { search: `%${search}%` }
+    );
 
     const [products, total] = await queryBuilder
-      .orderBy('product.created_at', 'DESC')
+      .orderBy('product.createdAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit)
       .getManyAndCount();

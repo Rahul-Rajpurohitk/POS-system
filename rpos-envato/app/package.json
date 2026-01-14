@@ -21,6 +21,7 @@
     "@react-navigation/bottom-tabs": "^6.5.20",
     "@react-navigation/native": "^6.1.17",
     "@react-navigation/native-stack": "^6.9.26",
+    "@react-navigation/stack": "^6.4.1",
     "@tamagui/animations-react-native": "^1.115.0",
     "@tamagui/config": "^1.115.0",
     "@tamagui/core": "^1.115.0",

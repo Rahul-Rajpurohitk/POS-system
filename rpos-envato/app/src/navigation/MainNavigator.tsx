@@ -52,7 +52,13 @@ const MoreStack = createNativeStackNavigator<MoreStackParamList>();
 // Product Stack Navigator
 function ProductNavigator() {
   return (
-    <ProductStack.Navigator screenOptions={{ headerShown: false }}>
+    <ProductStack.Navigator
+      initialRouteName="ProductList"
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { flex: 1 },
+      }}
+    >
       <ProductStack.Screen name="ProductList" component={ProductListScreen} />
       <ProductStack.Screen name="AddProduct" component={AddProductScreen} />
       <ProductStack.Screen name="ProductDetail" component={ProductDetailScreen} />
@@ -67,7 +73,13 @@ function ProductNavigator() {
 // Order Stack Navigator
 function OrderNavigator() {
   return (
-    <OrderStack.Navigator screenOptions={{ headerShown: false }}>
+    <OrderStack.Navigator
+      initialRouteName="OrderList"
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { flex: 1 },
+      }}
+    >
       <OrderStack.Screen name="OrderList" component={OrderListScreen} />
       <OrderStack.Screen name="OrderDetail" component={OrderDetailScreen} />
     </OrderStack.Navigator>
@@ -77,7 +89,13 @@ function OrderNavigator() {
 // More Stack Navigator
 function MoreNavigator() {
   return (
-    <MoreStack.Navigator screenOptions={{ headerShown: false }}>
+    <MoreStack.Navigator
+      initialRouteName="MoreMenu"
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { flex: 1 },
+      }}
+    >
       <MoreStack.Screen name="MoreMenu" component={MoreMenuScreen} />
       <MoreStack.Screen name="Customers" component={CustomersScreen} />
       <MoreStack.Screen name="AddCustomer" component={AddCustomerScreen} />
@@ -124,6 +142,10 @@ export function MainNavigator() {
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '500',
+        },
+        // Ensure tab content container has proper dimensions for nested navigators
+        sceneContainerStyle: {
+          flex: 1,
         },
       }}
     >

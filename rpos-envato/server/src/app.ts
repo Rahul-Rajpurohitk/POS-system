@@ -11,6 +11,7 @@ import routes from './routes';
 import { notFoundHandler, errorHandler } from './middlewares/errorHandler.middleware';
 import { generalLimiter } from './middlewares/rateLimit.middleware';
 import logger, { stream } from './config/logger';
+import { setupSwagger } from './config/swagger';
 import './middlewares/auth.middleware'; // Initialize passport strategy
 
 /**
@@ -61,6 +62,9 @@ export function createApp(): Application {
 
   // API Routes
   app.use('/', routes);
+
+  // Swagger API Documentation
+  setupSwagger(app);
 
   // Error Handling
   app.use(notFoundHandler);

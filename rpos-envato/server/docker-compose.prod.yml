@@ -1,0 +1,134 @@
+version: '3.8'
+
+# =============================================================================
+# RPOS - PRODUCTION DOCKER COMPOSE
+# =============================================================================
+# Usage:
+#   1. Copy .env.production.example to .env.production
+#   2. Fill in all required production values
+#   3. Run: docker-compose -f docker-compose.prod.yml up -d
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Application Server
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: rpos-server
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - MONGODB_URL=mongodb://mongo:27017/pos_logs
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    ports:
+      - "${PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - pos-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Database
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: rpos-postgres
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pos_user} -d ${POSTGRES_DB:-pos_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - pos-network
+    # NOTE: Port not exposed externally in production for security
+    # Use SSH tunnel or VPN for database access
+
+  # ---------------------------------------------------------------------------
+  # MongoDB (Logging & Audit)
+  # ---------------------------------------------------------------------------
+  mongo:
+    image: mongo:6
+    container_name: rpos-mongo
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - pos-network
+    # NOTE: Port not exposed externally in production
+
+  # ---------------------------------------------------------------------------
+  # Redis (Cache & Queue)
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: rpos-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pos-network
+    # NOTE: Port not exposed externally in production
+
+# -----------------------------------------------------------------------------
+# Volumes (Persistent Data)
+# -----------------------------------------------------------------------------
+volumes:
+  postgres_data:
+    name: rpos-postgres-data
+  mongo_data:
+    name: rpos-mongo-data
+  redis_data:
+    name: rpos-redis-data
+
+# -----------------------------------------------------------------------------
+# Network
+# -----------------------------------------------------------------------------
+networks:
+  pos-network:
+    name: rpos-network
+    driver: bridge

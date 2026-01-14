@@ -1137,7 +1137,7 @@ class AdvancedAnalyticsService {
       .select([
         'payment.method as method',
         'COUNT(payment.id) as count',
-        'COALESCE(SUM(payment.amount), 0) as amount',
+        'COALESCE(SUM(payment.amountApplied), 0) as amount',
       ])
       .innerJoin('payment.order', 'order')
       .where('order.businessId = :businessId', { businessId })

@@ -118,6 +118,7 @@ async function seed() {
         authType: AuthType.EMAIL,
         businessId: business.id,
         enabled: true,
+        emailVerified: true,
       });
       await userRepo.save(user);
       users.push(user);

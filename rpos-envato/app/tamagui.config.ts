@@ -47,6 +47,13 @@ const headingFont = createInterFont({
     8: 32,
     9: 40,
     10: 48,
+    // Named sizes for convenience
+    xs: 12,
+    sm: 14,
+    md: 16,
+    lg: 20,
+    xl: 24,
+    xxl: 32,
   },
   weight: {
     4: '400',
@@ -64,6 +71,13 @@ const bodyFont = createInterFont({
     4: 16,
     5: 18,
     6: 20,
+    // Named sizes for convenience
+    xs: 12,
+    sm: 14,
+    md: 16,
+    lg: 18,
+    xl: 20,
+    xxl: 24,
   },
   weight: {
     4: '400',

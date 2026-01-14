@@ -29,6 +29,30 @@ export const getCustomerCount = asyncHandler(async (req: Request, res: Response)
 });
 
 /**
+ * Get all customers with pagination
+ * GET /customers
+ */
+export const getCustomers = asyncHandler(async (req: Request, res: Response) => {
+  const { page, limit, search } = req.query;
+
+  const result = await customerService.getCustomers(req.business!, {
+    page: page ? parseInt(page as string, 10) : 1,
+    limit: limit ? parseInt(limit as string, 10) : 100,
+    search: search as string | undefined,
+  });
+
+  res.json({
+    success: true,
+    data: result.customers,
+    pagination: {
+      total: result.total,
+      page: page ? parseInt(page as string, 10) : 1,
+      limit: limit ? parseInt(limit as string, 10) : 100,
+    },
+  });
+});
+
+/**
  * Add new customer
  * POST /customers
  */
@@ -86,6 +110,8 @@ export const deleteCustomer = asyncHandler(async (req: Request, res: Response) =
 
 export default {
   syncCustomers,
+  getCustomers,
+  getCustomerCount,
   addCustomer,
   editCustomer,
   deleteCustomer,

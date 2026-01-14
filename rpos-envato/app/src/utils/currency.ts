@@ -5,7 +5,7 @@ import type { Currency } from '@/types';
  * Preserves the original app's formatting logic
  */
 export function formatCurrency(
-  value: number,
+  value: number | string | null | undefined,
   currency: Currency,
   options?: {
     showSymbol?: boolean;
@@ -14,8 +14,11 @@ export function formatCurrency(
 ): string {
   const { showSymbol = true, decimals = 2 } = options || {};
 
+  // Handle non-numeric values gracefully
+  const numValue = typeof value === 'number' ? value : parseFloat(String(value)) || 0;
+
   // Format the number with proper decimals
-  const formattedValue = value.toFixed(decimals);
+  const formattedValue = numValue.toFixed(decimals);
 
   // Add thousand separators
   const parts = formattedValue.split('.');

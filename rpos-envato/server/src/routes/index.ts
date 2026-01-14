@@ -38,7 +38,28 @@ const router = Router();
 // ============ HEALTH CHECK ENDPOINTS ============
 
 /**
- * Basic health check - always returns ok if server is running
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Basic health check
+ *     description: Returns OK if server is running
+ *     tags: [Health]
+ *     responses:
+ *       200:
+ *         description: Server is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ok
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                 uptime:
+ *                   type: number
  */
 router.get('/health', (req, res) => {
   res.json({
