@@ -47,11 +47,33 @@ router.post(
   '/reset-password',
   passwordResetLimiter,
   [
-    body('token').notEmpty().withMessage('Reset token is required'),
-    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+    body('email').isEmail().withMessage('Invalid email'),
+    body('resetCode').isLength({ min: 6, max: 6 }).withMessage('Reset code must be 6 digits'),
+    body('newPassword').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
   ],
   checkValidation,
   catchAsync(authController.resetPassword)
+);
+
+// POST /auth/verify-email - Verify email with code
+router.post(
+  '/verify-email',
+  authLimiter,
+  [
+    body('email').isEmail().withMessage('Invalid email'),
+    body('verificationCode').isLength({ min: 6, max: 6 }).withMessage('Verification code must be 6 digits'),
+  ],
+  checkValidation,
+  catchAsync(authController.verifyEmail)
+);
+
+// POST /auth/resend-verification - Resend verification email
+router.post(
+  '/resend-verification',
+  passwordResetLimiter,
+  [body('email').isEmail().withMessage('Invalid email')],
+  checkValidation,
+  catchAsync(authController.resendVerification)
 );
 
 export default router;

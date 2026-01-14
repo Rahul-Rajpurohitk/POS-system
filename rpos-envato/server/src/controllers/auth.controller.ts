@@ -70,4 +70,34 @@ export const resetPassword = asyncHandler(async (req: Request, res: Response) =>
   });
 });
 
-export default { register, login, forgotPassword, resetPassword };
+/**
+ * Verify email
+ * POST /auth/verify-email
+ */
+export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
+  const { email, verificationCode } = req.body;
+
+  await authService.verifyEmail(email, verificationCode);
+
+  res.json({
+    success: true,
+    message: 'Email verified successfully',
+  });
+});
+
+/**
+ * Resend verification email
+ * POST /auth/resend-verification
+ */
+export const resendVerification = asyncHandler(async (req: Request, res: Response) => {
+  const { email } = req.body;
+
+  await authService.resendVerificationEmail(email);
+
+  res.json({
+    success: true,
+    message: 'If the email exists and is not verified, a verification code has been sent',
+  });
+});
+
+export default { register, login, forgotPassword, resetPassword, verifyEmail, resendVerification };

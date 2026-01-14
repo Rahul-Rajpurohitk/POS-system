@@ -83,7 +83,20 @@ export class AuthService {
       });
 
       user.setPassword(password);
+
+      // Generate email verification code
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      user.emailVerificationToken = verificationCode;
+      user.emailVerified = false;
+
       const savedUser = await manager.save(user);
+
+      // Send verification email
+      await NotificationJob.sendEmailVerification({
+        email: savedUser.email,
+        verificationCode,
+        userName: savedUser.fullName,
+      });
 
       // Generate token
       const token = this.generateToken(savedUser);
@@ -194,6 +207,67 @@ export class AuthService {
     user.setPassword(newPassword);
     user.resetCode = '';
     await this.userRepository.save(user);
+
+    return true;
+  }
+
+  /**
+   * Verify email with code
+   */
+  async verifyEmail(email: string, verificationCode: string): Promise<boolean> {
+    const user = await this.userRepository.findOne({
+      where: {
+        email,
+        emailVerificationToken: verificationCode,
+        authType: AuthType.EMAIL,
+        enabled: true,
+      },
+    });
+
+    if (!user) {
+      throw new Error('Invalid verification code');
+    }
+
+    if (user.emailVerified) {
+      throw new Error('Email already verified');
+    }
+
+    // Mark as verified
+    user.emailVerified = true;
+    user.emailVerificationToken = '';
+    await this.userRepository.save(user);
+
+    return true;
+  }
+
+  /**
+   * Resend verification email
+   */
+  async resendVerificationEmail(email: string): Promise<boolean> {
+    const user = await this.userRepository.findOne({
+      where: { email, authType: AuthType.EMAIL, enabled: true },
+    });
+
+    if (!user) {
+      // Don't reveal if email exists
+      return true;
+    }
+
+    if (user.emailVerified) {
+      throw new Error('Email already verified');
+    }
+
+    // Generate new verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    user.emailVerificationToken = verificationCode;
+    await this.userRepository.save(user);
+
+    // Send verification email
+    await NotificationJob.sendEmailVerification({
+      email: user.email,
+      verificationCode,
+      userName: user.fullName,
+    });
 
     return true;
   }

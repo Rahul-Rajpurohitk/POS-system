@@ -8,6 +8,8 @@ export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
+  ResetPassword: { email: string };
+  VerifyEmail: { email: string };
 };
 
 // Main Tab Navigator
