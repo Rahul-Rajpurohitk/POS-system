@@ -1,7 +1,7 @@
 import { Repository, Between, MoreThanOrEqual, In } from 'typeorm';
 import { AppDataSource } from '../config/database';
 import { Order, OrderItem, Payment, Product, Customer, User, Shift } from '../entities';
-import { OrderStatus, PaymentStatus, ReportPeriod } from '../types/enums';
+import { OrderStatus, PaymentStatus, PaymentMethod, ReportPeriod } from '../types/enums';
 import {
   DateRange,
   ABCAnalysisSummary,
@@ -961,6 +961,502 @@ class AdvancedAnalyticsService {
 
     // Cache the result
     await analyticsCacheService.setRevenueTrends(businessId, period, result);
+
+    return result;
+  }
+
+  // ============ ENHANCED DASHBOARD ============
+
+  /**
+   * Get enhanced dashboard with real-time metrics, comparisons, and insights
+   */
+  async getEnhancedDashboard(
+    businessId: string,
+    useCache = true
+  ): Promise<EnhancedDashboardSummary> {
+    const completedStatuses = [OrderStatus.COMPLETED, OrderStatus.PARTIALLY_REFUNDED];
+    const now = new Date();
+
+    // Get today's date range (start of day to now)
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEnd = now;
+
+    // Get current hour range
+    const currentHourStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours());
+    const currentHourEnd = now;
+
+    // Get yesterday's range
+    const yesterdayStart = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayEnd = new Date(todayStart.getTime() - 1);
+
+    // Get last week same day range
+    const lastWeekStart = new Date(todayStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const lastWeekEnd = new Date(todayEnd.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Get last month same day range
+    const lastMonthStart = new Date(todayStart);
+    lastMonthStart.setMonth(lastMonthStart.getMonth() - 1);
+    const lastMonthEnd = new Date(todayEnd);
+    lastMonthEnd.setMonth(lastMonthEnd.getMonth() - 1);
+
+    // Fetch today's metrics
+    const todayMetrics = await this.orderRepository
+      .createQueryBuilder('order')
+      .select([
+        'COALESCE(SUM(order.total), 0) as revenue',
+        'COUNT(order.id) as orders',
+        'COUNT(DISTINCT order.customerId) as customers',
+        'MAX(order.createdAt) as "lastOrderTime"',
+      ])
+      .where('order.businessId = :businessId', { businessId })
+      .andWhere('order.status IN (:...statuses)', { statuses: completedStatuses })
+      .andWhere('order.createdAt BETWEEN :start AND :end', {
+        start: todayStart,
+        end: todayEnd,
+      })
+      .getRawOne();
+
+    // Fetch current hour sales
+    const currentHourMetrics = await this.orderRepository
+      .createQueryBuilder('order')
+      .select('COALESCE(SUM(order.total), 0) as revenue')
+      .where('order.businessId = :businessId', { businessId })
+      .andWhere('order.status IN (:...statuses)', { statuses: completedStatuses })
+      .andWhere('order.createdAt BETWEEN :start AND :end', {
+        start: currentHourStart,
+        end: currentHourEnd,
+      })
+      .getRawOne();
+
+    // Fetch yesterday's metrics for comparison
+    const yesterdayMetrics = await this.orderRepository
+      .createQueryBuilder('order')
+      .select([
+        'COALESCE(SUM(order.total), 0) as revenue',
+        'COUNT(order.id) as orders',
+      ])
+      .where('order.businessId = :businessId', { businessId })
+      .andWhere('order.status IN (:...statuses)', { statuses: completedStatuses })
+      .andWhere('order.createdAt BETWEEN :start AND :end', {
+        start: yesterdayStart,
+        end: yesterdayEnd,
+      })
+      .getRawOne();
+
+    // Fetch last week same day metrics
+    const lastWeekMetrics = await this.orderRepository
+      .createQueryBuilder('order')
+      .select([
+        'COALESCE(SUM(order.total), 0) as revenue',
+        'COUNT(order.id) as orders',
+      ])
+      .where('order.businessId = :businessId', { businessId })
+      .andWhere('order.status IN (:...statuses)', { statuses: completedStatuses })
+      .andWhere('order.createdAt BETWEEN :start AND :end', {
+        start: lastWeekStart,
+        end: lastWeekEnd,
+      })
+      .getRawOne();
+
+    // Fetch last month same day metrics
+    const lastMonthMetrics = await this.orderRepository
+      .createQueryBuilder('order')
+      .select([
+        'COALESCE(SUM(order.total), 0) as revenue',
+        'COUNT(order.id) as orders',
+      ])
+      .where('order.businessId = :businessId', { businessId })
+      .andWhere('order.status IN (:...statuses)', { statuses: completedStatuses })
+      .andWhere('order.createdAt BETWEEN :start AND :end', {
+        start: lastMonthStart,
+        end: lastMonthEnd,
+      })
+      .getRawOne();
+
+    // Get top products today
+    const topProductsData = await this.orderItemRepository
+      .createQueryBuilder('item')
+      .select([
+        'product.id as id',
+        'product.name as name',
+        'SUM(item.quantity) as quantity',
+        'SUM(item.lineTotal) as revenue',
+      ])
+      .innerJoin('item.product', 'product')
+      .innerJoin('item.order', 'order')
+      .where('order.businessId = :businessId', { businessId })
+      .andWhere('order.status IN (:...statuses)', { statuses: completedStatuses })
+      .andWhere('order.createdAt BETWEEN :start AND :end', {
+        start: todayStart,
+        end: todayEnd,
+      })
+      .groupBy('product.id')
+      .addGroupBy('product.name')
+      .orderBy('revenue', 'DESC')
+      .limit(5)
+      .getRawMany();
+
+    // Get hourly breakdown for today
+    const hourlyData = await this.orderRepository
+      .createQueryBuilder('order')
+      .select([
+        'EXTRACT(HOUR FROM order.createdAt) as hour',
+        'COUNT(order.id) as orders',
+        'COALESCE(SUM(order.total), 0) as revenue',
+      ])
+      .where('order.businessId = :businessId', { businessId })
+      .andWhere('order.status IN (:...statuses)', { statuses: completedStatuses })
+      .andWhere('order.createdAt BETWEEN :start AND :end', {
+        start: todayStart,
+        end: todayEnd,
+      })
+      .groupBy('EXTRACT(HOUR FROM order.createdAt)')
+      .orderBy('hour', 'ASC')
+      .getRawMany();
+
+    // Build hourly breakdown (fill all 24 hours)
+    const hourlyBreakdown: HourlyMetrics[] = [];
+    for (let h = 0; h < 24; h++) {
+      const hourData = hourlyData.find(d => parseInt(d.hour) === h);
+      const revenue = hourData ? parseFloat(hourData.revenue) : 0;
+      const orders = hourData ? parseInt(hourData.orders) : 0;
+      hourlyBreakdown.push({
+        hour: h,
+        avgRevenue: round(revenue),
+        avgOrders: round(orders),
+        avgOrderValue: orders > 0 ? round(revenue / orders) : 0,
+        totalRevenue: round(revenue),
+        totalOrders: orders,
+        dataPoints: 1,
+      });
+    }
+
+    // Get payment methods distribution
+    const paymentData = await this.paymentRepository
+      .createQueryBuilder('payment')
+      .select([
+        'payment.method as method',
+        'COUNT(payment.id) as count',
+        'COALESCE(SUM(payment.amount), 0) as amount',
+      ])
+      .innerJoin('payment.order', 'order')
+      .where('order.businessId = :businessId', { businessId })
+      .andWhere('payment.status = :status', { status: PaymentStatus.COMPLETED })
+      .andWhere('order.createdAt BETWEEN :start AND :end', {
+        start: todayStart,
+        end: todayEnd,
+      })
+      .groupBy('payment.method')
+      .getRawMany();
+
+    const totalPayments = paymentData.reduce((sum, p) => sum + parseFloat(p.amount || '0'), 0);
+    const paymentMethods = paymentData.map(p => ({
+      method: p.method as PaymentMethod,
+      count: parseInt(p.count),
+      amount: round(parseFloat(p.amount)),
+      percentage: totalPayments > 0 ? round((parseFloat(p.amount) / totalPayments) * 100) : 0,
+    }));
+
+    // Parse metrics
+    const todayRevenue = parseFloat(todayMetrics?.revenue || '0');
+    const todayOrders = parseInt(todayMetrics?.orders || '0');
+    const todayCustomers = parseInt(todayMetrics?.customers || '0');
+    const currentHourSales = parseFloat(currentHourMetrics?.revenue || '0');
+    const lastOrderTime = todayMetrics?.lastOrderTime ? new Date(todayMetrics.lastOrderTime) : null;
+
+    const yesterdayRevenue = parseFloat(yesterdayMetrics?.revenue || '0');
+    const yesterdayOrders = parseInt(yesterdayMetrics?.orders || '0');
+
+    const lastWeekRevenue = parseFloat(lastWeekMetrics?.revenue || '0');
+    const lastWeekOrders = parseInt(lastWeekMetrics?.orders || '0');
+
+    const lastMonthRevenue = parseFloat(lastMonthMetrics?.revenue || '0');
+    const lastMonthOrders = parseInt(lastMonthMetrics?.orders || '0');
+
+    // Generate insights
+    const insights = this.generateDashboardInsights(
+      todayRevenue,
+      todayOrders,
+      yesterdayRevenue,
+      yesterdayOrders,
+      lastWeekRevenue,
+      topProductsData
+    );
+
+    const result: EnhancedDashboardSummary = {
+      realTimeMetrics: {
+        todaySales: round(todayRevenue),
+        todayOrders,
+        todayCustomers,
+        currentHourSales: round(currentHourSales),
+        lastOrderTime,
+      },
+      comparisons: {
+        vsYesterday: {
+          revenue: round(yesterdayRevenue),
+          orders: yesterdayOrders,
+          percentChange: percentageChange(todayRevenue, yesterdayRevenue),
+        },
+        vsLastWeek: {
+          revenue: round(lastWeekRevenue),
+          orders: lastWeekOrders,
+          percentChange: percentageChange(todayRevenue, lastWeekRevenue),
+        },
+        vsLastMonth: {
+          revenue: round(lastMonthRevenue),
+          orders: lastMonthOrders,
+          percentChange: percentageChange(todayRevenue, lastMonthRevenue),
+        },
+      },
+      topProducts: topProductsData.map(p => ({
+        id: p.id,
+        name: p.name,
+        quantity: parseInt(p.quantity),
+        revenue: round(parseFloat(p.revenue)),
+      })),
+      insights,
+      hourlyBreakdown,
+      paymentMethods,
+    };
+
+    return result;
+  }
+
+  /**
+   * Generate dashboard insights based on metrics
+   */
+  private generateDashboardInsights(
+    todayRevenue: number,
+    todayOrders: number,
+    yesterdayRevenue: number,
+    yesterdayOrders: number,
+    lastWeekRevenue: number,
+    topProducts: Array<{ name: string; revenue: string }>
+  ): Array<{ type: 'positive' | 'negative' | 'neutral'; title: string; description: string; metric?: string }> {
+    const insights: Array<{ type: 'positive' | 'negative' | 'neutral'; title: string; description: string; metric?: string }> = [];
+
+    // Revenue comparison insight
+    const revenueChangeVsYesterday = percentageChange(todayRevenue, yesterdayRevenue);
+    if (revenueChangeVsYesterday > 10) {
+      insights.push({
+        type: 'positive',
+        title: 'Strong Day',
+        description: `Revenue is up ${revenueChangeVsYesterday.toFixed(1)}% compared to yesterday`,
+        metric: `+${revenueChangeVsYesterday.toFixed(1)}%`,
+      });
+    } else if (revenueChangeVsYesterday < -10) {
+      insights.push({
+        type: 'negative',
+        title: 'Slow Day',
+        description: `Revenue is down ${Math.abs(revenueChangeVsYesterday).toFixed(1)}% compared to yesterday`,
+        metric: `${revenueChangeVsYesterday.toFixed(1)}%`,
+      });
+    }
+
+    // Week over week comparison
+    const revenueChangeVsLastWeek = percentageChange(todayRevenue, lastWeekRevenue);
+    if (revenueChangeVsLastWeek > 20) {
+      insights.push({
+        type: 'positive',
+        title: 'Weekly Growth',
+        description: `Revenue is up ${revenueChangeVsLastWeek.toFixed(1)}% vs same day last week`,
+        metric: `+${revenueChangeVsLastWeek.toFixed(1)}%`,
+      });
+    }
+
+    // Top product insight
+    if (topProducts.length > 0) {
+      insights.push({
+        type: 'neutral',
+        title: 'Top Seller',
+        description: `${topProducts[0].name} is leading sales today`,
+        metric: `$${parseFloat(topProducts[0].revenue).toFixed(2)}`,
+      });
+    }
+
+    // Order count insight
+    if (todayOrders > yesterdayOrders && todayOrders > 0) {
+      insights.push({
+        type: 'positive',
+        title: 'Order Volume Up',
+        description: `${todayOrders} orders today vs ${yesterdayOrders} yesterday`,
+      });
+    }
+
+    // If no orders yet today
+    if (todayOrders === 0) {
+      insights.push({
+        type: 'neutral',
+        title: 'No Orders Yet',
+        description: 'No completed orders recorded today',
+      });
+    }
+
+    return insights;
+  }
+
+  // ============ CUSTOMER COHORT ANALYSIS ============
+
+  /**
+   * Get customer cohort analysis for retention tracking
+   */
+  async getCustomerCohorts(
+    businessId: string,
+    useCache = true
+  ): Promise<CohortAnalysisSummary> {
+    // Check cache
+    if (useCache) {
+      const cached = await analyticsCacheService.getCustomerCohorts(businessId);
+      if (cached) return cached;
+    }
+
+    const completedStatuses = [OrderStatus.COMPLETED, OrderStatus.PARTIALLY_REFUNDED];
+
+    // Get first purchase date per customer (cohort assignment)
+    const customerFirstPurchase = await this.orderRepository
+      .createQueryBuilder('order')
+      .select([
+        'order.customerId as "customerId"',
+        'MIN(order.createdAt) as "firstPurchaseDate"',
+      ])
+      .where('order.businessId = :businessId', { businessId })
+      .andWhere('order.status IN (:...statuses)', { statuses: completedStatuses })
+      .andWhere('order.customerId IS NOT NULL')
+      .groupBy('order.customerId')
+      .getRawMany();
+
+    if (customerFirstPurchase.length === 0) {
+      return {
+        cohorts: [],
+        overallRetentionRate: 0,
+        averageLifetimeValue: 0,
+        averagePurchaseFrequency: 0,
+        churnRate: 100,
+      };
+    }
+
+    // Assign customers to cohorts (by month of first purchase)
+    const customerCohorts = new Map<string, string[]>(); // cohortMonth -> customerIds[]
+    for (const c of customerFirstPurchase) {
+      const firstDate = new Date(c.firstPurchaseDate);
+      const cohortMonth = `${firstDate.getFullYear()}-${String(firstDate.getMonth() + 1).padStart(2, '0')}`;
+      if (!customerCohorts.has(cohortMonth)) {
+        customerCohorts.set(cohortMonth, []);
+      }
+      customerCohorts.get(cohortMonth)!.push(c.customerId);
+    }
+
+    // Get all customer orders
+    const allOrders = await this.orderRepository
+      .createQueryBuilder('order')
+      .select([
+        'order.customerId as "customerId"',
+        'order.createdAt as "orderDate"',
+        'order.total as total',
+      ])
+      .where('order.businessId = :businessId', { businessId })
+      .andWhere('order.status IN (:...statuses)', { statuses: completedStatuses })
+      .andWhere('order.customerId IS NOT NULL')
+      .orderBy('order.createdAt', 'ASC')
+      .getRawMany();
+
+    // Group orders by customer
+    const ordersByCustomer = new Map<string, Array<{ date: Date; total: number }>>();
+    for (const o of allOrders) {
+      if (!ordersByCustomer.has(o.customerId)) {
+        ordersByCustomer.set(o.customerId, []);
+      }
+      ordersByCustomer.get(o.customerId)!.push({
+        date: new Date(o.orderDate),
+        total: parseFloat(o.total),
+      });
+    }
+
+    // Calculate cohort retention
+    const now = new Date();
+    const cohorts: CohortData[] = [];
+    let totalRetained = 0;
+    let totalCustomers = 0;
+    let totalLifetimeValue = 0;
+    let totalPurchases = 0;
+
+    // Sort cohorts by month
+    const sortedCohortMonths = Array.from(customerCohorts.keys()).sort();
+
+    for (const cohortMonth of sortedCohortMonths) {
+      const customerIds = customerCohorts.get(cohortMonth)!;
+      const cohortSize = customerIds.length;
+      totalCustomers += cohortSize;
+
+      // Calculate months since cohort start
+      const [year, month] = cohortMonth.split('-').map(Number);
+      const cohortStartDate = new Date(year, month - 1, 1);
+      const monthsSinceCohort = Math.floor(
+        (now.getTime() - cohortStartDate.getTime()) / (30 * 24 * 60 * 60 * 1000)
+      );
+
+      // Calculate retention for each subsequent month
+      const retentionByMonth: number[] = [];
+      for (let m = 0; m <= Math.min(monthsSinceCohort, 11); m++) {
+        const periodStart = new Date(year, month - 1 + m, 1);
+        const periodEnd = new Date(year, month + m, 0, 23, 59, 59);
+
+        let activeCustomers = 0;
+        for (const customerId of customerIds) {
+          const orders = ordersByCustomer.get(customerId) || [];
+          const hasOrderInPeriod = orders.some(
+            o => o.date >= periodStart && o.date <= periodEnd
+          );
+          if (hasOrderInPeriod) {
+            activeCustomers++;
+          }
+        }
+
+        const retentionRate = cohortSize > 0 ? round((activeCustomers / cohortSize) * 100) : 0;
+        retentionByMonth.push(retentionRate);
+
+        // Track overall retention (month 1+)
+        if (m === 1 && activeCustomers > 0) {
+          totalRetained += activeCustomers;
+        }
+      }
+
+      // Calculate LTV and frequency for this cohort
+      for (const customerId of customerIds) {
+        const orders = ordersByCustomer.get(customerId) || [];
+        totalLifetimeValue += orders.reduce((sum, o) => sum + o.total, 0);
+        totalPurchases += orders.length;
+      }
+
+      cohorts.push({
+        cohortMonth,
+        totalCustomers: cohortSize,
+        retentionByMonth,
+      });
+    }
+
+    // Calculate overall metrics
+    const overallRetentionRate = totalCustomers > 0
+      ? round((totalRetained / totalCustomers) * 100)
+      : 0;
+    const averageLifetimeValue = totalCustomers > 0
+      ? round(totalLifetimeValue / totalCustomers)
+      : 0;
+    const averagePurchaseFrequency = totalCustomers > 0
+      ? round(totalPurchases / totalCustomers, 1)
+      : 0;
+    const churnRate = 100 - overallRetentionRate;
+
+    const result: CohortAnalysisSummary = {
+      cohorts: cohorts.slice(-12), // Last 12 months
+      overallRetentionRate,
+      averageLifetimeValue,
+      averagePurchaseFrequency,
+      churnRate: round(churnRate),
+    };
+
+    // Cache the result
+    await analyticsCacheService.setCustomerCohorts(businessId, result);
 
     return result;
   }
