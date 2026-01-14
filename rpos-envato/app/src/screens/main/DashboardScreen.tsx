@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { YStack, XStack, Text, ScrollView, Spinner } from 'tamagui';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -9,7 +9,8 @@ import {
   TrendingUp,
   ArrowUpRight,
   ArrowDownRight,
-  RefreshCw
+  RefreshCw,
+  Calendar
 } from '@tamagui/lucide-icons';
 import { Card, CardHeader, Button } from '@/components/ui';
 import { useSettingsStore, useAuthStore } from '@/store';
@@ -17,6 +18,16 @@ import { formatCurrency } from '@/utils';
 import { usePlatform } from '@/hooks';
 import { get } from '@/services/api/client';
 import type { MainTabScreenProps } from '@/navigation/types';
+
+// Period options for analytics
+type PeriodOption = 'today' | 'this_week' | 'this_month' | 'all_time';
+
+const PERIOD_OPTIONS: { value: PeriodOption; label: string; comparisonLabel: string }[] = [
+  { value: 'today', label: 'Today', comparisonLabel: 'vs yesterday' },
+  { value: 'this_week', label: 'This Week', comparisonLabel: 'vs last week' },
+  { value: 'this_month', label: 'This Month', comparisonLabel: 'vs last month' },
+  { value: 'all_time', label: 'All Time', comparisonLabel: '' },
+];
 
 // API response types
 interface DashboardData {
@@ -127,11 +138,14 @@ export default function DashboardScreen({ navigation }: MainTabScreenProps<'Dash
   const { settings } = useSettingsStore();
   const { user } = useAuthStore();
   const { isTablet } = usePlatform();
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodOption>('this_week');
 
-  // Fetch dashboard analytics
+  const currentPeriodConfig = PERIOD_OPTIONS.find(p => p.value === selectedPeriod) || PERIOD_OPTIONS[1];
+
+  // Fetch dashboard analytics based on selected period
   const { data: dashboardData, isLoading: dashboardLoading, refetch: refetchDashboard } = useQuery({
-    queryKey: ['dashboard', 'today'],
-    queryFn: () => get<DashboardData>('/analytics/dashboard?period=today'),
+    queryKey: ['dashboard', selectedPeriod],
+    queryFn: () => get<DashboardData>(`/analytics/dashboard?period=${selectedPeriod}`),
     staleTime: 1000 * 60 * 2, // 2 minutes
   });
 
@@ -164,11 +178,11 @@ export default function DashboardScreen({ navigation }: MainTabScreenProps<'Dash
 
   const stats = [
     {
-      title: 'Today Sales',
+      title: `${currentPeriodConfig.label} Sales`,
       value: formatCurrency(sales?.totalRevenue ?? 0, settings.currency),
       icon: <DollarSign size={20} color="white" />,
-      trend: sales?.comparisonPeriod?.percentChange
-        ? `${sales.comparisonPeriod.percentChange > 0 ? '+' : ''}${sales.comparisonPeriod.percentChange.toFixed(1)}%`
+      trend: sales?.comparisonPeriod?.percentChange && currentPeriodConfig.comparisonLabel
+        ? `${sales.comparisonPeriod.percentChange > 0 ? '+' : ''}${sales.comparisonPeriod.percentChange.toFixed(1)}% ${currentPeriodConfig.comparisonLabel}`
         : undefined,
       trendUp: (sales?.comparisonPeriod?.percentChange ?? 0) > 0,
     },
@@ -214,6 +228,26 @@ export default function DashboardScreen({ navigation }: MainTabScreenProps<'Dash
               <RefreshCw size={20} color="$primary" />
             )}
           </Button>
+        </XStack>
+
+        {/* Period Selector */}
+        <XStack gap="$2" flexWrap="wrap">
+          {PERIOD_OPTIONS.map((period) => (
+            <Button
+              key={period.value}
+              variant={selectedPeriod === period.value ? 'primary' : 'secondary'}
+              size="sm"
+              onPress={() => setSelectedPeriod(period.value)}
+            >
+              <Calendar size={14} color={selectedPeriod === period.value ? 'white' : '$colorSecondary'} />
+              <Text
+                fontSize="$2"
+                color={selectedPeriod === period.value ? 'white' : '$color'}
+              >
+                {period.label}
+              </Text>
+            </Button>
+          ))}
         </XStack>
 
         {/* Stats Grid */}

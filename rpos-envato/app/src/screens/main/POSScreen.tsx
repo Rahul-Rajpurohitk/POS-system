@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { FlatList, ActivityIndicator } from 'react-native';
+import { FlatList, ActivityIndicator, ScrollView as RNScrollView } from 'react-native';
 import { YStack, XStack, Text, ScrollView, Input as TamaguiInput, Separator } from 'tamagui';
-import { Search, User, Ticket, Trash2, RefreshCw } from '@tamagui/lucide-icons';
-import { Button, Card, Modal } from '@/components/ui';
+import { Search, User, Ticket, Trash2, RefreshCw, Grid, AlertTriangle } from '@tamagui/lucide-icons';
+import { Button, Card, Modal, Badge } from '@/components/ui';
 import { ProductItem } from '@/components/product';
 import { CartItem } from '@/components/order';
 import { useCartStore, useSettingsStore, useSyncStore } from '@/store';
@@ -11,9 +11,10 @@ import { usePlatform, useProductGridColumns } from '@/hooks';
 import { useProducts } from '@/features/products/hooks';
 import { useCustomers } from '@/features/customers/hooks';
 import { useActiveCoupons } from '@/features/coupons/hooks';
+import { useCategories } from '@/features/categories/hooks';
 import { post } from '@/services/api/client';
 import type { MainTabScreenProps } from '@/navigation/types';
-import type { Order } from '@/types';
+import type { Order, Category } from '@/types';
 
 export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
   const { settings } = useSettingsStore();
@@ -37,6 +38,7 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
   const numColumns = useProductGridColumns();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [customerModalVisible, setCustomerModalVisible] = useState(false);
   const [couponModalVisible, setCouponModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -59,21 +61,43 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
     isLoading: couponsLoading
   } = useActiveCoupons();
 
+  const {
+    data: categoriesData,
+    isLoading: categoriesLoading
+  } = useCategories();
+
   // Extract data with fallbacks
   const products = productsData?.data ?? [];
   const customers = customersData?.data ?? [];
   const coupons = couponsData ?? [];
+  const categories = categoriesData ?? [];
 
-  // Filter products by search
+  // Filter products by search and category
   const filteredProducts = useMemo(() => {
-    if (!searchQuery) return products;
-    const query = searchQuery.toLowerCase();
-    return products.filter(
-      (p) =>
-        p.name.toLowerCase().includes(query) ||
-        (p.sku && p.sku.toLowerCase().includes(query))
-    );
-  }, [searchQuery, products]);
+    let filtered = products;
+
+    // Filter by category
+    if (selectedCategory) {
+      filtered = filtered.filter((p) => p.category?.id === selectedCategory);
+    }
+
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (p) =>
+          p.name.toLowerCase().includes(query) ||
+          (p.sku && p.sku.toLowerCase().includes(query))
+      );
+    }
+
+    return filtered;
+  }, [searchQuery, selectedCategory, products]);
+
+  // Get low stock products count for warnings
+  const lowStockCount = useMemo(() => {
+    return products.filter((p) => (p.quantity ?? p.stock ?? 0) < 10).length;
+  }, [products]);
 
   // Filter valid coupons (not expired)
   const validCoupons = useMemo(() => {
@@ -151,6 +175,54 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
             backgroundColor="transparent"
           />
         </XStack>
+
+        {/* Category Filter Bar */}
+        <RNScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <XStack gap="$2" paddingVertical="$1">
+            <Button
+              variant={selectedCategory === null ? 'primary' : 'secondary'}
+              size="sm"
+              onPress={() => setSelectedCategory(null)}
+            >
+              <Grid size={14} color={selectedCategory === null ? 'white' : '$color'} />
+              <Text fontSize="$2" color={selectedCategory === null ? 'white' : '$color'}>
+                All ({products.length})
+              </Text>
+            </Button>
+            {categories.map((cat: Category) => {
+              const categoryProductCount = products.filter((p) => p.category?.id === cat.id).length;
+              return (
+                <Button
+                  key={cat.id}
+                  variant={selectedCategory === cat.id ? 'primary' : 'secondary'}
+                  size="sm"
+                  onPress={() => setSelectedCategory(cat.id)}
+                >
+                  <Text fontSize="$2" color={selectedCategory === cat.id ? 'white' : '$color'}>
+                    {cat.name} ({categoryProductCount})
+                  </Text>
+                </Button>
+              );
+            })}
+          </XStack>
+        </RNScrollView>
+
+        {/* Low Stock Warning */}
+        {lowStockCount > 0 && (
+          <XStack
+            backgroundColor="$warningBackground"
+            paddingHorizontal="$3"
+            paddingVertical="$2"
+            borderRadius="$2"
+            alignItems="center"
+            gap="$2"
+          >
+            <AlertTriangle size={16} color="$warning" />
+            <Text fontSize="$2" color="$warning">
+              {lowStockCount} product{lowStockCount > 1 ? 's' : ''} with low stock
+            </Text>
+          </XStack>
+        )}
 
         {/* Products Grid */}
         {productsLoading ? (

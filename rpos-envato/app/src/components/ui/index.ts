@@ -11,6 +11,9 @@ export type { CardProps, CardHeaderProps } from './Card';
 export { Modal, ConfirmModal } from './Modal';
 export type { ModalProps, ConfirmModalProps } from './Modal';
 
+export { Badge } from './Badge';
+export type { BadgeProps, BadgeVariant } from './Badge';
+
 // Re-export common Tamagui components for convenience
 export {
   YStack,

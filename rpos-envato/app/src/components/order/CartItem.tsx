@@ -76,7 +76,7 @@ export function CartItem({ item, onRemove }: CartItemProps) {
       )}
 
       {/* Product Info */}
-      <YStack flex={1} gap="$1">
+      <YStack flex={1} gap="$1" minWidth={80}>
         <Text
           fontSize="$3"
           fontWeight="500"
@@ -85,7 +85,7 @@ export function CartItem({ item, onRemove }: CartItemProps) {
         >
           {product.name}
         </Text>
-        <Text fontSize="$2" color="$colorSecondary">
+        <Text fontSize="$2" color="$colorSecondary" numberOfLines={1}>
           {formatCurrency(product.sellingPrice, settings.currency)} each
         </Text>
       </YStack>

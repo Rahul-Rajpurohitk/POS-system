@@ -230,6 +230,12 @@ const config = createTamagui({
       placeholderColor: tokens.color.placeholderLight,
       colorSecondary: tokens.color.textSecondaryLight,
       cardBackground: tokens.color.containerBgLight,
+
+      // Badge backgrounds (light, semi-transparent)
+      successBackground: 'rgba(76, 175, 80, 0.15)',
+      warningBackground: 'rgba(255, 152, 0, 0.15)',
+      errorBackground: 'rgba(244, 67, 54, 0.15)',
+      infoBackground: 'rgba(33, 150, 243, 0.15)',
     },
     dark: {
       background: tokens.color.backgroundDark,
@@ -268,6 +274,12 @@ const config = createTamagui({
       placeholderColor: tokens.color.placeholderDark,
       colorSecondary: tokens.color.textSecondaryDark,
       cardBackground: tokens.color.containerBgDark,
+
+      // Badge backgrounds (darker, semi-transparent)
+      successBackground: 'rgba(76, 175, 80, 0.25)',
+      warningBackground: 'rgba(255, 152, 0, 0.25)',
+      errorBackground: 'rgba(244, 67, 54, 0.25)',
+      infoBackground: 'rgba(33, 150, 243, 0.25)',
     },
   },
   tokens,

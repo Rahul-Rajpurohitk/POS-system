@@ -1,13 +1,36 @@
 import React, { useState, useMemo } from 'react';
 import { FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { YStack, XStack, Text, Input } from 'tamagui';
-import { Search, Calendar, RefreshCw } from '@tamagui/lucide-icons';
-import { Button, Card } from '@/components/ui';
+import { Search, Calendar, RefreshCw, User } from '@tamagui/lucide-icons';
+import { Button, Card, Badge } from '@/components/ui';
+import type { BadgeVariant } from '@/components/ui';
 import { formatCurrency, formatDate } from '@/utils';
 import { useSettingsStore } from '@/store';
 import { useOrders } from '@/features/orders/hooks';
 import type { OrderScreenProps } from '@/navigation/types';
 import type { Order } from '@/types';
+
+// Helper to get badge variant from order status
+const getStatusBadgeVariant = (status?: string): BadgeVariant => {
+  switch (status?.toLowerCase()) {
+    case 'completed':
+      return 'success';
+    case 'pending':
+    case 'processing':
+      return 'warning';
+    case 'cancelled':
+    case 'refunded':
+      return 'error';
+    default:
+      return 'default';
+  }
+};
+
+// Helper to format status text
+const formatStatus = (status?: string): string => {
+  if (!status) return 'Unknown';
+  return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+};
 
 export default function OrderListScreen({ navigation }: OrderScreenProps<'OrderList'>) {
   const { settings } = useSettingsStore();
@@ -73,11 +96,26 @@ export default function OrderListScreen({ navigation }: OrderScreenProps<'OrderL
           renderItem={({ item }) => {
             const orderNumber = item.number || item.orderNumber || `#${item.id.slice(0, 6)}`;
             const payment = item.payment || { subTotal: item.subTotal || 0, discount: item.discount || 0, total: item.total || 0 };
+            const customerName = item.customer?.name || item.guestName || 'Walk-in Customer';
+            const itemCount = item.items?.reduce((sum: number, i: any) => sum + (i.quantity || 1), 0) || 0;
+            const status = item.status || 'completed';
+
             return (
               <Card pressable onPress={() => navigation.navigate('OrderDetail', { id: item.id })} marginBottom="$3">
-                <XStack justifyContent="space-between" alignItems="center">
-                  <YStack gap="$1">
-                    <Text fontSize="$4" fontWeight="600">{orderNumber}</Text>
+                <XStack justifyContent="space-between" alignItems="flex-start">
+                  <YStack gap="$1" flex={1}>
+                    <XStack alignItems="center" gap="$2">
+                      <Text fontSize="$4" fontWeight="600">{orderNumber}</Text>
+                      <Badge variant={getStatusBadgeVariant(status)} size="sm">
+                        {formatStatus(status)}
+                      </Badge>
+                    </XStack>
+                    <XStack alignItems="center" gap="$1">
+                      <User size={14} color="$colorSecondary" />
+                      <Text fontSize="$2" color="$colorSecondary" numberOfLines={1}>
+                        {customerName} {itemCount > 0 && `• ${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}
+                      </Text>
+                    </XStack>
                     <XStack alignItems="center" gap="$1">
                       <Calendar size={14} color="$colorSecondary" />
                       <Text fontSize="$2" color="$colorSecondary">{formatDate(item.createdAt, 'PPp')}</Text>

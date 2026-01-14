@@ -66,9 +66,10 @@ export interface TopProduct {
 
 export interface RecentOrder {
   id: string;
-  number: number;
+  orderNumber: string;
   customerName: string;
   total: number;
+  itemCount: number;
   status: OrderStatus;
   createdAt: Date;
 }
@@ -516,14 +517,15 @@ class AnalyticsService {
       where: { businessId },
       order: { createdAt: 'DESC' },
       take: limit,
-      relations: ['customer'],
+      relations: ['customer', 'items'],
     });
 
     return orders.map((order) => ({
       id: order.id,
-      number: order.number,
+      orderNumber: String(order.number),
       customerName: order.customer?.name || order.guestName || 'Walk-in Customer',
       total: this.round(Number(order.total)),
+      itemCount: order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0,
       status: order.status,
       createdAt: order.createdAt,
     }));
