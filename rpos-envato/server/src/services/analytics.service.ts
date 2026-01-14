@@ -128,7 +128,7 @@ export interface CustomerSpending {
   lastOrderDate: Date;
 }
 
-class AnalyticsService {
+export class AnalyticsService {
   private orderRepository: Repository<Order>;
   private orderItemRepository: Repository<OrderItem>;
   private paymentRepository: Repository<Payment>;
