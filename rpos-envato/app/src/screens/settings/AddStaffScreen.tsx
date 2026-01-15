@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { Alert } from 'react-native';
 import { YStack, XStack, Text, ScrollView } from 'tamagui';
 import { ArrowLeft, User, Mail, Lock, Shield } from '@tamagui/lucide-icons';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button, Input, Card } from '@/components/ui';
+import { useCreateStaff } from '@/features/settings';
 import type { MoreScreenProps } from '@/navigation/types';
 
 const schema = z.object({
@@ -21,22 +23,27 @@ const schema = z.object({
 type Form = z.infer<typeof schema>;
 
 export default function AddStaffScreen({ navigation }: MoreScreenProps<'AddStaff'>) {
-  const [loading, setLoading] = useState(false);
   const [role, setRole] = useState<'admin' | 'manager' | 'cashier'>('cashier');
+  const createStaff = useCreateStaff();
 
   const { control, handleSubmit, formState: { errors }, setValue } = useForm<Form>({
     resolver: zodResolver(schema),
     defaultValues: { name: '', email: '', password: '', confirmPassword: '', role: 'cashier' },
   });
 
-  const onSubmit = async (data: Form) => {
-    setLoading(true);
-    try {
-      console.log('Creating staff:', data);
-      navigation.goBack();
-    } finally {
-      setLoading(false);
-    }
+  const onSubmit = (data: Form) => {
+    createStaff.mutate(
+      {
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        role: data.role,
+      },
+      {
+        onSuccess: () => navigation.goBack(),
+        onError: (error) => Alert.alert('Error', error.message || 'Failed to create staff member'),
+      }
+    );
   };
 
   const roles: Array<{ value: 'admin' | 'manager' | 'cashier'; label: string; description: string }> = [
@@ -59,7 +66,7 @@ export default function AddStaffScreen({ navigation }: MoreScreenProps<'AddStaff
           <ArrowLeft size={24} />
         </Button>
         <Text fontSize="$6" fontWeight="bold" flex={1}>Add Staff</Text>
-        <Button variant="primary" loading={loading} onPress={handleSubmit(onSubmit)}>
+        <Button variant="primary" loading={createStaff.isPending} onPress={handleSubmit(onSubmit)}>
           <Text color="white" fontWeight="600">Save</Text>
         </Button>
       </XStack>

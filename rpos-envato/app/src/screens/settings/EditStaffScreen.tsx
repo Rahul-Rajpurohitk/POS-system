@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
-import { YStack, XStack, Text, ScrollView, Switch } from 'tamagui';
-import { ArrowLeft, User, Mail, Shield, Trash2 } from '@tamagui/lucide-icons';
+import React, { useState, useEffect } from 'react';
+import { Alert } from 'react-native';
+import { YStack, XStack, Text, ScrollView, Switch, Spinner } from 'tamagui';
+import { ArrowLeft, User, Mail, Shield, Trash2, Users } from '@tamagui/lucide-icons';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button, Input, Card, ConfirmModal } from '@/components/ui';
+import { useStaffMember, useUpdateStaff, useDeleteStaff } from '@/features/settings';
 import type { MoreScreenProps } from '@/navigation/types';
 
 const schema = z.object({
@@ -18,24 +20,61 @@ type Form = z.infer<typeof schema>;
 
 export default function EditStaffScreen({ navigation, route }: MoreScreenProps<'EditStaff'>) {
   const { id } = route.params;
-  const [loading, setLoading] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
   const [role, setRole] = useState<'admin' | 'manager' | 'cashier'>('cashier');
   const [isActive, setIsActive] = useState(true);
 
-  const { control, handleSubmit, formState: { errors }, setValue } = useForm<Form>({
+  const { data: staff, isLoading: staffLoading, error } = useStaffMember(id);
+  const updateStaff = useUpdateStaff();
+  const deleteStaff = useDeleteStaff();
+
+  const { control, handleSubmit, reset, formState: { errors }, setValue } = useForm<Form>({
     resolver: zodResolver(schema),
-    defaultValues: { name: 'John Doe', email: 'john@example.com', role: 'cashier', isActive: true },
+    defaultValues: { name: '', email: '', role: 'cashier', isActive: true },
   });
 
-  const onSubmit = async (data: Form) => {
-    setLoading(true);
-    try {
-      console.log('Updating staff:', id, data);
-      navigation.goBack();
-    } finally {
-      setLoading(false);
+  // Pre-fill form when staff data loads
+  useEffect(() => {
+    if (staff) {
+      const staffName = staff.name || `${staff.firstName || ''} ${staff.lastName || ''}`.trim();
+      const staffRole = (staff.role?.toLowerCase() || 'cashier') as 'admin' | 'manager' | 'cashier';
+      const staffIsActive = staff.isActive !== false;
+
+      reset({
+        name: staffName,
+        email: staff.email || '',
+        role: staffRole === 'staff' ? 'cashier' : staffRole,
+        isActive: staffIsActive,
+      });
+      setRole(staffRole === 'staff' ? 'cashier' : staffRole);
+      setIsActive(staffIsActive);
     }
+  }, [staff, reset]);
+
+  const onSubmit = (data: Form) => {
+    updateStaff.mutate(
+      {
+        id,
+        data: {
+          name: data.name,
+          email: data.email,
+          role: data.role,
+          isActive: data.isActive,
+        },
+      },
+      {
+        onSuccess: () => navigation.goBack(),
+        onError: (error) => Alert.alert('Error', error.message || 'Failed to update staff member'),
+      }
+    );
+  };
+
+  const handleDelete = () => {
+    setDeleteModal(false);
+    deleteStaff.mutate(id, {
+      onSuccess: () => navigation.goBack(),
+      onError: (error) => Alert.alert('Error', error.message || 'Failed to delete staff member'),
+    });
   };
 
   const roles: Array<{ value: 'admin' | 'manager' | 'cashier'; label: string; description: string }> = [
@@ -43,6 +82,36 @@ export default function EditStaffScreen({ navigation, route }: MoreScreenProps<'
     { value: 'manager', label: 'Manager', description: 'Manage products, orders, staff' },
     { value: 'cashier', label: 'Cashier', description: 'POS and order management only' },
   ];
+
+  if (staffLoading) {
+    return (
+      <YStack flex={1} backgroundColor="$background" justifyContent="center" alignItems="center">
+        <Spinner size="large" color="$primary" />
+        <Text marginTop="$3" color="$colorSecondary">Loading staff member...</Text>
+      </YStack>
+    );
+  }
+
+  if (error || !staff) {
+    return (
+      <YStack flex={1} backgroundColor="$background">
+        <XStack padding="$4" alignItems="center" gap="$3" backgroundColor="$cardBackground" borderBottomWidth={1} borderBottomColor="$borderColor">
+          <Button variant="ghost" size="icon" onPress={() => navigation.goBack()}><ArrowLeft size={24} /></Button>
+          <Text fontSize="$6" fontWeight="bold" flex={1}>Edit Staff</Text>
+        </XStack>
+        <YStack flex={1} justifyContent="center" alignItems="center" padding="$6">
+          <Users size={64} color="$colorSecondary" />
+          <Text fontSize="$5" fontWeight="600" marginTop="$4">Staff Not Found</Text>
+          <Text color="$colorSecondary" textAlign="center" marginTop="$2">
+            {error?.message || 'Unable to load staff member details'}
+          </Text>
+          <Button variant="outline" marginTop="$4" onPress={() => navigation.goBack()}>
+            <Text>Go Back</Text>
+          </Button>
+        </YStack>
+      </YStack>
+    );
+  }
 
   return (
     <YStack flex={1} backgroundColor="$background">
@@ -58,10 +127,10 @@ export default function EditStaffScreen({ navigation, route }: MoreScreenProps<'
           <ArrowLeft size={24} />
         </Button>
         <Text fontSize="$6" fontWeight="bold" flex={1}>Edit Staff</Text>
-        <Button variant="ghost" size="icon" onPress={() => setDeleteModal(true)}>
+        <Button variant="ghost" size="icon" onPress={() => setDeleteModal(true)} disabled={deleteStaff.isPending}>
           <Trash2 size={20} color="$error" />
         </Button>
-        <Button variant="primary" loading={loading} onPress={handleSubmit(onSubmit)}>
+        <Button variant="primary" loading={updateStaff.isPending} onPress={handleSubmit(onSubmit)}>
           <Text color="white" fontWeight="600">Save</Text>
         </Button>
       </XStack>
@@ -177,10 +246,7 @@ export default function EditStaffScreen({ navigation, route }: MoreScreenProps<'
       <ConfirmModal
         visible={deleteModal}
         onClose={() => setDeleteModal(false)}
-        onConfirm={() => {
-          setDeleteModal(false);
-          navigation.goBack();
-        }}
+        onConfirm={handleDelete}
         title="Remove Staff"
         message="Are you sure you want to remove this staff member? This action cannot be undone."
         confirmText="Remove"

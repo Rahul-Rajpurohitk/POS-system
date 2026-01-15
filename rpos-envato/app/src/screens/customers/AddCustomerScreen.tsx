@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { Alert } from 'react-native';
 import { YStack, XStack, Text, ScrollView } from 'tamagui';
 import { ArrowLeft, User, Mail, Phone, MapPin } from '@tamagui/lucide-icons';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button, Input, Card } from '@/components/ui';
+import { useCreateCustomer } from '@/features/customers';
 import type { MoreScreenProps } from '@/navigation/types';
 
 const schema = z.object({
@@ -16,15 +18,16 @@ const schema = z.object({
 type Form = z.infer<typeof schema>;
 
 export default function AddCustomerScreen({ navigation }: MoreScreenProps<'AddCustomer'>) {
-  const [loading, setLoading] = useState(false);
+  const createCustomer = useCreateCustomer();
   const { control, handleSubmit, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema), defaultValues: { name: '', email: '', phone: '', address: '' },
   });
 
-  const onSubmit = async (data: Form) => {
-    setLoading(true);
-    try { console.log('Creating customer:', data); navigation.goBack(); }
-    finally { setLoading(false); }
+  const onSubmit = (data: Form) => {
+    createCustomer.mutate(data, {
+      onSuccess: () => navigation.goBack(),
+      onError: (error) => Alert.alert('Error', error.message || 'Failed to create customer'),
+    });
   };
 
   return (
@@ -32,7 +35,7 @@ export default function AddCustomerScreen({ navigation }: MoreScreenProps<'AddCu
       <XStack padding="$4" alignItems="center" gap="$3" backgroundColor="$cardBackground" borderBottomWidth={1} borderBottomColor="$borderColor">
         <Button variant="ghost" size="icon" onPress={() => navigation.goBack()}><ArrowLeft size={24} /></Button>
         <Text fontSize="$6" fontWeight="bold" flex={1}>Add Customer</Text>
-        <Button variant="primary" loading={loading} onPress={handleSubmit(onSubmit)}><Text color="white" fontWeight="600">Save</Text></Button>
+        <Button variant="primary" loading={createCustomer.isPending} onPress={handleSubmit(onSubmit)}><Text color="white" fontWeight="600">Save</Text></Button>
       </XStack>
       <ScrollView flex={1} padding="$4">
         <Card>

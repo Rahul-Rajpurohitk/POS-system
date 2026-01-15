@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform } from 'react-native';
+import React from 'react';
+import { Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { YStack, XStack, Text, ScrollView } from 'tamagui';
 import { ArrowLeft, Camera } from '@tamagui/lucide-icons';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button, Input, Card } from '@/components/ui';
-import { generateLocalId } from '@/utils';
+import { Button, Input, Card, Select } from '@/components/ui';
+import { useCreateProduct } from '@/features/products';
+import { useCategories } from '@/features/categories';
 import type { ProductScreenProps } from '@/navigation/types';
 
 const productSchema = z.object({
@@ -15,42 +16,43 @@ const productSchema = z.object({
   sellingPrice: z.string().refine(v => !isNaN(parseFloat(v)) && parseFloat(v) >= 0, 'Invalid price'),
   purchasePrice: z.string().refine(v => !isNaN(parseFloat(v)) && parseFloat(v) >= 0, 'Invalid price'),
   quantity: z.string().refine(v => !isNaN(parseInt(v)) && parseInt(v) >= 0, 'Invalid quantity'),
+  categoryId: z.string().optional(),
   desc: z.string().optional(),
 });
 
 type ProductForm = z.infer<typeof productSchema>;
 
 export default function AddProductScreen({ navigation }: ProductScreenProps<'AddProduct'>) {
-  const [loading, setLoading] = useState(false);
+  const createProduct = useCreateProduct();
+  const { data: categories } = useCategories();
 
   const { control, handleSubmit, formState: { errors } } = useForm<ProductForm>({
     resolver: zodResolver(productSchema),
-    defaultValues: { name: '', sku: '', sellingPrice: '', purchasePrice: '', quantity: '0', desc: '' },
+    defaultValues: { name: '', sku: '', sellingPrice: '', purchasePrice: '', quantity: '0', categoryId: '', desc: '' },
   });
 
-  const onSubmit = async (data: ProductForm) => {
-    setLoading(true);
-    try {
-      // TODO: API call to create product
-      const product = {
-        id: generateLocalId(),
+  const onSubmit = (data: ProductForm) => {
+    createProduct.mutate(
+      {
         name: data.name,
         sku: data.sku,
         sellingPrice: parseFloat(data.sellingPrice),
         purchasePrice: parseFloat(data.purchasePrice),
-        quantity: parseInt(data.quantity),
-        desc: data.desc,
-        images: [],
-        createdAt: new Date().toISOString(),
-      };
-      console.log('Creating product:', product);
-      navigation.goBack();
-    } catch (error) {
-      console.error('Failed to create product:', error);
-    } finally {
-      setLoading(false);
-    }
+        stock: parseInt(data.quantity),
+        categoryId: data.categoryId || undefined,
+        description: data.desc,
+      },
+      {
+        onSuccess: () => navigation.goBack(),
+        onError: (error) => Alert.alert('Error', error.message || 'Failed to create product'),
+      }
+    );
   };
+
+  const categoryOptions = [
+    { label: 'No Category', value: '' },
+    ...(categories?.map(c => ({ label: c.name, value: c.id })) || []),
+  ];
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
@@ -60,7 +62,7 @@ export default function AddProductScreen({ navigation }: ProductScreenProps<'Add
             <ArrowLeft size={24} />
           </Button>
           <Text fontSize="$6" fontWeight="bold" flex={1}>Add Product</Text>
-          <Button variant="primary" loading={loading} onPress={handleSubmit(onSubmit)}>
+          <Button variant="primary" loading={createProduct.isPending} onPress={handleSubmit(onSubmit)}>
             <Text color="white" fontWeight="600">Save</Text>
           </Button>
         </XStack>
@@ -79,6 +81,16 @@ export default function AddProductScreen({ navigation }: ProductScreenProps<'Add
 
               <Controller control={control} name="sku" render={({ field: { onChange, value } }) => (
                 <Input label="SKU" placeholder="Enter SKU" value={value} onChangeText={onChange} error={errors.sku?.message} required />
+              )} />
+
+              <Controller control={control} name="categoryId" render={({ field: { onChange, value } }) => (
+                <Select
+                  label="Category"
+                  options={categoryOptions}
+                  value={value || ''}
+                  onValueChange={onChange}
+                  placeholder="Select category"
+                />
               )} />
 
               <XStack gap="$3">
