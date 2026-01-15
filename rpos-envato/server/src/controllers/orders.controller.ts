@@ -55,13 +55,17 @@ export const addOrder = asyncHandler(async (req: Request, res: Response) => {
     businessId: req.business!,
     createdById: req.userId!,
     items: req.body.items,
-    couponId: req.body.coupon,
-    customerId: req.body.customer,
+    couponId: req.body.couponId || req.body.coupon,
+    customerId: req.body.customerId || req.body.customer,
     guestName: req.body.guest?.name,
     guestEmail: req.body.guest?.email,
     guestPhone: req.body.guest?.phone,
     guestAddress: req.body.guest?.address,
   });
+
+  if (!order) {
+    return res.status(500).json({ message: 'Failed to create order' });
+  }
 
   // Create log entry
   await logService.createNewOrder(order, user);

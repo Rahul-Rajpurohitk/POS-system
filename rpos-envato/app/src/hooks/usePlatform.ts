@@ -47,14 +47,23 @@ export function usePlatform(): PlatformInfo {
 
 /**
  * Get number of columns for product grid based on screen width
+ * Optimized for compact 'xs' size cards (100px width + 8px gap)
  */
 export function useProductGridColumns(): number {
   const { width } = useWindowDimensions();
 
-  if (width >= 1280) return 6;
-  if (width >= 1024) return 5;
-  if (width >= 768) return 4;
-  if (width >= 480) return 3;
+  // For POS screen, account for cart panel (~350px on desktop)
+  const availableWidth = width >= 1024 ? width - 380 : width - 32;
+  const cardWidth = 108; // 100px card + 8px gap
+
+  const columns = Math.floor(availableWidth / cardWidth);
+
+  // Ensure reasonable bounds
+  if (columns >= 8) return 8;
+  if (columns >= 6) return 6;
+  if (columns >= 5) return 5;
+  if (columns >= 4) return 4;
+  if (columns >= 3) return 3;
   return 2;
 }
 

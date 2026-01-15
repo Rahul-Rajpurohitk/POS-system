@@ -8,8 +8,24 @@ import * as couponsController from '../controllers/coupons.controller';
 
 const router = Router();
 
-// GET /coupons/sync
+// GET /coupons - Get all coupons
+router.get('/', staff, readLimiter, catchAsync(couponsController.getAllCoupons));
+
+// GET /coupons/active - Get active/valid coupons (non-expired)
+router.get('/active', staff, readLimiter, catchAsync(couponsController.getActiveCoupons));
+
+// GET /coupons/sync - Sync coupons for mobile
 router.get('/sync', staff, readLimiter, catchAsync(couponsController.syncCoupons));
+
+// GET /coupons/:id - Get single coupon
+router.get(
+  '/:id',
+  staff,
+  readLimiter,
+  [param('id').isUUID().withMessage('Invalid coupon ID')],
+  checkValidation,
+  catchAsync(couponsController.getCoupon)
+);
 
 // POST /coupons
 router.post(

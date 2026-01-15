@@ -44,6 +44,10 @@ const ProductCard = styled(YStack, {
 
   variants: {
     size: {
+      xs: {
+        width: 100,
+        borderRadius: '$2',
+      },
       sm: {
         width: 120,
         borderRadius: '$3',
@@ -55,6 +59,12 @@ const ProductCard = styled(YStack, {
       lg: {
         width: 185,
         borderRadius: '$4',
+      },
+      compact: {
+        width: '100%',
+        flexDirection: 'row',
+        borderRadius: '$3',
+        height: 72,
       },
     },
     selected: {
@@ -87,6 +97,9 @@ const ImageContainer = styled(YStack, {
 
   variants: {
     size: {
+      xs: {
+        height: 60,
+      },
       sm: {
         height: 80,
       },
@@ -95,6 +108,11 @@ const ImageContainer = styled(YStack, {
       },
       lg: {
         height: 120,
+      },
+      compact: {
+        width: 72,
+        height: 72,
+        flexShrink: 0,
       },
     },
   } as const,
@@ -164,7 +182,7 @@ const StockBadge = ({ quantity, size }: { quantity: number; size: 'sm' | 'md' | 
 export interface ProductItemProps {
   product: Product;
   onPress: (product: Product) => void;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'compact';
   selected?: boolean;
 }
 
@@ -179,14 +197,64 @@ export function ProductItem({
   const isOutOfStock = stockQty <= 0;
   const imageUrl = typeof product.images?.[0] === 'object' ? (product.images[0] as any).url : product.images?.[0];
 
-  const iconSize = size === 'sm' ? 24 : size === 'md' ? 32 : 40;
-  const nameFontSize = size === 'sm' ? '$2' : size === 'md' ? '$3' : '$4';
-  const priceFontSize = size === 'sm' ? '$3' : size === 'md' ? '$4' : '$5';
-  const padding = size === 'sm' ? '$2' : size === 'md' ? '$3' : '$4';
+  const isCompact = size === 'compact';
+  const isXs = size === 'xs';
+  const iconSize = isCompact ? 24 : isXs ? 20 : size === 'sm' ? 24 : size === 'md' ? 32 : 40;
+  const nameFontSize = isCompact ? '$3' : isXs ? '$2' : size === 'sm' ? '$2' : size === 'md' ? '$3' : '$4';
+  const priceFontSize = isCompact ? '$3' : isXs ? '$2' : size === 'sm' ? '$3' : size === 'md' ? '$4' : '$5';
+  const padding = isCompact ? '$2' : isXs ? '$1' : size === 'sm' ? '$2' : size === 'md' ? '$3' : '$4';
+  const stockBadgeSize = isCompact || isXs ? 'sm' : size as 'sm' | 'md' | 'lg';
 
   // Calculate profit margin for visual indicator
   const profit = (product.sellingPrice || 0) - (product.purchasePrice || 0);
   const profitMargin = product.sellingPrice > 0 ? (profit / product.sellingPrice) * 100 : 0;
+
+  // Compact row layout for list view
+  if (isCompact) {
+    return (
+      <ProductCard
+        size={size}
+        selected={selected}
+        outOfStock={isOutOfStock}
+        onPress={() => !isOutOfStock && onPress(product)}
+        disabled={isOutOfStock}
+      >
+        {/* Image Section - Square on left */}
+        <ImageContainer size={size}>
+          {imageUrl ? (
+            <ProductImage source={{ uri: imageUrl }} />
+          ) : (
+            <PlaceholderImage>
+              <Package size={iconSize} color="$placeholderColor" />
+            </PlaceholderImage>
+          )}
+        </ImageContainer>
+
+        {/* Product Info - Right side */}
+        <YStack flex={1} padding={padding} justifyContent="center" gap="$1">
+          <Text
+            fontSize={nameFontSize}
+            fontWeight="600"
+            numberOfLines={1}
+            color="$color"
+          >
+            {product.name}
+          </Text>
+          <XStack alignItems="center" justifyContent="space-between">
+            <Text fontSize={priceFontSize} fontWeight="700" color="$primary">
+              {formatCurrency(product.sellingPrice, settings.currency)}
+            </Text>
+            {stockQty <= 10 && stockQty > 0 && (
+              <Text fontSize={10} color="#D97706" fontWeight="600">{stockQty} left</Text>
+            )}
+            {isOutOfStock && (
+              <Text fontSize={10} color="#DC2626" fontWeight="600">Out</Text>
+            )}
+          </XStack>
+        </YStack>
+      </ProductCard>
+    );
+  }
 
   return (
     <ProductCard
@@ -206,13 +274,13 @@ export function ProductItem({
           </PlaceholderImage>
         )}
         {/* Stock Badge */}
-        <StockBadge quantity={stockQty} size={size} />
+        <StockBadge quantity={stockQty} size={stockBadgeSize} />
       </ImageContainer>
 
       {/* Product Info Section */}
       <YStack padding={padding} gap="$1" width="100%">
-        {/* Category Tag */}
-        {product.category?.name && (
+        {/* Category Tag - hide on xs */}
+        {product.category?.name && !isXs && (
           <Text
             fontSize={size === 'sm' ? 9 : 10}
             color="$colorSecondary"
@@ -227,15 +295,15 @@ export function ProductItem({
         <Text
           fontSize={nameFontSize}
           fontWeight="600"
-          numberOfLines={2}
+          numberOfLines={isXs ? 1 : 2}
           color="$color"
-          lineHeight={size === 'sm' ? 14 : 18}
+          lineHeight={isXs ? 12 : size === 'sm' ? 14 : 18}
         >
           {product.name}
         </Text>
 
         {/* Price Section */}
-        <XStack alignItems="center" justifyContent="space-between" marginTop="$1">
+        <XStack alignItems="center" justifyContent="space-between" marginTop={isXs ? 0 : '$1'}>
           <Text
             fontSize={priceFontSize}
             fontWeight="700"
@@ -244,8 +312,8 @@ export function ProductItem({
             {formatCurrency(product.sellingPrice, settings.currency)}
           </Text>
 
-          {/* Profit indicator */}
-          {profitMargin > 0 && size !== 'sm' && (
+          {/* Profit indicator - hide on xs and sm */}
+          {profitMargin > 0 && size !== 'sm' && !isXs && (
             <XStack alignItems="center" gap={2}>
               <TrendingUp size={10} color="#059669" />
               <Text fontSize={9} color="#059669" fontWeight="600">

@@ -146,11 +146,11 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
         // Send to server
         await post('/orders', {
           items: order.items.map((i) => ({
-            product: i.product.id,
+            productId: i.product.id,
             quantity: i.quantity,
           })),
-          customer: order.customer?.id,
-          coupon: order.coupon?.id,
+          customerId: order.customer?.id,
+          couponId: order.coupon?.id,
           payment: order.payment,
         });
       }
@@ -214,8 +214,13 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
         </XStack>
 
         {/* Category Filter Bar - Enhanced Pills */}
-        <RNScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <XStack gap="$2" paddingVertical="$1">
+        <YStack minHeight={48}>
+          <RNScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 4, paddingVertical: 8 }}
+          >
+            <XStack gap="$2" alignItems="center">
             <YStack
               paddingHorizontal="$4"
               paddingVertical="$2"
@@ -282,6 +287,7 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
             })}
           </XStack>
         </RNScrollView>
+        </YStack>
 
         {/* Low Stock Warning - Enhanced */}
         {lowStockCount > 0 && (
@@ -340,11 +346,11 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
               <ProductItem
                 product={item}
                 onPress={(p) => addItem(p)}
-                size={isDesktop ? 'lg' : 'md'}
+                size={isDesktop ? 'sm' : 'xs'}
               />
             )}
-            contentContainerStyle={{ gap: 12, paddingBottom: 20 }}
-            columnWrapperStyle={numColumns > 1 ? { gap: 12 } : undefined}
+            contentContainerStyle={{ gap: 8, paddingBottom: 20 }}
+            columnWrapperStyle={numColumns > 1 ? { gap: 8 } : undefined}
             showsVerticalScrollIndicator={false}
             refreshing={productsRefetching}
             onRefresh={() => refetchProducts()}

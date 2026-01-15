@@ -187,11 +187,8 @@ export class OrderService {
         couponId,
       });
 
-      // Return order with items
-      return this.orderRepository.findOne({
-        where: { id: savedOrder.id },
-        relations: ['items', 'items.product', 'customer', 'coupon', 'createdBy'],
-      }) as Promise<Order>;
+      // Return the saved order - we'll fetch relations separately if needed
+      return savedOrder;
     });
   }
 
