@@ -170,7 +170,7 @@ export default function OrderListScreen({ navigation }: OrderScreenProps<'OrderL
     error
   } = useOrders({ limit: 100 });
 
-  const orders = ordersData ?? [];
+  const orders = ordersData?.data ?? [];
 
   const filtered = useMemo(() => {
     if (!search) return orders;

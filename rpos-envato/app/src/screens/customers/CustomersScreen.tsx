@@ -28,7 +28,7 @@ export default function CustomersScreen({ navigation }: MoreScreenProps<'Custome
     error
   } = useCustomers({ limit: 100 });
 
-  const customers = customersData ?? [];
+  const customers = customersData?.data ?? [];
 
   const filtered = useMemo(() => {
     if (!search) return customers;

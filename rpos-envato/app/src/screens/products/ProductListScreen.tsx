@@ -216,7 +216,7 @@ export default function ProductListScreen({ navigation }: ProductScreenProps<'Pr
     error
   } = useProducts({ limit: 100 });
 
-  const products = productsData ?? [];
+  const products = productsData?.data ?? [];
 
   const filteredProducts = useMemo(() => {
     if (!search) return products;

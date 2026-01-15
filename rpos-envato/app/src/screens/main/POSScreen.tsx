@@ -79,11 +79,11 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
     isLoading: categoriesLoading
   } = useCategories();
 
-  // Extract data with fallbacks
-  const products = productsData ?? [];
-  const customers = customersData ?? [];
-  const coupons = couponsData ?? [];
-  const categories = categoriesData ?? [];
+  // Extract data with fallbacks - API returns PaginatedResponse with data array
+  const products = productsData?.data ?? [];
+  const customers = customersData?.data ?? [];
+  const coupons = couponsData?.data ?? [];
+  const categories = categoriesData?.data ?? [];
 
   // Filter products by search and category
   const filteredProducts = useMemo(() => {
