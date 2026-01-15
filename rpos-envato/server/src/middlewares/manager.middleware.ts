@@ -16,7 +16,7 @@ export const manager = (req: Request, res: Response, next: NextFunction): void =
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    if (user.role !== Role.MANAGER) {
+    if (user.role !== Role.ADMIN && user.role !== Role.MANAGER) {
       return res.status(403).json({ message: 'Manager access required' });
     }
 

@@ -479,8 +479,8 @@ export class AnalyticsService {
         'product.name as name',
         'product.sku as sku',
         'SUM(item.quantity) as quantitySold',
-        'SUM(item.total) as revenue',
-        'SUM((item.unitPrice - product.costPrice) * item.quantity) as profit',
+        'SUM(item.lineTotal) as revenue',
+        'SUM((item.unitPrice - product.purchasePrice) * item.quantity) as profit',
       ])
       .innerJoin('item.product', 'product')
       .innerJoin('item.order', 'order')

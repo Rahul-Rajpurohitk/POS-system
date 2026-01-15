@@ -16,7 +16,7 @@ export const staff = (req: Request, res: Response, next: NextFunction): void => 
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    if (user.role !== Role.MANAGER && user.role !== Role.STAFF) {
+    if (user.role !== Role.ADMIN && user.role !== Role.MANAGER && user.role !== Role.STAFF) {
       return res.status(403).json({ message: 'Staff access required' });
     }
 

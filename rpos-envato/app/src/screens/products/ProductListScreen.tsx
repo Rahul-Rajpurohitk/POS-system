@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { FlatList, ActivityIndicator, RefreshControl } from 'react-native';
+import { FlatList, ActivityIndicator, RefreshControl, Pressable, Image } from 'react-native';
 import { YStack, XStack, Text, Input } from 'tamagui';
-import { Search, Plus, Filter, RefreshCw, Package } from '@tamagui/lucide-icons';
-import { Button, Card, Badge } from '@/components/ui';
+import { Search, Plus, Filter, RefreshCw, Eye, Edit, Trash2, Package } from '@tamagui/lucide-icons';
+import { Button, Badge } from '@/components/ui';
 import type { BadgeVariant } from '@/components/ui';
 import { formatCurrency } from '@/utils';
 import { useSettingsStore } from '@/store';
+import { usePlatform } from '@/hooks';
 import { useProducts } from '@/features/products/hooks';
 import type { ProductScreenProps } from '@/navigation/types';
 import type { Product } from '@/types';
@@ -24,8 +25,176 @@ const getStockStatusText = (quantity: number): string => {
   return 'In Stock';
 };
 
+// Table header component
+function TableHeader({ isDesktop }: { isDesktop: boolean }) {
+  return (
+    <XStack
+      backgroundColor="$backgroundHover"
+      paddingVertical="$2"
+      paddingHorizontal="$3"
+      borderBottomWidth={1}
+      borderBottomColor="$borderColor"
+    >
+      <Text width={50} fontSize="$2" fontWeight="600" color="$colorSecondary"></Text>
+      <Text flex={1} fontSize="$2" fontWeight="600" color="$colorSecondary">Product</Text>
+      {isDesktop && (
+        <Text width={100} fontSize="$2" fontWeight="600" color="$colorSecondary">SKU</Text>
+      )}
+      <Text width={100} fontSize="$2" fontWeight="600" color="$colorSecondary">Category</Text>
+      <Text width={80} fontSize="$2" fontWeight="600" color="$colorSecondary" textAlign="center">Stock</Text>
+      {isDesktop && (
+        <Text width={90} fontSize="$2" fontWeight="600" color="$colorSecondary" textAlign="right">Cost</Text>
+      )}
+      <Text width={90} fontSize="$2" fontWeight="600" color="$colorSecondary" textAlign="right">Price</Text>
+      {isDesktop && (
+        <Text width={90} fontSize="$2" fontWeight="600" color="$colorSecondary" textAlign="right">Profit</Text>
+      )}
+      <Text width={80} fontSize="$2" fontWeight="600" color="$colorSecondary" textAlign="center">Actions</Text>
+    </XStack>
+  );
+}
+
+// Table row component
+function TableRow({
+  product,
+  isDesktop,
+  onView,
+  onEdit
+}: {
+  product: Product;
+  isDesktop: boolean;
+  onView: () => void;
+  onEdit: () => void;
+}) {
+  const { settings } = useSettingsStore();
+  const stockQty = product.quantity ?? product.stock ?? 0;
+  const profit = (product.sellingPrice || 0) - (product.purchasePrice || 0);
+  const profitMargin = product.sellingPrice > 0 ? (profit / product.sellingPrice) * 100 : 0;
+  const categoryName = product.category?.name || 'Uncategorized';
+  const imageUrl = product.images?.[0]?.url || product.images?.[0];
+
+  return (
+    <Pressable onPress={onView}>
+      {({ pressed }) => (
+        <XStack
+          paddingVertical="$2"
+          paddingHorizontal="$3"
+          borderBottomWidth={1}
+          borderBottomColor="$borderColor"
+          backgroundColor={pressed ? '$backgroundHover' : '$cardBackground'}
+          alignItems="center"
+        >
+          {/* Product Image */}
+          <YStack width={50} alignItems="center">
+            {imageUrl ? (
+              <Image
+                source={{ uri: imageUrl }}
+                style={{ width: 40, height: 40, borderRadius: 4 }}
+                resizeMode="cover"
+              />
+            ) : (
+              <YStack
+                width={40}
+                height={40}
+                backgroundColor="$backgroundHover"
+                borderRadius="$1"
+                justifyContent="center"
+                alignItems="center"
+              >
+                <Package size={20} color="$colorSecondary" />
+              </YStack>
+            )}
+          </YStack>
+
+          {/* Product Name */}
+          <YStack flex={1}>
+            <Text fontSize="$3" fontWeight="500" numberOfLines={1}>{product.name}</Text>
+            {!isDesktop && (
+              <Text fontSize="$2" color="$colorSecondary" numberOfLines={1}>
+                SKU: {product.sku || 'N/A'}
+              </Text>
+            )}
+          </YStack>
+
+          {/* SKU */}
+          {isDesktop && (
+            <Text width={100} fontSize="$2" color="$colorSecondary" numberOfLines={1}>
+              {product.sku || 'N/A'}
+            </Text>
+          )}
+
+          {/* Category */}
+          <XStack width={100}>
+            <Badge variant="info" size="sm">
+              {categoryName.length > 10 ? categoryName.substring(0, 10) + '...' : categoryName}
+            </Badge>
+          </XStack>
+
+          {/* Stock */}
+          <XStack width={80} justifyContent="center">
+            <Badge variant={getStockBadgeVariant(stockQty)} size="sm">
+              {stockQty}
+            </Badge>
+          </XStack>
+
+          {/* Cost */}
+          {isDesktop && (
+            <Text width={90} fontSize="$2" color="$colorSecondary" textAlign="right">
+              {formatCurrency(product.purchasePrice, settings.currency)}
+            </Text>
+          )}
+
+          {/* Price */}
+          <Text width={90} fontSize="$3" fontWeight="600" textAlign="right" color="$accent">
+            {formatCurrency(product.sellingPrice, settings.currency)}
+          </Text>
+
+          {/* Profit */}
+          {isDesktop && (
+            <YStack width={90} alignItems="flex-end">
+              <Text fontSize="$2" color={profit > 0 ? '$success' : '$colorSecondary'} fontWeight="500">
+                {profit > 0 ? '+' : ''}{formatCurrency(profit, settings.currency)}
+              </Text>
+              {profit > 0 && (
+                <Text fontSize="$1" color="$success">
+                  {profitMargin.toFixed(0)}%
+                </Text>
+              )}
+            </YStack>
+          )}
+
+          {/* Actions */}
+          <XStack width={80} justifyContent="center" gap="$2">
+            <Pressable onPress={(e) => { e.stopPropagation(); onView(); }}>
+              <YStack
+                padding="$1"
+                borderRadius="$1"
+                backgroundColor="$backgroundHover"
+                hoverStyle={{ backgroundColor: '$primary' }}
+              >
+                <Eye size={16} color="$primary" />
+              </YStack>
+            </Pressable>
+            <Pressable onPress={(e) => { e.stopPropagation(); onEdit(); }}>
+              <YStack
+                padding="$1"
+                borderRadius="$1"
+                backgroundColor="$backgroundHover"
+                hoverStyle={{ backgroundColor: '$primary' }}
+              >
+                <Edit size={16} color="$colorSecondary" />
+              </YStack>
+            </Pressable>
+          </XStack>
+        </XStack>
+      )}
+    </Pressable>
+  );
+}
+
 export default function ProductListScreen({ navigation }: ProductScreenProps<'ProductList'>) {
   const { settings } = useSettingsStore();
+  const { isDesktop, isTablet } = usePlatform();
   const [search, setSearch] = useState('');
 
   const {
@@ -43,55 +212,19 @@ export default function ProductListScreen({ navigation }: ProductScreenProps<'Pr
     const query = search.toLowerCase();
     return products.filter(p =>
       p.name.toLowerCase().includes(query) ||
-      (p.sku && p.sku.toLowerCase().includes(query))
+      (p.sku && p.sku.toLowerCase().includes(query)) ||
+      (p.category?.name && p.category.name.toLowerCase().includes(query))
     );
   }, [products, search]);
 
-  const renderProduct = ({ item }: { item: Product }) => {
-    const stockQty = item.quantity ?? item.stock ?? 0;
-    const profit = (item.sellingPrice || 0) - (item.purchasePrice || 0);
-    const profitMargin = item.sellingPrice > 0 ? (profit / item.sellingPrice) * 100 : 0;
-    const categoryName = item.category?.name;
-
-    return (
-      <Card pressable onPress={() => navigation.navigate('ProductDetail', { id: item.id })} marginBottom="$3">
-        <XStack justifyContent="space-between" alignItems="flex-start">
-          <YStack flex={1} gap="$1">
-            <XStack alignItems="center" gap="$2">
-              <Text fontSize="$4" fontWeight="600" numberOfLines={1} flex={1}>{item.name}</Text>
-            </XStack>
-            <XStack alignItems="center" gap="$1">
-              <Package size={14} color="$colorSecondary" />
-              <Text fontSize="$2" color="$colorSecondary">SKU: {item.sku || 'N/A'}</Text>
-            </XStack>
-            <XStack alignItems="center" gap="$2" flexWrap="wrap">
-              <Badge variant={getStockBadgeVariant(stockQty)} size="sm">
-                {getStockStatusText(stockQty)} ({stockQty})
-              </Badge>
-              {categoryName && (
-                <Badge variant="info" size="sm">
-                  {categoryName}
-                </Badge>
-              )}
-            </XStack>
-          </YStack>
-          <YStack alignItems="flex-end" gap="$1">
-            <Text fontSize="$5" fontWeight="bold" color="$accent">
-              {formatCurrency(item.sellingPrice, settings.currency)}
-            </Text>
-            <Text fontSize="$2" color="$colorSecondary">
-              Cost: {formatCurrency(item.purchasePrice, settings.currency)}
-            </Text>
-            {profit > 0 && (
-              <Text fontSize="$2" color="$success" fontWeight="500">
-                +{formatCurrency(profit, settings.currency)} ({profitMargin.toFixed(0)}%)
-              </Text>
-            )}
-          </YStack>
-        </XStack>
-      </Card>
-    );
-  };
+  // Calculate summary stats
+  const stats = useMemo(() => {
+    const totalProducts = products.length;
+    const lowStock = products.filter(p => (p.quantity ?? p.stock ?? 0) < 10 && (p.quantity ?? p.stock ?? 0) > 0).length;
+    const outOfStock = products.filter(p => (p.quantity ?? p.stock ?? 0) <= 0).length;
+    const totalValue = products.reduce((sum, p) => sum + (p.sellingPrice * (p.quantity ?? p.stock ?? 0)), 0);
+    return { totalProducts, lowStock, outOfStock, totalValue };
+  }, [products]);
 
   if (isLoading) {
     return (
@@ -114,36 +247,85 @@ export default function ProductListScreen({ navigation }: ProductScreenProps<'Pr
     );
   }
 
+  const showDesktopLayout = isDesktop || isTablet;
+
   return (
     <YStack flex={1} backgroundColor="$background">
-      <XStack padding="$4" justifyContent="space-between" alignItems="center" backgroundColor="$cardBackground" borderBottomWidth={1} borderBottomColor="$borderColor">
-        <Text fontSize="$6" fontWeight="bold">Products</Text>
+      {/* Header */}
+      <XStack
+        padding="$4"
+        justifyContent="space-between"
+        alignItems="center"
+        backgroundColor="$cardBackground"
+        borderBottomWidth={1}
+        borderBottomColor="$borderColor"
+      >
+        <YStack>
+          <Text fontSize="$6" fontWeight="bold">Products</Text>
+          <XStack gap="$3">
+            <Text fontSize="$2" color="$colorSecondary">{stats.totalProducts} products</Text>
+            {stats.lowStock > 0 && (
+              <Text fontSize="$2" color="$warning">{stats.lowStock} low stock</Text>
+            )}
+            {stats.outOfStock > 0 && (
+              <Text fontSize="$2" color="$error">{stats.outOfStock} out of stock</Text>
+            )}
+          </XStack>
+        </YStack>
         <XStack gap="$2">
           <Button variant="secondary" size="sm" onPress={() => navigation.navigate('Categories')}>
-            <Filter size={18} />
+            <Filter size={16} />
             <Text>Categories</Text>
           </Button>
           <Button variant="primary" size="sm" onPress={() => navigation.navigate('AddProduct')}>
-            <Plus size={18} color="white" />
+            <Plus size={16} color="white" />
             <Text color="white">Add</Text>
           </Button>
         </XStack>
       </XStack>
 
-      <YStack padding="$4" gap="$3" flex={1}>
-        <XStack backgroundColor="$cardBackground" borderRadius="$2" paddingHorizontal="$3" alignItems="center" borderWidth={1} borderColor="$borderColor">
-          <Search size={20} color="$placeholderColor" />
-          <Input flex={1} placeholder="Search products..." value={search} onChangeText={setSearch} borderWidth={0} backgroundColor="transparent" />
+      {/* Search */}
+      <XStack padding="$3" backgroundColor="$cardBackground" borderBottomWidth={1} borderBottomColor="$borderColor">
+        <XStack
+          flex={1}
+          backgroundColor="$background"
+          borderRadius="$2"
+          paddingHorizontal="$3"
+          alignItems="center"
+          borderWidth={1}
+          borderColor="$borderColor"
+        >
+          <Search size={18} color="$placeholderColor" />
+          <Input
+            flex={1}
+            placeholder="Search by name, SKU, or category..."
+            value={search}
+            onChangeText={setSearch}
+            borderWidth={0}
+            backgroundColor="transparent"
+            size="$3"
+          />
         </XStack>
+      </XStack>
+
+      {/* Table */}
+      <YStack flex={1} backgroundColor="$cardBackground">
+        <TableHeader isDesktop={showDesktopLayout} />
 
         <FlatList
           data={filteredProducts}
           keyExtractor={(item) => item.id}
-          renderItem={renderProduct}
-          showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
           }
+          renderItem={({ item }) => (
+            <TableRow
+              product={item}
+              isDesktop={showDesktopLayout}
+              onView={() => navigation.navigate('ProductDetail', { id: item.id })}
+              onEdit={() => navigation.navigate('ProductDetail', { id: item.id })}
+            />
+          )}
           ListEmptyComponent={
             <YStack flex={1} justifyContent="center" alignItems="center" paddingVertical="$10">
               <Text color="$colorSecondary">
