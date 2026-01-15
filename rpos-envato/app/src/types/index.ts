@@ -95,6 +95,7 @@ export interface Category extends BaseEntity {
   name: string;
   code?: string;
   image?: string;
+  color?: string;
   parent?: ID;
   status?: 'editing';
 }

@@ -187,7 +187,7 @@ export function CartItem({ item, onRemove, compact = false }: CartItemProps) {
         </QuantityControl>
 
         {/* Item Total */}
-        <Text fontSize="$2" fontWeight="700" color={THEME.primary} minWidth={50} textAlign="right">
+        <Text fontSize="$2" fontWeight="700" color="$color" minWidth={50} textAlign="right">
           {formatCurrency(itemTotal, settings.currency)}
         </Text>
       </CartItemContainer>

@@ -5,6 +5,7 @@ export interface CreateCategoryRequest {
   name: string;
   description?: string;
   image?: string;
+  color?: string;
   parentId?: string;
   isActive?: boolean;
 }

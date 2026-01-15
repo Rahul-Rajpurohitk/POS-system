@@ -4,11 +4,12 @@ import { YStack, XStack, Text, ScrollView, Input as TamaguiInput, Separator } fr
 import {
   Search, User, Ticket, Trash2, RefreshCw, Grid, AlertTriangle,
   ShoppingCart, CheckCircle, CreditCard, Package,
-  ChevronRight,
+  ChevronRight, ArrowLeft,
 } from '@tamagui/lucide-icons';
 import { Button, Card, Modal, Badge } from '@/components/ui';
 import { ProductItem } from '@/components/product';
 import { CartItem } from '@/components/order';
+import { CategoryTile } from '@/components/category';
 import { useCartStore, useSettingsStore, useSyncStore } from '@/store';
 import { formatCurrency, generateLocalId, generateLocalOrderNumber, isCouponExpired } from '@/utils';
 import { usePlatform, useProductGridColumns } from '@/hooks';
@@ -23,11 +24,11 @@ import type { Order, Category } from '@/types';
 
 // Theme colors
 const THEME = {
-  primary: '#4F46E5',
-  success: '#10B981',
+  primary: '#3B82F6',
+  success: '#22C55E',
   warning: '#F59E0B',
   error: '#EF4444',
-  accent: '#8B5CF6',
+  accent: '#6366F1',
 };
 
 // US State Tax Rates (auto-selected based on business profile)
@@ -111,6 +112,7 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
   const [couponModalVisible, setCouponModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>('cash');
+  const [viewMode, setViewMode] = useState<'categories' | 'products'>('categories');
 
   // Fetch business settings from API
   const { data: appSettings } = useAppSettings();
@@ -190,7 +192,7 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
 
   // Filter valid coupons (not expired)
   const validCoupons = useMemo(() => {
-    return coupons.filter((c) => !isCouponExpired(c.expiredAt));
+    return coupons.filter((c: { expiredAt?: string }) => !isCouponExpired(c.expiredAt));
   }, [coupons]);
 
   // Handle checkout
@@ -244,184 +246,12 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
 
   return (
     <XStack flex={1} backgroundColor="$background">
-      {/* Left Side - Products */}
-      <YStack flex={1} padding="$4" gap="$3">
-        {/* Enhanced Search Bar */}
-        <XStack gap="$3" alignItems="center">
-          <XStack
-            flex={1}
-            backgroundColor="$cardBackground"
-            borderRadius="$4"
-            paddingHorizontal="$4"
-            paddingVertical="$2"
-            alignItems="center"
-            borderWidth={1}
-            borderColor="$borderColor"
-            gap="$2"
-            shadowColor="#000"
-            shadowOffset={{ width: 0, height: 2 }}
-            shadowOpacity={0.05}
-            shadowRadius={8}
-          >
-            <Search size={20} color="$primary" />
-            <TamaguiInput
-              flex={1}
-              placeholder="Search products by name or SKU..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              borderWidth={0}
-              backgroundColor="transparent"
-              fontSize="$3"
-            />
-            {searchQuery && (
-              <YStack
-                padding="$1"
-                borderRadius="$2"
-                backgroundColor="$backgroundHover"
-                cursor="pointer"
-                onPress={() => setSearchQuery('')}
-              >
-                <Text fontSize="$2" color="$colorSecondary">Clear</Text>
-              </YStack>
-            )}
-          </XStack>
-          <Button variant="secondary" size="sm" onPress={() => refetchProducts()}>
-            <RefreshCw size={16} color={productsRefetching ? THEME.primary : '$color'} />
-          </Button>
-        </XStack>
-
-        {/* Category Filter Pills */}
-        <XStack
-          gap={8}
-          paddingVertical={8}
-          paddingHorizontal={4}
-          flexWrap="wrap"
-        >
-          {/* All Products Pill */}
-          <YStack
-            paddingHorizontal={16}
-            paddingVertical={8}
-            borderRadius={20}
-            backgroundColor={!selectedCategory ? THEME.primary : '#F3F4F6'}
-            cursor="pointer"
-            onPress={() => setSelectedCategory(null)}
-            hoverStyle={{ opacity: 0.9 }}
-            pressStyle={{ transform: [{ scale: 0.97 }] }}
-          >
-            <Text
-              fontSize={13}
-              fontWeight="600"
-              color={!selectedCategory ? 'white' : '#374151'}
-            >
-              All Products
-            </Text>
-          </YStack>
-
-          {/* Category Pills */}
-          {categories.map((cat: Category) => {
-            const isSelected = selectedCategory === cat.id;
-            return (
-              <XStack
-                key={cat.id}
-                paddingHorizontal={16}
-                paddingVertical={8}
-                borderRadius={20}
-                backgroundColor={isSelected ? THEME.primary : '#F3F4F6'}
-                cursor="pointer"
-                onPress={() => setSelectedCategory(isSelected ? null : cat.id)}
-                hoverStyle={{ opacity: 0.9 }}
-                pressStyle={{ transform: [{ scale: 0.97 }] }}
-                alignItems="center"
-                gap={6}
-              >
-                <Text
-                  fontSize={13}
-                  fontWeight="600"
-                  color={isSelected ? 'white' : '#374151'}
-                >
-                  {cat.name}
-                </Text>
-                {/* X to clear selection */}
-                {isSelected && (
-                  <Text fontSize={14} fontWeight="700" color="white">×</Text>
-                )}
-              </XStack>
-            );
-          })}
-        </XStack>
-
-        {/* Low Stock Warning - Enhanced */}
-        {lowStockCount > 0 && (
-          <XStack
-            backgroundColor="#FEF3C7"
-            paddingHorizontal="$4"
-            paddingVertical="$3"
-            borderRadius="$3"
-            alignItems="center"
-            gap="$3"
-            borderWidth={1}
-            borderColor="#FCD34D"
-          >
-            <YStack
-              width={32}
-              height={32}
-              borderRadius={16}
-              backgroundColor="#FDE68A"
-              alignItems="center"
-              justifyContent="center"
-            >
-              <AlertTriangle size={18} color="#D97706" />
-            </YStack>
-            <YStack flex={1}>
-              <Text fontSize="$3" fontWeight="600" color="#92400E">
-                Low Stock Alert
-              </Text>
-              <Text fontSize="$2" color="#B45309">
-                {lowStockCount} product{lowStockCount > 1 ? 's' : ''} running low - consider restocking
-              </Text>
-            </YStack>
-          </XStack>
-        )}
-
-        {/* Products Grid */}
-        {productsLoading ? (
-          <YStack flex={1} justifyContent="center" alignItems="center">
-            <ActivityIndicator size="large" />
-            <Text color="$colorSecondary" marginTop="$2">Loading products...</Text>
-          </YStack>
-        ) : products.length === 0 ? (
-          <YStack flex={1} justifyContent="center" alignItems="center" gap="$3">
-            <Text color="$colorSecondary">No products found</Text>
-            <Button variant="secondary" size="sm" onPress={() => refetchProducts()}>
-              <RefreshCw size={16} />
-              <Text>Refresh</Text>
-            </Button>
-          </YStack>
-        ) : (
-          <FlatList
-            data={filteredProducts}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <ProductItem
-                product={item}
-                onPress={(p) => addItem(p)}
-                size="compact"
-              />
-            )}
-            contentContainerStyle={{ gap: 4, paddingBottom: 20 }}
-            showsVerticalScrollIndicator={false}
-            refreshing={productsRefetching}
-            onRefresh={() => refetchProducts()}
-          />
-        )}
-      </YStack>
-
-      {/* Right Side - Cart */}
+      {/* LEFT Side - Cart */}
       <YStack
         width={isDesktop ? 360 : 300}
         backgroundColor="$cardBackground"
-        borderLeftWidth={1}
-        borderLeftColor="$borderColor"
+        borderRightWidth={1}
+        borderRightColor="$borderColor"
       >
         {/* Compact Cart Header */}
         <XStack
@@ -547,7 +377,7 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
 
           <XStack justifyContent="space-between" alignItems="center">
             <Text fontSize="$4" fontWeight="700">Total</Text>
-            <Text fontSize="$5" fontWeight="700" color={THEME.primary}>
+            <Text fontSize="$5" fontWeight="700" color="$color">
               {formatCurrency(
                 getSubTotal() - getDiscount() + ((getSubTotal() - getDiscount()) * taxRate / 100),
                 settings.currency
@@ -591,7 +421,7 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
 
           {/* Checkout Button */}
           <YStack
-            backgroundColor={items.length === 0 ? '$borderColor' : THEME.primary}
+            backgroundColor={items.length === 0 ? '$borderColor' : '#0D9488'}
             paddingVertical="$3"
             borderRadius="$3"
             alignItems="center"
@@ -617,6 +447,205 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
             )}
           </YStack>
         </YStack>
+      </YStack>
+
+      {/* RIGHT Side - Categories or Products */}
+      <YStack flex={1} padding="$4" gap="$3">
+        {viewMode === 'categories' ? (
+          /* Category Tiles Grid */
+          <>
+            <XStack alignItems="center" justifyContent="space-between">
+              <Text fontSize="$5" fontWeight="600" color="$color">Categories</Text>
+              <Button variant="secondary" size="sm" onPress={() => refetchProducts()}>
+                <RefreshCw size={16} color={productsRefetching ? THEME.primary : '$color'} />
+              </Button>
+            </XStack>
+
+            {categoriesLoading ? (
+              <YStack flex={1} justifyContent="center" alignItems="center">
+                <ActivityIndicator size="large" />
+                <Text color="$colorSecondary" marginTop="$2">Loading categories...</Text>
+              </YStack>
+            ) : (
+              <ScrollView flex={1} showsVerticalScrollIndicator={false}>
+                <XStack flexWrap="wrap">
+                  {/* "All Products" tile - color strip style */}
+                  <YStack width="33.33%" padding={6}>
+                    <XStack
+                      backgroundColor="$cardBackground"
+                      borderRadius="$3"
+                      overflow="hidden"
+                      minHeight={100}
+                      cursor="pointer"
+                      borderWidth={1}
+                      borderColor="$borderColor"
+                      hoverStyle={{
+                        backgroundColor: '$backgroundHover',
+                        borderColor: THEME.primary,
+                      }}
+                      pressStyle={{
+                        opacity: 0.9,
+                        scale: 0.98,
+                      }}
+                      onPress={() => {
+                        setSelectedCategory(null);
+                        setViewMode('products');
+                      }}
+                    >
+                      <YStack width={5} backgroundColor={THEME.primary} />
+                      <YStack flex={1} padding="$3" justifyContent="center">
+                        <Text fontSize="$4" fontWeight="600" color="$color">All Products</Text>
+                      </YStack>
+                    </XStack>
+                  </YStack>
+
+                  {/* Category tiles */}
+                  {categories.map((cat: Category) => (
+                    <YStack key={cat.id} width="33.33%" padding={6}>
+                      <CategoryTile
+                        category={cat}
+                        onPress={() => {
+                          setSelectedCategory(cat.id);
+                          setViewMode('products');
+                        }}
+                      />
+                    </YStack>
+                  ))}
+                </XStack>
+              </ScrollView>
+            )}
+          </>
+        ) : (
+          /* Products View with Back Button */
+          <>
+            <XStack alignItems="center" gap="$3">
+              <YStack
+                padding="$2"
+                backgroundColor="$backgroundHover"
+                borderRadius="$2"
+                cursor="pointer"
+                hoverStyle={{ backgroundColor: '$borderColor' }}
+                onPress={() => setViewMode('categories')}
+              >
+                <ArrowLeft size={20} color="$color" />
+              </YStack>
+              <Text fontSize="$5" fontWeight="600" color="$color">
+                {selectedCategory
+                  ? categories.find((c: Category) => c.id === selectedCategory)?.name || 'Products'
+                  : 'All Products'}
+              </Text>
+              <YStack flex={1} />
+              <Button variant="secondary" size="sm" onPress={() => refetchProducts()}>
+                <RefreshCw size={16} color={productsRefetching ? THEME.primary : '$color'} />
+              </Button>
+            </XStack>
+
+            {/* Search Bar */}
+            <XStack
+              backgroundColor="$cardBackground"
+              borderRadius="$4"
+              paddingHorizontal="$4"
+              paddingVertical="$2"
+              alignItems="center"
+              borderWidth={1}
+              borderColor="$borderColor"
+              gap="$2"
+            >
+              <Search size={20} color="$primary" />
+              <TamaguiInput
+                flex={1}
+                placeholder="Search products by name or SKU..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                borderWidth={0}
+                backgroundColor="transparent"
+                fontSize="$3"
+              />
+              {searchQuery && (
+                <YStack
+                  padding="$1"
+                  borderRadius="$2"
+                  backgroundColor="$backgroundHover"
+                  cursor="pointer"
+                  onPress={() => setSearchQuery('')}
+                >
+                  <Text fontSize="$2" color="$colorSecondary">Clear</Text>
+                </YStack>
+              )}
+            </XStack>
+
+            {/* Low Stock Warning */}
+            {lowStockCount > 0 && (
+              <XStack
+                backgroundColor="#FEF3C7"
+                paddingHorizontal="$4"
+                paddingVertical="$3"
+                borderRadius="$3"
+                alignItems="center"
+                gap="$3"
+                borderWidth={1}
+                borderColor="#FCD34D"
+              >
+                <YStack
+                  width={32}
+                  height={32}
+                  borderRadius={16}
+                  backgroundColor="#FDE68A"
+                  alignItems="center"
+                  justifyContent="center"
+                >
+                  <AlertTriangle size={18} color="#D97706" />
+                </YStack>
+                <YStack flex={1}>
+                  <Text fontSize="$3" fontWeight="600" color="#92400E">
+                    Low Stock Alert
+                  </Text>
+                  <Text fontSize="$2" color="#B45309">
+                    {lowStockCount} product{lowStockCount > 1 ? 's' : ''} running low
+                  </Text>
+                </YStack>
+              </XStack>
+            )}
+
+            {/* Products Grid */}
+            {productsLoading ? (
+              <YStack flex={1} justifyContent="center" alignItems="center">
+                <ActivityIndicator size="large" />
+                <Text color="$colorSecondary" marginTop="$2">Loading products...</Text>
+              </YStack>
+            ) : filteredProducts.length === 0 ? (
+              <YStack flex={1} justifyContent="center" alignItems="center" gap="$3">
+                <Package size={48} color="$colorSecondary" />
+                <Text color="$colorSecondary">No products found</Text>
+                <Button variant="secondary" size="sm" onPress={() => refetchProducts()}>
+                  <RefreshCw size={16} />
+                  <Text>Refresh</Text>
+                </Button>
+              </YStack>
+            ) : (
+              <FlatList
+                data={filteredProducts}
+                keyExtractor={(item) => item.id}
+                numColumns={3}
+                key="products-grid-3"
+                renderItem={({ item }) => (
+                  <YStack flex={1} maxWidth="33.33%" padding={6}>
+                    <ProductItem
+                      product={item}
+                      onPress={(p) => addItem(p)}
+                      size="grid"
+                    />
+                  </YStack>
+                )}
+                contentContainerStyle={{ paddingBottom: 20 }}
+                columnWrapperStyle={{ gap: 0 }}
+                showsVerticalScrollIndicator={false}
+                refreshing={productsRefetching}
+                onRefresh={() => refetchProducts()}
+              />
+            )}
+          </>
+        )}
       </YStack>
 
       {/* Customer Selection Modal */}

@@ -135,11 +135,11 @@ async function seed() {
     // ============ CREATE CATEGORIES ============
     console.log('Creating categories...');
     const categoryData = [
-      { name: 'Electronics', image: '' },
-      { name: 'Clothing', image: '' },
-      { name: 'Food & Beverages', image: '' },
-      { name: 'Home & Garden', image: '' },
-      { name: 'Sports & Outdoors', image: '' },
+      { name: 'Electronics', image: '', color: '#3B82F6' },      // Blue
+      { name: 'Clothing', image: '', color: '#F97316' },         // Orange
+      { name: 'Food & Beverages', image: '', color: '#22C55E' }, // Green
+      { name: 'Home & Garden', image: '', color: '#A855F7' },    // Purple
+      { name: 'Sports & Outdoors', image: '', color: '#EF4444' }, // Red
     ];
 
     const categories: Category[] = [];
@@ -147,6 +147,7 @@ async function seed() {
       const category = categoryRepo.create({
         name: cat.name,
         image: cat.image,
+        color: cat.color,
         businessId: business.id,
         enabled: true,
         count: 0,

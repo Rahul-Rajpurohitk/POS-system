@@ -1,0 +1,1 @@
+export { CategoryTile } from './CategoryTile';

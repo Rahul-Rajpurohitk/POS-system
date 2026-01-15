@@ -66,6 +66,11 @@ const ProductCard = styled(YStack, {
         borderRadius: '$3',
         height: 80,
       },
+      grid: {
+        width: '100%',
+        borderRadius: '$3',
+        minHeight: 140,
+      },
     },
     selected: {
       true: {
@@ -113,6 +118,10 @@ const ImageContainer = styled(YStack, {
         width: 80,
         height: 80,
         flexShrink: 0,
+      },
+      grid: {
+        height: 0,
+        display: 'none',
       },
     },
   } as const,
@@ -182,7 +191,7 @@ const StockBadge = ({ quantity, size }: { quantity: number; size: 'sm' | 'md' | 
 export interface ProductItemProps {
   product: Product;
   onPress: (product: Product) => void;
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'compact';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'compact' | 'grid';
   selected?: boolean;
 }
 
@@ -208,6 +217,77 @@ export function ProductItem({
   // Calculate profit margin for visual indicator
   const profit = (product.sellingPrice || 0) - (product.purchasePrice || 0);
   const profitMargin = product.sellingPrice > 0 ? (profit / product.sellingPrice) * 100 : 0;
+
+  // Grid layout for POS view - shows price, margin, stock in a card with category color strip
+  if (size === 'grid') {
+    const categoryColor = (product.category as any)?.color || '#6B7280'; // Gray fallback
+
+    return (
+      <ProductCard
+        size={size}
+        selected={selected}
+        outOfStock={isOutOfStock}
+        onPress={() => !isOutOfStock && onPress(product)}
+        disabled={isOutOfStock}
+        overflow="hidden"
+      >
+        <XStack flex={1}>
+          {/* Category color strip on left */}
+          <YStack width={5} backgroundColor={categoryColor} />
+
+          {/* Content */}
+          <YStack flex={1} padding="$3" gap="$2">
+            {/* Product Name */}
+            <Text fontSize="$3" fontWeight="600" numberOfLines={2} color="$color">
+              {product.name}
+            </Text>
+
+            {/* SKU */}
+            {product.sku && (
+              <Text fontSize={11} color="$colorSecondary">
+                SKU: {product.sku}
+              </Text>
+            )}
+
+            {/* Stock Status */}
+            <XStack
+              backgroundColor={isOutOfStock ? STOCK_COLORS.outOfStock.bg : stockQty <= 10 ? STOCK_COLORS.lowStock.bg : STOCK_COLORS.inStock.bg}
+              paddingHorizontal={8}
+              paddingVertical={4}
+              borderRadius={4}
+              alignItems="center"
+              alignSelf="flex-start"
+              gap={4}
+            >
+              {stockQty <= 10 && stockQty > 0 && <AlertTriangle size={12} color={STOCK_COLORS.lowStock.text} />}
+              <Text
+                fontSize={11}
+                fontWeight="600"
+                color={isOutOfStock ? STOCK_COLORS.outOfStock.text : stockQty <= 10 ? STOCK_COLORS.lowStock.text : STOCK_COLORS.inStock.text}
+              >
+                {isOutOfStock ? 'Out of Stock' : `${stockQty} in stock`}
+              </Text>
+            </XStack>
+
+            {/* Price and Margin */}
+            <XStack alignItems="flex-end" justifyContent="space-between" marginTop="$1">
+              <Text fontSize="$5" fontWeight="700" color="$color">
+                {formatCurrency(product.sellingPrice, settings.currency)}
+              </Text>
+              {profitMargin > 0 && (
+                <XStack alignItems="center" gap={3}>
+                  <TrendingUp size={12} color="#059669" />
+                  <Text fontSize={11} color="#059669" fontWeight="600">
+                    {profitMargin.toFixed(0)}% margin
+                  </Text>
+                </XStack>
+              )}
+            </XStack>
+          </YStack>
+        </XStack>
+      </ProductCard>
+    );
+  }
 
   // Compact row layout for list view
   if (isCompact) {
