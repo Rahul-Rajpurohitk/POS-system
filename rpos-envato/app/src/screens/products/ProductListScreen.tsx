@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { FlatList, ActivityIndicator, RefreshControl, Pressable, Image } from 'react-native';
+import { FlatList, ActivityIndicator, RefreshControl, Pressable } from 'react-native';
+import { Image } from 'tamagui';
 import { YStack, XStack, Text, Input } from 'tamagui';
 import {
   Search, Plus, Filter, RefreshCw, Eye, Edit, Trash2, Package,
@@ -82,7 +83,9 @@ function TableRow({
   const profit = (product.sellingPrice || 0) - (product.purchasePrice || 0);
   const profitMargin = product.sellingPrice > 0 ? (profit / product.sellingPrice) * 100 : 0;
   const categoryName = product.category?.name || 'Uncategorized';
-  const imageUrl = product.images?.[0]?.url || product.images?.[0];
+  // Handle both object { url: string } and string image formats
+  const firstImage = product.images?.[0];
+  const imageUrl = typeof firstImage === 'string' ? firstImage : firstImage?.url;
 
   return (
     <Pressable onPress={onView}>
@@ -100,8 +103,10 @@ function TableRow({
             {imageUrl ? (
               <Image
                 source={{ uri: imageUrl }}
-                style={{ width: 40, height: 40, borderRadius: 4 }}
-                resizeMode="cover"
+                width={40}
+                height={40}
+                borderRadius="$1"
+                objectFit="cover"
               />
             ) : (
               <YStack
