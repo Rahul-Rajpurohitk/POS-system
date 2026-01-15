@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { FlatList, ActivityIndicator, RefreshControl, Pressable } from 'react-native';
+import { FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { YStack, XStack, Text, Input, Avatar } from 'tamagui';
 import {
   ArrowLeft, Search, Plus, RefreshCw, Users, Mail, Phone,
@@ -130,9 +130,14 @@ export default function CustomersScreen({ navigation }: MoreScreenProps<'Custome
             backgroundColor="transparent"
           />
           {search && (
-            <Pressable onPress={() => setSearch('')}>
-              <Text fontSize="$2" color="$colorSecondary">Clear</Text>
-            </Pressable>
+            <Text
+              fontSize="$2"
+              color="$colorSecondary"
+              cursor="pointer"
+              onPress={() => setSearch('')}
+            >
+              Clear
+            </Text>
           )}
           <YStack
             padding="$2"
@@ -156,81 +161,81 @@ export default function CustomersScreen({ navigation }: MoreScreenProps<'Custome
           renderItem={({ item, index }) => {
             const avatarColor = getAvatarColor(item.name);
             return (
-              <Pressable onPress={() => navigation.navigate('CustomerDetail', { id: item.id })}>
-                {({ pressed }) => (
+              <YStack
+                backgroundColor="$cardBackground"
+                borderRadius="$4"
+                padding="$4"
+                marginBottom="$3"
+                borderWidth={1}
+                borderColor="$borderColor"
+                shadowColor="#000"
+                shadowOffset={{ width: 0, height: 2 }}
+                shadowOpacity={0.05}
+                shadowRadius={8}
+                cursor="pointer"
+                hoverStyle={{ backgroundColor: '$backgroundHover', borderColor: '#7C3AED' }}
+                pressStyle={{ backgroundColor: '$backgroundPress' }}
+                onPress={() => navigation.navigate('CustomerDetail', { id: item.id })}
+              >
+                <XStack alignItems="center" gap="$4">
+                  {/* Enhanced Avatar */}
                   <YStack
-                    backgroundColor={pressed ? '$backgroundHover' : '$cardBackground'}
-                    borderRadius="$4"
-                    padding="$4"
-                    marginBottom="$3"
-                    borderWidth={1}
-                    borderColor={pressed ? '#7C3AED' : '$borderColor'}
-                    shadowColor="#000"
-                    shadowOffset={{ width: 0, height: 2 }}
-                    shadowOpacity={0.05}
+                    width={56}
+                    height={56}
+                    borderRadius={28}
+                    backgroundColor={avatarColor}
+                    alignItems="center"
+                    justifyContent="center"
+                    shadowColor={avatarColor}
+                    shadowOffset={{ width: 0, height: 4 }}
+                    shadowOpacity={0.3}
                     shadowRadius={8}
                   >
-                    <XStack alignItems="center" gap="$4">
-                      {/* Enhanced Avatar */}
-                      <YStack
-                        width={56}
-                        height={56}
-                        borderRadius={28}
-                        backgroundColor={avatarColor}
-                        alignItems="center"
-                        justifyContent="center"
-                        shadowColor={avatarColor}
-                        shadowOffset={{ width: 0, height: 4 }}
-                        shadowOpacity={0.3}
-                        shadowRadius={8}
-                      >
-                        <Text color="white" fontWeight="bold" fontSize="$5">
-                          {getInitials(item.name)}
-                        </Text>
-                      </YStack>
-
-                      {/* Customer Info */}
-                      <YStack flex={1} gap="$1">
-                        <XStack alignItems="center" gap="$2">
-                          <Text fontSize="$4" fontWeight="600" color="$color">
-                            {item.name}
-                          </Text>
-                          {index < 3 && (
-                            <YStack
-                              paddingHorizontal="$2"
-                              paddingVertical={2}
-                              borderRadius="$2"
-                              backgroundColor="#FEF3C7"
-                            >
-                              <XStack alignItems="center" gap={4}>
-                                <Star size={10} color="#D97706" fill="#D97706" />
-                                <Text fontSize={9} fontWeight="600" color="#D97706">VIP</Text>
-                              </XStack>
-                            </YStack>
-                          )}
-                        </XStack>
-
-                        {item.email && (
-                          <XStack alignItems="center" gap="$2">
-                            <Mail size={12} color="$colorSecondary" />
-                            <Text fontSize="$2" color="$colorSecondary">{item.email}</Text>
-                          </XStack>
-                        )}
-
-                        {item.phone && (
-                          <XStack alignItems="center" gap="$2">
-                            <Phone size={12} color="$colorSecondary" />
-                            <Text fontSize="$2" color="$colorSecondary">{item.phone}</Text>
-                          </XStack>
-                        )}
-                      </YStack>
-
-                      {/* Arrow */}
-                      <ChevronRight size={20} color="$colorSecondary" />
-                    </XStack>
+                    <Text color="white" fontWeight="bold" fontSize="$5">
+                      {getInitials(item.name)}
+                    </Text>
                   </YStack>
-                )}
-              </Pressable>
+
+                  {/* Customer Info */}
+                  <YStack flex={1} gap="$1">
+                    <XStack alignItems="center" gap="$2">
+                      <Text fontSize="$4" fontWeight="600" color="$color">
+                        {item.name}
+                      </Text>
+                      {index < 3 && (
+                        <YStack
+                          paddingHorizontal="$2"
+                          paddingVertical={2}
+                          borderRadius="$2"
+                          backgroundColor="#FEF3C7"
+                        >
+                          <XStack alignItems="center" gap={4}>
+                            <Star size={10} color="#D97706" fill="#D97706" />
+                            <Text fontSize={9} fontWeight="600" color="#D97706">VIP</Text>
+                          </XStack>
+                        </YStack>
+                      )}
+                    </XStack>
+
+                    {item.email && (
+                      <XStack alignItems="center" gap="$2">
+                        <Mail size={12} color="$colorSecondary" />
+                        <Text fontSize="$2" color="$colorSecondary">{item.email}</Text>
+                      </XStack>
+                    )}
+
+                    {item.phone && (
+                      <XStack alignItems="center" gap="$2">
+                        <Phone size={12} color="$colorSecondary" />
+                        <Text fontSize="$2" color="$colorSecondary">{item.phone}</Text>
+                      </XStack>
+                    )}
+                  </YStack>
+
+                  {/* Arrow */}
+                  <ChevronRight size={20} color="$colorSecondary" />
+                </XStack>
+              </YStack>
             );
           }}
           ListEmptyComponent={

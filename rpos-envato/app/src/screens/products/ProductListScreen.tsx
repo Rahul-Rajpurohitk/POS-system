@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { FlatList, ActivityIndicator, RefreshControl, Pressable } from 'react-native';
+import { FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { Image } from 'tamagui';
 import { YStack, XStack, Text, Input } from 'tamagui';
 import {
@@ -88,123 +88,123 @@ function TableRow({
   const imageUrl = typeof firstImage === 'string' ? firstImage : firstImage?.url;
 
   return (
-    <Pressable onPress={onView}>
-      {({ pressed }) => (
-        <XStack
-          paddingVertical="$2"
-          paddingHorizontal="$3"
-          borderBottomWidth={1}
-          borderBottomColor="$borderColor"
-          backgroundColor={pressed ? '$backgroundHover' : '$cardBackground'}
-          alignItems="center"
-        >
-          {/* Product Image */}
-          <YStack width={50} alignItems="center">
-            {imageUrl ? (
-              <Image
-                source={{ uri: imageUrl }}
-                width={40}
-                height={40}
-                borderRadius="$1"
-                objectFit="cover"
-              />
-            ) : (
-              <YStack
-                width={40}
-                height={40}
-                backgroundColor="$backgroundHover"
-                borderRadius="$1"
-                justifyContent="center"
-                alignItems="center"
-              >
-                <Package size={20} color="$colorSecondary" />
-              </YStack>
-            )}
+    <XStack
+      paddingVertical="$2"
+      paddingHorizontal="$3"
+      borderBottomWidth={1}
+      borderBottomColor="$borderColor"
+      backgroundColor="$cardBackground"
+      alignItems="center"
+      cursor="pointer"
+      hoverStyle={{ backgroundColor: '$backgroundHover' }}
+      pressStyle={{ backgroundColor: '$backgroundPress' }}
+      onPress={onView}
+    >
+      {/* Product Image */}
+      <YStack width={50} alignItems="center">
+        {imageUrl ? (
+          <Image
+            source={{ uri: imageUrl }}
+            width={40}
+            height={40}
+            borderRadius="$1"
+            objectFit="cover"
+          />
+        ) : (
+          <YStack
+            width={40}
+            height={40}
+            backgroundColor="$backgroundHover"
+            borderRadius="$1"
+            justifyContent="center"
+            alignItems="center"
+          >
+            <Package size={20} color="$colorSecondary" />
           </YStack>
+        )}
+      </YStack>
 
-          {/* Product Name */}
-          <YStack flex={1}>
-            <Text fontSize="$3" fontWeight="500" numberOfLines={1}>{product.name}</Text>
-            {!isDesktop && (
-              <Text fontSize="$2" color="$colorSecondary" numberOfLines={1}>
-                SKU: {product.sku || 'N/A'}
-              </Text>
-            )}
-          </YStack>
-
-          {/* SKU */}
-          {isDesktop && (
-            <Text width={100} fontSize="$2" color="$colorSecondary" numberOfLines={1}>
-              {product.sku || 'N/A'}
-            </Text>
-          )}
-
-          {/* Category */}
-          <XStack width={100}>
-            <Badge variant="info" size="sm">
-              {categoryName.length > 10 ? categoryName.substring(0, 10) + '...' : categoryName}
-            </Badge>
-          </XStack>
-
-          {/* Stock */}
-          <XStack width={80} justifyContent="center">
-            <Badge variant={getStockBadgeVariant(stockQty)} size="sm">
-              {stockQty}
-            </Badge>
-          </XStack>
-
-          {/* Cost */}
-          {isDesktop && (
-            <Text width={90} fontSize="$2" color="$colorSecondary" textAlign="right">
-              {formatCurrency(product.purchasePrice, settings.currency)}
-            </Text>
-          )}
-
-          {/* Price */}
-          <Text width={90} fontSize="$3" fontWeight="600" textAlign="right" color="$accent">
-            {formatCurrency(product.sellingPrice, settings.currency)}
+      {/* Product Name */}
+      <YStack flex={1}>
+        <Text fontSize="$3" fontWeight="500" numberOfLines={1}>{product.name}</Text>
+        {!isDesktop && (
+          <Text fontSize="$2" color="$colorSecondary" numberOfLines={1}>
+            SKU: {product.sku || 'N/A'}
           </Text>
+        )}
+      </YStack>
 
-          {/* Profit */}
-          {isDesktop && (
-            <YStack width={90} alignItems="flex-end">
-              <Text fontSize="$2" color={profit > 0 ? '$success' : '$colorSecondary'} fontWeight="500">
-                {profit > 0 ? '+' : ''}{formatCurrency(profit, settings.currency)}
-              </Text>
-              {profit > 0 && (
-                <Text fontSize="$1" color="$success">
-                  {profitMargin.toFixed(0)}%
-                </Text>
-              )}
-            </YStack>
-          )}
-
-          {/* Actions */}
-          <XStack width={80} justifyContent="center" gap="$2">
-            <Pressable onPress={(e) => { e.stopPropagation(); onView(); }}>
-              <YStack
-                padding="$1"
-                borderRadius="$1"
-                backgroundColor="$backgroundHover"
-                hoverStyle={{ backgroundColor: '$primary' }}
-              >
-                <Eye size={16} color="$primary" />
-              </YStack>
-            </Pressable>
-            <Pressable onPress={(e) => { e.stopPropagation(); onEdit(); }}>
-              <YStack
-                padding="$1"
-                borderRadius="$1"
-                backgroundColor="$backgroundHover"
-                hoverStyle={{ backgroundColor: '$primary' }}
-              >
-                <Edit size={16} color="$colorSecondary" />
-              </YStack>
-            </Pressable>
-          </XStack>
-        </XStack>
+      {/* SKU */}
+      {isDesktop && (
+        <Text width={100} fontSize="$2" color="$colorSecondary" numberOfLines={1}>
+          {product.sku || 'N/A'}
+        </Text>
       )}
-    </Pressable>
+
+      {/* Category */}
+      <XStack width={100}>
+        <Badge variant="info" size="sm">
+          {categoryName.length > 10 ? categoryName.substring(0, 10) + '...' : categoryName}
+        </Badge>
+      </XStack>
+
+      {/* Stock */}
+      <XStack width={80} justifyContent="center">
+        <Badge variant={getStockBadgeVariant(stockQty)} size="sm">
+          {stockQty}
+        </Badge>
+      </XStack>
+
+      {/* Cost */}
+      {isDesktop && (
+        <Text width={90} fontSize="$2" color="$colorSecondary" textAlign="right">
+          {formatCurrency(product.purchasePrice, settings.currency)}
+        </Text>
+      )}
+
+      {/* Price */}
+      <Text width={90} fontSize="$3" fontWeight="600" textAlign="right" color="$accent">
+        {formatCurrency(product.sellingPrice, settings.currency)}
+      </Text>
+
+      {/* Profit */}
+      {isDesktop && (
+        <YStack width={90} alignItems="flex-end">
+          <Text fontSize="$2" color={profit > 0 ? '$success' : '$colorSecondary'} fontWeight="500">
+            {profit > 0 ? '+' : ''}{formatCurrency(profit, settings.currency)}
+          </Text>
+          {profit > 0 && (
+            <Text fontSize="$1" color="$success">
+              {profitMargin.toFixed(0)}%
+            </Text>
+          )}
+        </YStack>
+      )}
+
+      {/* Actions */}
+      <XStack width={80} justifyContent="center" gap="$2">
+        <YStack
+          padding="$1"
+          borderRadius="$1"
+          backgroundColor="$backgroundHover"
+          cursor="pointer"
+          hoverStyle={{ backgroundColor: '$primary' }}
+          onPress={(e: any) => { e.stopPropagation(); onView(); }}
+        >
+          <Eye size={16} color="$primary" />
+        </YStack>
+        <YStack
+          padding="$1"
+          borderRadius="$1"
+          backgroundColor="$backgroundHover"
+          cursor="pointer"
+          hoverStyle={{ backgroundColor: '$primary' }}
+          onPress={(e: any) => { e.stopPropagation(); onEdit(); }}
+        >
+          <Edit size={16} color="$colorSecondary" />
+        </YStack>
+      </XStack>
+    </XStack>
   );
 }
 
@@ -465,9 +465,14 @@ export default function ProductListScreen({ navigation }: ProductScreenProps<'Pr
             size="$3"
           />
           {search && (
-            <Pressable onPress={() => setSearch('')}>
-              <Text fontSize="$2" color="$colorSecondary">Clear</Text>
-            </Pressable>
+            <Text
+              fontSize="$2"
+              color="$colorSecondary"
+              cursor="pointer"
+              onPress={() => setSearch('')}
+            >
+              Clear
+            </Text>
           )}
         </XStack>
         <Button variant="ghost" size="icon" onPress={() => refetch()} marginLeft="$2">

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { FlatList, ActivityIndicator, RefreshControl, Pressable, ScrollView } from 'react-native';
+import { FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { YStack, XStack, Text, Input } from 'tamagui';
 import {
   Search, RefreshCw, ChevronRight, Eye, Edit, ShoppingBag,
@@ -90,70 +90,70 @@ function TableRow({
   const status = order.status || 'completed';
 
   return (
-    <Pressable onPress={onView}>
-      {({ pressed }) => (
-        <XStack
-          paddingVertical="$3"
-          paddingHorizontal="$3"
-          borderBottomWidth={1}
-          borderBottomColor="$borderColor"
-          backgroundColor={pressed ? '$backgroundHover' : '$cardBackground'}
-          alignItems="center"
-        >
-          <Text width={100} fontSize="$3" fontWeight="500" color="$accent">
-            {orderNumber}
+    <XStack
+      paddingVertical="$3"
+      paddingHorizontal="$3"
+      borderBottomWidth={1}
+      borderBottomColor="$borderColor"
+      backgroundColor="$cardBackground"
+      alignItems="center"
+      cursor="pointer"
+      hoverStyle={{ backgroundColor: '$backgroundHover' }}
+      pressStyle={{ backgroundColor: '$backgroundPress' }}
+      onPress={onView}
+    >
+      <Text width={100} fontSize="$3" fontWeight="500" color="$accent">
+        {orderNumber}
+      </Text>
+      <YStack flex={1}>
+        <Text fontSize="$3" numberOfLines={1}>{customerName}</Text>
+        {!isDesktop && (
+          <Text fontSize="$2" color="$colorSecondary">
+            {itemCount} {itemCount === 1 ? 'item' : 'items'} • {formatDate(order.createdAt, 'MMM d, h:mm a')}
           </Text>
-          <YStack flex={1}>
-            <Text fontSize="$3" numberOfLines={1}>{customerName}</Text>
-            {!isDesktop && (
-              <Text fontSize="$2" color="$colorSecondary">
-                {itemCount} {itemCount === 1 ? 'item' : 'items'} • {formatDate(order.createdAt, 'MMM d, h:mm a')}
-              </Text>
-            )}
-          </YStack>
-          {isDesktop && (
-            <Text width={80} fontSize="$3" textAlign="center" color="$colorSecondary">
-              {itemCount}
-            </Text>
-          )}
-          <Text width={100} fontSize="$3" fontWeight="600" textAlign="right">
-            {formatCurrency(payment.total, settings.currency)}
-          </Text>
-          <XStack width={100} justifyContent="center">
-            <Badge variant={getStatusBadgeVariant(status)} size="sm">
-              {formatStatus(status)}
-            </Badge>
-          </XStack>
-          {isDesktop && (
-            <Text width={150} fontSize="$2" color="$colorSecondary">
-              {formatDate(order.createdAt, 'MMM d, yyyy h:mm a')}
-            </Text>
-          )}
-          <XStack width={80} justifyContent="center" gap="$2">
-            <Pressable onPress={(e) => { e.stopPropagation(); onView(); }}>
-              <YStack
-                padding="$1"
-                borderRadius="$1"
-                backgroundColor="$backgroundHover"
-                hoverStyle={{ backgroundColor: '$primary' }}
-              >
-                <Eye size={16} color="$primary" />
-              </YStack>
-            </Pressable>
-            <Pressable onPress={(e) => { e.stopPropagation(); onEdit(); }}>
-              <YStack
-                padding="$1"
-                borderRadius="$1"
-                backgroundColor="$backgroundHover"
-                hoverStyle={{ backgroundColor: '$primary' }}
-              >
-                <Edit size={16} color="$colorSecondary" />
-              </YStack>
-            </Pressable>
-          </XStack>
-        </XStack>
+        )}
+      </YStack>
+      {isDesktop && (
+        <Text width={80} fontSize="$3" textAlign="center" color="$colorSecondary">
+          {itemCount}
+        </Text>
       )}
-    </Pressable>
+      <Text width={100} fontSize="$3" fontWeight="600" textAlign="right">
+        {formatCurrency(payment.total, settings.currency)}
+      </Text>
+      <XStack width={100} justifyContent="center">
+        <Badge variant={getStatusBadgeVariant(status)} size="sm">
+          {formatStatus(status)}
+        </Badge>
+      </XStack>
+      {isDesktop && (
+        <Text width={150} fontSize="$2" color="$colorSecondary">
+          {formatDate(order.createdAt, 'MMM d, yyyy h:mm a')}
+        </Text>
+      )}
+      <XStack width={80} justifyContent="center" gap="$2">
+        <YStack
+          padding="$1"
+          borderRadius="$1"
+          backgroundColor="$backgroundHover"
+          cursor="pointer"
+          hoverStyle={{ backgroundColor: '$primary' }}
+          onPress={(e: any) => { e.stopPropagation(); onView(); }}
+        >
+          <Eye size={16} color="$primary" />
+        </YStack>
+        <YStack
+          padding="$1"
+          borderRadius="$1"
+          backgroundColor="$backgroundHover"
+          cursor="pointer"
+          hoverStyle={{ backgroundColor: '$primary' }}
+          onPress={(e: any) => { e.stopPropagation(); onEdit(); }}
+        >
+          <Edit size={16} color="$colorSecondary" />
+        </YStack>
+      </XStack>
+    </XStack>
   );
 }
 
@@ -411,9 +411,14 @@ export default function OrderListScreen({ navigation }: OrderScreenProps<'OrderL
             size="$3"
           />
           {search && (
-            <Pressable onPress={() => setSearch('')}>
-              <Text fontSize="$2" color="$colorSecondary">Clear</Text>
-            </Pressable>
+            <Text
+              fontSize="$2"
+              color="$colorSecondary"
+              cursor="pointer"
+              onPress={() => setSearch('')}
+            >
+              Clear
+            </Text>
           )}
         </XStack>
       </XStack>
