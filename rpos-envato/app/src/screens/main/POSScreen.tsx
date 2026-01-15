@@ -3,8 +3,8 @@ import { FlatList, ActivityIndicator, ScrollView as RNScrollView } from 'react-n
 import { YStack, XStack, Text, ScrollView, Input as TamaguiInput, Separator } from 'tamagui';
 import {
   Search, User, Ticket, Trash2, RefreshCw, Grid, AlertTriangle,
-  ShoppingCart, CheckCircle, CreditCard, Percent, Tag, Package,
-  ChevronRight, Clock, Star,
+  ShoppingCart, CheckCircle, CreditCard, Package,
+  ChevronRight,
 } from '@tamagui/lucide-icons';
 import { Button, Card, Modal, Badge } from '@/components/ui';
 import { ProductItem } from '@/components/product';
@@ -16,6 +16,7 @@ import { useProducts } from '@/features/products/hooks';
 import { useCustomers } from '@/features/customers/hooks';
 import { useActiveCoupons } from '@/features/coupons/hooks';
 import { useCategories } from '@/features/categories/hooks';
+import { useAppSettings } from '@/features/settings/hooks';
 import { post } from '@/services/api/client';
 import type { MainTabScreenProps } from '@/navigation/types';
 import type { Order, Category } from '@/types';
@@ -27,6 +28,60 @@ const THEME = {
   warning: '#F59E0B',
   error: '#EF4444',
   accent: '#8B5CF6',
+};
+
+// US State Tax Rates (auto-selected based on business profile)
+const US_STATE_TAX_RATES: Record<string, { name: string; rate: number }> = {
+  'AL': { name: 'Alabama', rate: 4.0 },
+  'AK': { name: 'Alaska', rate: 0 },
+  'AZ': { name: 'Arizona', rate: 5.6 },
+  'AR': { name: 'Arkansas', rate: 6.5 },
+  'CA': { name: 'California', rate: 7.25 },
+  'CO': { name: 'Colorado', rate: 2.9 },
+  'CT': { name: 'Connecticut', rate: 6.35 },
+  'DE': { name: 'Delaware', rate: 0 },
+  'FL': { name: 'Florida', rate: 6.0 },
+  'GA': { name: 'Georgia', rate: 4.0 },
+  'HI': { name: 'Hawaii', rate: 4.0 },
+  'ID': { name: 'Idaho', rate: 6.0 },
+  'IL': { name: 'Illinois', rate: 6.25 },
+  'IN': { name: 'Indiana', rate: 7.0 },
+  'IA': { name: 'Iowa', rate: 6.0 },
+  'KS': { name: 'Kansas', rate: 6.5 },
+  'KY': { name: 'Kentucky', rate: 6.0 },
+  'LA': { name: 'Louisiana', rate: 4.45 },
+  'ME': { name: 'Maine', rate: 5.5 },
+  'MD': { name: 'Maryland', rate: 6.0 },
+  'MA': { name: 'Massachusetts', rate: 6.25 },
+  'MI': { name: 'Michigan', rate: 6.0 },
+  'MN': { name: 'Minnesota', rate: 6.875 },
+  'MS': { name: 'Mississippi', rate: 7.0 },
+  'MO': { name: 'Missouri', rate: 4.225 },
+  'MT': { name: 'Montana', rate: 0 },
+  'NE': { name: 'Nebraska', rate: 5.5 },
+  'NV': { name: 'Nevada', rate: 6.85 },
+  'NH': { name: 'New Hampshire', rate: 0 },
+  'NJ': { name: 'New Jersey', rate: 6.625 },
+  'NM': { name: 'New Mexico', rate: 5.125 },
+  'NY': { name: 'New York', rate: 4.0 },
+  'NC': { name: 'North Carolina', rate: 4.75 },
+  'ND': { name: 'North Dakota', rate: 5.0 },
+  'OH': { name: 'Ohio', rate: 5.75 },
+  'OK': { name: 'Oklahoma', rate: 4.5 },
+  'OR': { name: 'Oregon', rate: 0 },
+  'PA': { name: 'Pennsylvania', rate: 6.0 },
+  'RI': { name: 'Rhode Island', rate: 7.0 },
+  'SC': { name: 'South Carolina', rate: 6.0 },
+  'SD': { name: 'South Dakota', rate: 4.5 },
+  'TN': { name: 'Tennessee', rate: 7.0 },
+  'TX': { name: 'Texas', rate: 6.25 },
+  'UT': { name: 'Utah', rate: 6.1 },
+  'VT': { name: 'Vermont', rate: 6.0 },
+  'VA': { name: 'Virginia', rate: 5.3 },
+  'WA': { name: 'Washington', rate: 6.5 },
+  'WV': { name: 'West Virginia', rate: 6.0 },
+  'WI': { name: 'Wisconsin', rate: 5.0 },
+  'WY': { name: 'Wyoming', rate: 4.0 },
 };
 
 export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
@@ -55,6 +110,24 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
   const [customerModalVisible, setCustomerModalVisible] = useState(false);
   const [couponModalVisible, setCouponModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>('cash');
+
+  // Fetch business settings from API
+  const { data: appSettings } = useAppSettings();
+
+  // Auto-calculate tax based on business location (US state-based)
+  const taxRate = useMemo(() => {
+    // If business has a US state, use state-based tax rate
+    const businessState = (appSettings as any)?.state;
+    const businessCountry = (appSettings as any)?.country || 'US';
+
+    if (businessCountry === 'US' && businessState && US_STATE_TAX_RATES[businessState]) {
+      return US_STATE_TAX_RATES[businessState].rate;
+    }
+
+    // Fall back to stored tax rate from business settings
+    return appSettings?.tax ?? settings.tax ?? 0;
+  }, [appSettings, settings.tax]);
 
   // Fetch real data from API
   const {
@@ -83,7 +156,10 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
   const products = productsData?.data ?? [];
   const customers = customersData?.data ?? [];
   const coupons = couponsData?.data ?? [];
-  const categories = categoriesData?.data ?? [];
+  // Filter out test/regression categories
+  const categories = (categoriesData?.data ?? []).filter(
+    (c: Category) => !c.name.toLowerCase().includes('test') && !c.name.toLowerCase().includes('regression')
+  );
 
   // Filter products by search and category
   const filteredProducts = useMemo(() => {
@@ -152,6 +228,7 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
           customerId: order.customer?.id,
           couponId: order.coupon?.id,
           payment: order.payment,
+          paymentMethod,
         });
       }
 
@@ -213,81 +290,65 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
           </Button>
         </XStack>
 
-        {/* Category Filter Bar - Enhanced Pills */}
-        <YStack minHeight={48}>
-          <RNScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 4, paddingVertical: 8 }}
+        {/* Category Filter Pills */}
+        <XStack
+          gap={8}
+          paddingVertical={8}
+          paddingHorizontal={4}
+          flexWrap="wrap"
+        >
+          {/* All Products Pill */}
+          <YStack
+            paddingHorizontal={16}
+            paddingVertical={8}
+            borderRadius={20}
+            backgroundColor={!selectedCategory ? THEME.primary : '#F3F4F6'}
+            cursor="pointer"
+            onPress={() => setSelectedCategory(null)}
+            hoverStyle={{ opacity: 0.9 }}
+            pressStyle={{ transform: [{ scale: 0.97 }] }}
           >
-            <XStack gap="$2" alignItems="center">
-            <YStack
-              paddingHorizontal="$4"
-              paddingVertical="$2"
-              borderRadius="$4"
-              backgroundColor={selectedCategory === null ? THEME.primary : '$cardBackground'}
-              borderWidth={1}
-              borderColor={selectedCategory === null ? THEME.primary : '$borderColor'}
-              cursor="pointer"
-              onPress={() => setSelectedCategory(null)}
-              hoverStyle={{ borderColor: THEME.primary }}
-              pressStyle={{ transform: [{ scale: 0.97 }] }}
+            <Text
+              fontSize={13}
+              fontWeight="600"
+              color={!selectedCategory ? 'white' : '#374151'}
             >
-              <XStack alignItems="center" gap="$2">
-                <Grid size={14} color={selectedCategory === null ? 'white' : '$color'} />
-                <Text fontSize="$2" fontWeight="600" color={selectedCategory === null ? 'white' : '$color'}>
-                  All Products
+              All Products
+            </Text>
+          </YStack>
+
+          {/* Category Pills */}
+          {categories.map((cat: Category) => {
+            const isSelected = selectedCategory === cat.id;
+            return (
+              <XStack
+                key={cat.id}
+                paddingHorizontal={16}
+                paddingVertical={8}
+                borderRadius={20}
+                backgroundColor={isSelected ? THEME.primary : '#F3F4F6'}
+                cursor="pointer"
+                onPress={() => setSelectedCategory(isSelected ? null : cat.id)}
+                hoverStyle={{ opacity: 0.9 }}
+                pressStyle={{ transform: [{ scale: 0.97 }] }}
+                alignItems="center"
+                gap={6}
+              >
+                <Text
+                  fontSize={13}
+                  fontWeight="600"
+                  color={isSelected ? 'white' : '#374151'}
+                >
+                  {cat.name}
                 </Text>
-                <YStack
-                  backgroundColor={selectedCategory === null ? 'rgba(255,255,255,0.2)' : '$backgroundHover'}
-                  paddingHorizontal="$2"
-                  paddingVertical={2}
-                  borderRadius="$2"
-                >
-                  <Text fontSize={10} fontWeight="700" color={selectedCategory === null ? 'white' : '$colorSecondary'}>
-                    {products.length}
-                  </Text>
-                </YStack>
+                {/* X to clear selection */}
+                {isSelected && (
+                  <Text fontSize={14} fontWeight="700" color="white">×</Text>
+                )}
               </XStack>
-            </YStack>
-            {categories.map((cat: Category) => {
-              const categoryProductCount = products.filter((p) => p.category?.id === cat.id).length;
-              const isSelected = selectedCategory === cat.id;
-              return (
-                <YStack
-                  key={cat.id}
-                  paddingHorizontal="$4"
-                  paddingVertical="$2"
-                  borderRadius="$4"
-                  backgroundColor={isSelected ? THEME.primary : '$cardBackground'}
-                  borderWidth={1}
-                  borderColor={isSelected ? THEME.primary : '$borderColor'}
-                  cursor="pointer"
-                  onPress={() => setSelectedCategory(cat.id)}
-                  hoverStyle={{ borderColor: THEME.primary }}
-                  pressStyle={{ transform: [{ scale: 0.97 }] }}
-                >
-                  <XStack alignItems="center" gap="$2">
-                    <Text fontSize="$2" fontWeight="600" color={isSelected ? 'white' : '$color'}>
-                      {cat.name}
-                    </Text>
-                    <YStack
-                      backgroundColor={isSelected ? 'rgba(255,255,255,0.2)' : '$backgroundHover'}
-                      paddingHorizontal="$2"
-                      paddingVertical={2}
-                      borderRadius="$2"
-                    >
-                      <Text fontSize={10} fontWeight="700" color={isSelected ? 'white' : '$colorSecondary'}>
-                        {categoryProductCount}
-                      </Text>
-                    </YStack>
-                  </XStack>
-                </YStack>
-              );
-            })}
-          </XStack>
-        </RNScrollView>
-        </YStack>
+            );
+          })}
+        </XStack>
 
         {/* Low Stock Warning - Enhanced */}
         {lowStockCount > 0 && (
@@ -340,17 +401,14 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
           <FlatList
             data={filteredProducts}
             keyExtractor={(item) => item.id}
-            numColumns={numColumns}
-            key={numColumns}
             renderItem={({ item }) => (
               <ProductItem
                 product={item}
                 onPress={(p) => addItem(p)}
-                size={isDesktop ? 'sm' : 'xs'}
+                size="compact"
               />
             )}
-            contentContainerStyle={{ gap: 8, paddingBottom: 20 }}
-            columnWrapperStyle={numColumns > 1 ? { gap: 8 } : undefined}
+            contentContainerStyle={{ gap: 4, paddingBottom: 20 }}
             showsVerticalScrollIndicator={false}
             refreshing={productsRefetching}
             onRefresh={() => refetchProducts()}
@@ -360,145 +418,90 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
 
       {/* Right Side - Cart */}
       <YStack
-        width={isDesktop ? 420 : 340}
+        width={isDesktop ? 360 : 300}
         backgroundColor="$cardBackground"
         borderLeftWidth={1}
         borderLeftColor="$borderColor"
       >
-        {/* Enhanced Cart Header */}
-        <YStack
-          padding="$4"
+        {/* Compact Cart Header */}
+        <XStack
+          padding="$3"
           borderBottomWidth={1}
           borderBottomColor="$borderColor"
           backgroundColor="$background"
+          justifyContent="space-between"
+          alignItems="center"
         >
-          <XStack justifyContent="space-between" alignItems="center">
-            <XStack alignItems="center" gap="$3">
-              <YStack
-                width={44}
-                height={44}
-                borderRadius={22}
-                backgroundColor={THEME.primary}
-                alignItems="center"
-                justifyContent="center"
-              >
-                <ShoppingCart size={22} color="white" />
-              </YStack>
-              <YStack>
-                <Text fontSize="$5" fontWeight="bold" color="$color">Current Order</Text>
-                <Text fontSize="$2" color="$colorSecondary">
-                  {items.length} {items.length === 1 ? 'item' : 'items'} in cart
-                </Text>
-              </YStack>
-            </XStack>
-            {items.length > 0 && (
-              <YStack
-                padding="$2"
-                borderRadius="$2"
-                backgroundColor="#FEE2E2"
-                cursor="pointer"
-                hoverStyle={{ backgroundColor: '#FECACA' }}
-                pressStyle={{ transform: [{ scale: 0.95 }] }}
-                onPress={clear}
-              >
-                <Trash2 size={18} color="#DC2626" />
-              </YStack>
-            )}
+          <XStack alignItems="center" gap="$2">
+            <ShoppingCart size={18} color={THEME.primary} />
+            <Text fontSize="$4" fontWeight="600" color="$color">Order</Text>
+            <Badge variant="primary" size="sm">{items.length}</Badge>
           </XStack>
-        </YStack>
+          {items.length > 0 && (
+            <YStack
+              padding="$1"
+              borderRadius="$1"
+              cursor="pointer"
+              hoverStyle={{ backgroundColor: '#FEE2E2' }}
+              onPress={clear}
+            >
+              <Trash2 size={16} color="#DC2626" />
+            </YStack>
+          )}
+        </XStack>
 
-        {/* Customer & Coupon Selection - Enhanced */}
-        <XStack padding="$3" gap="$2" borderBottomWidth={1} borderBottomColor="$borderColor">
-          <YStack
+        {/* Compact Customer & Coupon Selection */}
+        <XStack padding="$2" gap="$2" borderBottomWidth={1} borderBottomColor="$borderColor">
+          <XStack
             flex={1}
-            padding="$3"
-            borderRadius="$3"
+            padding="$2"
+            borderRadius="$2"
             backgroundColor={customer ? '#EEF2FF' : '$backgroundHover'}
             borderWidth={1}
-            borderColor={customer ? THEME.primary : '$borderColor'}
+            borderColor={customer ? THEME.primary : 'transparent'}
             cursor="pointer"
             onPress={() => setCustomerModalVisible(true)}
-            hoverStyle={{ borderColor: THEME.primary }}
-            pressStyle={{ transform: [{ scale: 0.98 }] }}
+            alignItems="center"
+            gap="$2"
           >
-            <XStack alignItems="center" gap="$2">
-              <YStack
-                width={32}
-                height={32}
-                borderRadius={16}
-                backgroundColor={customer ? THEME.primary : '$borderColor'}
-                alignItems="center"
-                justifyContent="center"
-              >
-                <User size={16} color={customer ? 'white' : '$colorSecondary'} />
-              </YStack>
-              <YStack flex={1}>
-                <Text fontSize="$2" color="$colorSecondary">Customer</Text>
-                <Text fontSize="$3" fontWeight="600" color={customer ? THEME.primary : '$color'} numberOfLines={1}>
-                  {customer ? customer.name : 'Walk-in'}
-                </Text>
-              </YStack>
-              <ChevronRight size={16} color="$colorSecondary" />
-            </XStack>
-          </YStack>
+            <User size={14} color={customer ? THEME.primary : '$colorSecondary'} />
+            <Text fontSize="$2" fontWeight="500" color={customer ? THEME.primary : '$color'} numberOfLines={1} flex={1}>
+              {customer ? customer.name : 'Walk-in'}
+            </Text>
+            <ChevronRight size={12} color="$colorSecondary" />
+          </XStack>
 
-          <YStack
+          <XStack
             flex={1}
-            padding="$3"
-            borderRadius="$3"
+            padding="$2"
+            borderRadius="$2"
             backgroundColor={coupon ? '#ECFDF5' : '$backgroundHover'}
             borderWidth={1}
-            borderColor={coupon ? THEME.success : '$borderColor'}
+            borderColor={coupon ? THEME.success : 'transparent'}
             cursor="pointer"
             onPress={() => setCouponModalVisible(true)}
-            hoverStyle={{ borderColor: THEME.success }}
-            pressStyle={{ transform: [{ scale: 0.98 }] }}
+            alignItems="center"
+            gap="$2"
           >
-            <XStack alignItems="center" gap="$2">
-              <YStack
-                width={32}
-                height={32}
-                borderRadius={16}
-                backgroundColor={coupon ? THEME.success : '$borderColor'}
-                alignItems="center"
-                justifyContent="center"
-              >
-                <Percent size={16} color={coupon ? 'white' : '$colorSecondary'} />
-              </YStack>
-              <YStack flex={1}>
-                <Text fontSize="$2" color="$colorSecondary">Discount</Text>
-                <Text fontSize="$3" fontWeight="600" color={coupon ? THEME.success : '$color'} numberOfLines={1}>
-                  {coupon ? coupon.code : 'Add Code'}
-                </Text>
-              </YStack>
-              <ChevronRight size={16} color="$colorSecondary" />
-            </XStack>
-          </YStack>
+            <Ticket size={14} color={coupon ? THEME.success : '$colorSecondary'} />
+            <Text fontSize="$2" fontWeight="500" color={coupon ? THEME.success : '$color'} numberOfLines={1} flex={1}>
+              {coupon ? coupon.code : 'Add Coupon'}
+            </Text>
+            <ChevronRight size={12} color="$colorSecondary" />
+          </XStack>
         </XStack>
 
         {/* Cart Items */}
-        <ScrollView flex={1} padding="$3">
+        <ScrollView flex={1} padding="$2">
           {items.length === 0 ? (
-            <YStack flex={1} justifyContent="center" alignItems="center" paddingVertical="$10" gap="$4">
-              <YStack
-                width={80}
-                height={80}
-                borderRadius={40}
-                backgroundColor="$backgroundHover"
-                alignItems="center"
-                justifyContent="center"
-              >
-                <Package size={40} color="$colorSecondary" />
-              </YStack>
-              <YStack alignItems="center" gap="$2">
-                <Text fontSize="$4" fontWeight="600" color="$color">Cart is Empty</Text>
-                <Text fontSize="$2" color="$colorSecondary" textAlign="center">
-                  Select products from the left to add them to your order
-                </Text>
-              </YStack>
+            <YStack flex={1} justifyContent="center" alignItems="center" paddingVertical="$6" gap="$2">
+              <Package size={32} color="$colorSecondary" />
+              <Text fontSize="$3" color="$colorSecondary" textAlign="center">
+                Tap products to add
+              </Text>
             </YStack>
           ) : (
-            <YStack gap="$2">
+            <YStack gap="$1">
               {items.map((item, index) => (
                 <CartItem key={`${item.product.id}-${index}`} item={item} />
               ))}
@@ -506,116 +509,113 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
           )}
         </ScrollView>
 
-        {/* Enhanced Order Summary */}
+        {/* Compact Order Summary */}
         <YStack
-          padding="$4"
-          gap="$3"
+          padding="$3"
+          gap="$2"
           borderTopWidth={1}
           borderTopColor="$borderColor"
           backgroundColor="$background"
         >
           {/* Summary Lines */}
-          <YStack gap="$2">
+          <YStack gap={6}>
             <XStack justifyContent="space-between" alignItems="center">
-              <Text fontSize="$3" color="$colorSecondary">Subtotal</Text>
-              <Text fontSize="$3" fontWeight="500" color="$color">
-                {formatCurrency(getSubTotal(), settings.currency)}
-              </Text>
+              <Text fontSize="$2" color="$colorSecondary">Subtotal</Text>
+              <Text fontSize="$2" fontWeight="500">{formatCurrency(getSubTotal(), settings.currency)}</Text>
             </XStack>
 
             {getDiscount() > 0 && (
-              <XStack
-                justifyContent="space-between"
-                alignItems="center"
-                backgroundColor="#ECFDF5"
-                paddingHorizontal="$3"
-                paddingVertical="$2"
-                borderRadius="$2"
-                marginVertical="$1"
-              >
-                <XStack alignItems="center" gap="$2">
-                  <Tag size={14} color={THEME.success} />
-                  <Text fontSize="$3" color={THEME.success} fontWeight="500">
-                    Discount Applied
-                  </Text>
-                </XStack>
-                <Text fontSize="$3" fontWeight="600" color={THEME.success}>
+              <XStack justifyContent="space-between" alignItems="center">
+                <Text fontSize="$2" color={THEME.success}>Discount</Text>
+                <Text fontSize="$2" fontWeight="500" color={THEME.success}>
                   -{formatCurrency(getDiscount(), settings.currency)}
                 </Text>
               </XStack>
             )}
 
-            {getVat() > 0 && (
+            {taxRate > 0 && (
               <XStack justifyContent="space-between" alignItems="center">
-                <Text fontSize="$3" color="$colorSecondary">
-                  Tax ({settings.tax}%)
-                </Text>
-                <Text fontSize="$3" fontWeight="500" color="$color">
-                  {formatCurrency(getVat(), settings.currency)}
+                <Text fontSize="$2" color="$colorSecondary">Tax ({taxRate}%)</Text>
+                <Text fontSize="$2" fontWeight="500">
+                  {formatCurrency((getSubTotal() - getDiscount()) * taxRate / 100, settings.currency)}
                 </Text>
               </XStack>
             )}
           </YStack>
 
-          {/* Total */}
-          <YStack
-            backgroundColor={THEME.primary}
-            padding="$4"
-            borderRadius="$4"
-            marginTop="$2"
-          >
-            <XStack justifyContent="space-between" alignItems="center">
-              <YStack>
-                <Text fontSize="$2" color="rgba(255,255,255,0.7)">Total Amount</Text>
-                <Text fontSize="$7" fontWeight="bold" color="white">
-                  {formatCurrency(getTotal(), settings.currency)}
-                </Text>
-              </YStack>
-              <YStack alignItems="flex-end">
-                <Text fontSize="$2" color="rgba(255,255,255,0.7)">Items</Text>
-                <Text fontSize="$5" fontWeight="bold" color="white">
-                  {items.reduce((sum, i) => sum + i.quantity, 0)}
-                </Text>
-              </YStack>
-            </XStack>
-          </YStack>
+          <Separator />
+
+          <XStack justifyContent="space-between" alignItems="center">
+            <Text fontSize="$4" fontWeight="700">Total</Text>
+            <Text fontSize="$5" fontWeight="700" color={THEME.primary}>
+              {formatCurrency(
+                getSubTotal() - getDiscount() + ((getSubTotal() - getDiscount()) * taxRate / 100),
+                settings.currency
+              )}
+            </Text>
+          </XStack>
+
+          {/* Payment Method Selection */}
+          <XStack gap="$2">
+            <YStack
+              flex={1}
+              padding="$2"
+              borderRadius="$2"
+              backgroundColor={paymentMethod === 'card' ? THEME.primary : '$backgroundHover'}
+              alignItems="center"
+              cursor="pointer"
+              borderWidth={1}
+              borderColor={paymentMethod === 'card' ? THEME.primary : 'transparent'}
+              hoverStyle={{ backgroundColor: paymentMethod === 'card' ? THEME.primary : '#EEF2FF' }}
+              onPress={() => setPaymentMethod('card')}
+            >
+              <CreditCard size={16} color={paymentMethod === 'card' ? 'white' : THEME.primary} />
+              <Text fontSize="$1" fontWeight="500" color={paymentMethod === 'card' ? 'white' : THEME.primary}>Card</Text>
+            </YStack>
+            <YStack
+              flex={1}
+              padding="$2"
+              borderRadius="$2"
+              backgroundColor={paymentMethod === 'cash' ? THEME.success : '$backgroundHover'}
+              alignItems="center"
+              cursor="pointer"
+              borderWidth={1}
+              borderColor={paymentMethod === 'cash' ? THEME.success : 'transparent'}
+              hoverStyle={{ backgroundColor: paymentMethod === 'cash' ? THEME.success : '#ECFDF5' }}
+              onPress={() => setPaymentMethod('cash')}
+            >
+              <Text fontSize="$3" color={paymentMethod === 'cash' ? 'white' : THEME.success}>$</Text>
+              <Text fontSize="$1" fontWeight="500" color={paymentMethod === 'cash' ? 'white' : THEME.success}>Cash</Text>
+            </YStack>
+          </XStack>
 
           {/* Checkout Button */}
           <YStack
-            backgroundColor={items.length === 0 ? '$borderColor' : THEME.success}
-            paddingVertical="$4"
-            paddingHorizontal="$6"
-            borderRadius="$4"
+            backgroundColor={items.length === 0 ? '$borderColor' : THEME.primary}
+            paddingVertical="$3"
+            borderRadius="$3"
             alignItems="center"
             justifyContent="center"
             cursor={items.length === 0 ? 'not-allowed' : 'pointer'}
             opacity={items.length === 0 ? 0.5 : 1}
-            hoverStyle={items.length > 0 ? { opacity: 0.9, transform: [{ scale: 1.01 }] } : {}}
+            hoverStyle={items.length > 0 ? { opacity: 0.9 } : {}}
             pressStyle={items.length > 0 ? { transform: [{ scale: 0.98 }] } : {}}
             onPress={items.length > 0 ? handleCheckout : undefined}
           >
             {loading ? (
-              <XStack alignItems="center" gap="$3">
+              <XStack alignItems="center" gap="$2">
                 <ActivityIndicator color="white" size="small" />
-                <Text color="white" fontWeight="700" fontSize="$4">Processing...</Text>
+                <Text color="white" fontWeight="600" fontSize="$3">Processing...</Text>
               </XStack>
             ) : (
-              <XStack alignItems="center" gap="$3">
-                <CheckCircle size={22} color="white" />
-                <Text color="white" fontWeight="700" fontSize="$4">
+              <XStack alignItems="center" gap="$2">
+                <CheckCircle size={18} color="white" />
+                <Text color="white" fontWeight="600" fontSize="$3">
                   Complete Sale
                 </Text>
               </XStack>
             )}
           </YStack>
-
-          {/* Payment Method Hint */}
-          <XStack justifyContent="center" alignItems="center" gap="$2" paddingTop="$1">
-            <CreditCard size={14} color="$colorSecondary" />
-            <Text fontSize="$2" color="$colorSecondary">
-              Cash or Card accepted
-            </Text>
-          </XStack>
         </YStack>
       </YStack>
 
@@ -626,49 +626,75 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
         title="Select Customer"
         size="sm"
       >
-        <YStack gap="$2">
+        <YStack gap="$2" maxHeight={400}>
+          {/* Walk-in option */}
+          <XStack
+            padding="$2"
+            borderRadius="$2"
+            backgroundColor={!customer ? THEME.primary : '$backgroundHover'}
+            cursor="pointer"
+            alignItems="center"
+            gap="$2"
+            onPress={() => {
+              setCustomer(null);
+              setCustomerModalVisible(false);
+            }}
+          >
+            <User size={16} color={!customer ? 'white' : '$colorSecondary'} />
+            <Text fontSize="$3" fontWeight="500" color={!customer ? 'white' : '$color'}>Walk-in Customer</Text>
+          </XStack>
+
+          <Separator />
+
           {customersLoading ? (
-            <YStack padding="$4" alignItems="center">
+            <YStack padding="$3" alignItems="center">
               <ActivityIndicator size="small" />
-              <Text color="$colorSecondary" marginTop="$2">Loading customers...</Text>
             </YStack>
           ) : customers.length === 0 ? (
-            <Text color="$colorSecondary" textAlign="center" padding="$4">
-              No customers found
+            <Text color="$colorSecondary" textAlign="center" padding="$3" fontSize="$2">
+              No saved customers
             </Text>
           ) : (
-            customers.map((c) => (
-              <Button
-                key={c.id}
-                variant={customer?.id === c.id ? 'primary' : 'secondary'}
-                fullWidth
-                onPress={() => {
-                  setCustomer(c);
-                  setCustomerModalVisible(false);
-                }}
-              >
-                <YStack alignItems="center">
-                  <Text color={customer?.id === c.id ? 'white' : '$color'}>{c.name}</Text>
-                  {c.phone && (
-                    <Text color={customer?.id === c.id ? 'white' : '$colorSecondary'} fontSize="$2">
-                      {c.phone}
-                    </Text>
-                  )}
-                </YStack>
-              </Button>
-            ))
-          )}
-          {customer && (
-            <Button
-              variant="ghost"
-              fullWidth
-              onPress={() => {
-                setCustomer(null);
-                setCustomerModalVisible(false);
-              }}
-            >
-              <Text color="$error">Remove Customer</Text>
-            </Button>
+            <ScrollView maxHeight={280}>
+              <YStack gap="$1">
+                {customers.map((c) => (
+                  <XStack
+                    key={c.id}
+                    padding="$2"
+                    borderRadius="$2"
+                    backgroundColor={customer?.id === c.id ? '#EEF2FF' : 'transparent'}
+                    borderWidth={1}
+                    borderColor={customer?.id === c.id ? THEME.primary : 'transparent'}
+                    cursor="pointer"
+                    alignItems="center"
+                    gap="$2"
+                    hoverStyle={{ backgroundColor: '$backgroundHover' }}
+                    onPress={() => {
+                      setCustomer(c);
+                      setCustomerModalVisible(false);
+                    }}
+                  >
+                    <YStack
+                      width={32}
+                      height={32}
+                      borderRadius={16}
+                      backgroundColor={customer?.id === c.id ? THEME.primary : '$borderColor'}
+                      alignItems="center"
+                      justifyContent="center"
+                    >
+                      <Text fontSize="$2" fontWeight="600" color={customer?.id === c.id ? 'white' : '$colorSecondary'}>
+                        {c.name.charAt(0).toUpperCase()}
+                      </Text>
+                    </YStack>
+                    <YStack flex={1}>
+                      <Text fontSize="$3" fontWeight="500" color="$color">{c.name}</Text>
+                      {c.phone && <Text fontSize="$1" color="$colorSecondary">{c.phone}</Text>}
+                    </YStack>
+                    {customer?.id === c.id && <CheckCircle size={16} color={THEME.primary} />}
+                  </XStack>
+                ))}
+              </YStack>
+            </ScrollView>
           )}
         </YStack>
       </Modal>
@@ -677,55 +703,80 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
       <Modal
         visible={couponModalVisible}
         onClose={() => setCouponModalVisible(false)}
-        title="Select Coupon"
+        title="Apply Coupon"
         size="sm"
       >
-        <YStack gap="$2">
-          {couponsLoading ? (
-            <YStack padding="$4" alignItems="center">
-              <ActivityIndicator size="small" />
-              <Text color="$colorSecondary" marginTop="$2">Loading coupons...</Text>
-            </YStack>
-          ) : validCoupons.length === 0 ? (
-            <Text color="$colorSecondary" textAlign="center" padding="$4">
-              No active coupons available
-            </Text>
-          ) : (
-            validCoupons.map((c) => (
-              <Button
-                key={c.id}
-                variant={coupon?.id === c.id ? 'primary' : 'secondary'}
-                fullWidth
+        <YStack gap="$2" maxHeight={400}>
+          {/* No coupon option */}
+          {coupon && (
+            <>
+              <XStack
+                padding="$2"
+                borderRadius="$2"
+                backgroundColor="$backgroundHover"
+                cursor="pointer"
+                alignItems="center"
+                gap="$2"
                 onPress={() => {
-                  setCoupon(c);
+                  setCoupon(null);
                   setCouponModalVisible(false);
                 }}
               >
-                <YStack alignItems="center">
-                  <Text color={coupon?.id === c.id ? 'white' : '$color'} fontWeight="600">
-                    {c.code}
-                  </Text>
-                  <Text color={coupon?.id === c.id ? 'white' : '$colorSecondary'} fontSize="$2">
-                    {c.type === 'percentage' ? `${c.amount}% off` : `${formatCurrency(c.amount, settings.currency)} off`}
-                  </Text>
-                </YStack>
-              </Button>
-            ))
+                <Trash2 size={14} color="$error" />
+                <Text fontSize="$2" color="$error">Remove Coupon</Text>
+              </XStack>
+              <Separator />
+            </>
           )}
-          {coupon && (
-            <Button
-              variant="ghost"
-              fullWidth
-              onPress={() => {
-                setCoupon(null);
-                setCouponModalVisible(false);
-              }}
-            >
-              <Text color="$error">Remove Coupon</Text>
-            </Button>
+
+          {couponsLoading ? (
+            <YStack padding="$3" alignItems="center">
+              <ActivityIndicator size="small" />
+            </YStack>
+          ) : validCoupons.length === 0 ? (
+            <YStack padding="$4" alignItems="center" gap="$2">
+              <Ticket size={32} color="$colorSecondary" />
+              <Text color="$colorSecondary" textAlign="center" fontSize="$2">
+                No active coupons available
+              </Text>
+            </YStack>
+          ) : (
+            <ScrollView maxHeight={300}>
+              <YStack gap="$1">
+                {validCoupons.map((c) => (
+                  <XStack
+                    key={c.id}
+                    padding="$2"
+                    borderRadius="$2"
+                    backgroundColor={coupon?.id === c.id ? '#ECFDF5' : 'transparent'}
+                    borderWidth={1}
+                    borderColor={coupon?.id === c.id ? THEME.success : 'transparent'}
+                    cursor="pointer"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    hoverStyle={{ backgroundColor: '$backgroundHover' }}
+                    onPress={() => {
+                      setCoupon(c);
+                      setCouponModalVisible(false);
+                    }}
+                  >
+                    <YStack>
+                      <Text fontSize="$3" fontWeight="600" color={coupon?.id === c.id ? THEME.success : '$color'}>
+                        {c.code}
+                      </Text>
+                      <Text fontSize="$1" color="$colorSecondary">{c.name}</Text>
+                    </YStack>
+                    <Badge variant={coupon?.id === c.id ? 'success' : 'default'} size="sm">
+                      {c.type === 'percentage' ? `${c.amount}%` : formatCurrency(c.amount, settings.currency)}
+                    </Badge>
+                  </XStack>
+                ))}
+              </YStack>
+            </ScrollView>
           )}
         </YStack>
       </Modal>
+
     </XStack>
   );
 }

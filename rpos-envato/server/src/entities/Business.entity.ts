@@ -25,6 +25,25 @@ export class Business {
   @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
   tax!: number;
 
+  // Location fields for location-based taxation
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  address?: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  city?: string;
+
+  @Column({ type: 'varchar', length: 2, nullable: true })
+  state?: string; // US state code (e.g., "CA", "NY", "TX")
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  zipCode?: string;
+
+  @Column({ type: 'varchar', length: 2, default: 'US' })
+  country!: string; // ISO country code
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  timezone?: string;
+
   @Column({ type: 'boolean', default: true })
   enabled!: boolean;
 

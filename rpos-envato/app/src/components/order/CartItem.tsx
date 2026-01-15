@@ -1,41 +1,42 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { Animated } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { XStack, YStack, Text, Image, styled } from 'tamagui';
-import { Minus, Plus, Trash2, Package, X } from '@tamagui/lucide-icons';
-import { Button } from '@/components/ui';
+import { Minus, Plus, Trash2, Package } from '@tamagui/lucide-icons';
 import { formatCurrency } from '@/utils';
 import { useSettingsStore, useCartStore } from '@/store';
 import type { CartItem as CartItemType } from '@/types';
 
+const THEME = {
+  primary: '#4F46E5',
+  success: '#10B981',
+  error: '#EF4444',
+};
+
 const CartItemContainer = styled(XStack, {
   name: 'CartItemContainer',
   backgroundColor: '$cardBackground',
-  borderRadius: '$3',
-  padding: '$3',
-  gap: '$3',
+  paddingVertical: '$2',
+  paddingHorizontal: '$2',
+  gap: '$2',
   alignItems: 'center',
-  borderWidth: 1,
-  borderColor: '$borderColor',
-  position: 'relative',
-
-  hoverStyle: {
-    backgroundColor: '$backgroundHover',
-    borderColor: '$primary',
-  },
+  borderBottomWidth: 1,
+  borderBottomColor: '$borderColor',
 });
 
 const ProductImage = styled(Image, {
   name: 'CartProductImage',
-  width: 56,
-  height: 56,
+  width: 36,
+  height: 36,
   borderRadius: '$2',
   objectFit: 'cover',
 });
 
 const PlaceholderImage = styled(YStack, {
   name: 'CartPlaceholderImage',
-  width: 56,
-  height: 56,
-  backgroundColor: '$backgroundHover',
+  width: 36,
+  height: 36,
+  backgroundColor: '$backgroundPress',
   borderRadius: '$2',
   alignItems: 'center',
   justifyContent: 'center',
@@ -44,12 +45,7 @@ const PlaceholderImage = styled(YStack, {
 const QuantityControl = styled(XStack, {
   name: 'QuantityControl',
   alignItems: 'center',
-  gap: '$1',
-  backgroundColor: '$backgroundHover',
-  borderRadius: '$3',
-  padding: '$1',
-  borderWidth: 1,
-  borderColor: '$borderColor',
+  gap: 4,
 });
 
 const QuantityButton = styled(YStack, {
@@ -60,13 +56,18 @@ const QuantityButton = styled(YStack, {
   alignItems: 'center',
   justifyContent: 'center',
   cursor: 'pointer',
+  backgroundColor: '$backgroundHover',
+  borderWidth: 1,
+  borderColor: '$borderColor',
 
   hoverStyle: {
-    backgroundColor: '$primary',
+    backgroundColor: '$backgroundPress',
+    borderColor: '$colorSecondary',
   },
 
   pressStyle: {
     transform: [{ scale: 0.95 }],
+    backgroundColor: '$backgroundPress',
   },
 });
 
@@ -80,6 +81,7 @@ export function CartItem({ item, onRemove, compact = false }: CartItemProps) {
   const { settings } = useSettingsStore();
   const { incrementQuantity, decrementQuantity, removeItem } = useCartStore();
   const { product, quantity } = item;
+  const swipeableRef = useRef<Swipeable>(null);
   const imageUrl = typeof product.images?.[0] === 'object' ? (product.images[0] as any).url : product.images?.[0];
   const itemTotal = product.sellingPrice * quantity;
 
@@ -91,91 +93,105 @@ export function CartItem({ item, onRemove, compact = false }: CartItemProps) {
     }
   };
 
-  return (
-    <CartItemContainer>
-      {/* Product Image */}
-      {imageUrl ? (
-        <ProductImage source={{ uri: imageUrl }} />
-      ) : (
-        <PlaceholderImage>
-          <Package size={24} color="$placeholderColor" />
-        </PlaceholderImage>
-      )}
+  // Render right swipe action (delete)
+  const renderRightActions = (
+    progress: Animated.AnimatedInterpolation<number>,
+    dragX: Animated.AnimatedInterpolation<number>
+  ) => {
+    const scale = dragX.interpolate({
+      inputRange: [-80, 0],
+      outputRange: [1, 0.5],
+      extrapolate: 'clamp',
+    });
 
-      {/* Product Info */}
-      <YStack flex={1} gap="$1" minWidth={60}>
-        <Text
-          fontSize="$3"
-          fontWeight="600"
-          numberOfLines={1}
-          color="$color"
+    const opacity = dragX.interpolate({
+      inputRange: [-80, -40, 0],
+      outputRange: [1, 0.8, 0],
+      extrapolate: 'clamp',
+    });
+
+    return (
+      <Animated.View
+        style={{
+          backgroundColor: THEME.error,
+          justifyContent: 'center',
+          alignItems: 'center',
+          width: 80,
+          transform: [{ scale }],
+          opacity,
+        }}
+      >
+        <YStack
+          width="100%"
+          height="100%"
+          backgroundColor={THEME.error}
+          alignItems="center"
+          justifyContent="center"
+          cursor="pointer"
+          onPress={handleRemove}
         >
-          {product.name}
-        </Text>
-        <XStack alignItems="center" gap="$2">
-          <Text fontSize="$2" color="$colorSecondary">
+          <Trash2 size={20} color="white" />
+          <Text fontSize={10} color="white" fontWeight="600" marginTop={2}>
+            Delete
+          </Text>
+        </YStack>
+      </Animated.View>
+    );
+  };
+
+  return (
+    <Swipeable
+      ref={swipeableRef}
+      renderRightActions={renderRightActions}
+      rightThreshold={40}
+      overshootRight={false}
+      onSwipeableOpen={(direction) => {
+        if (direction === 'right') {
+          handleRemove();
+        }
+      }}
+    >
+      <CartItemContainer>
+        {/* Product Image */}
+        {imageUrl ? (
+          <ProductImage source={{ uri: imageUrl }} />
+        ) : (
+          <PlaceholderImage>
+            <Package size={16} color="$placeholderColor" />
+          </PlaceholderImage>
+        )}
+
+        {/* Product Info */}
+        <YStack flex={1} minWidth={40}>
+          <Text fontSize="$2" fontWeight="500" numberOfLines={1} color="$color">
+            {product.name}
+          </Text>
+          <Text fontSize={11} color="$colorSecondary">
             {formatCurrency(product.sellingPrice, settings.currency)}
           </Text>
-          <Text fontSize="$1" color="$colorSecondary">x{quantity}</Text>
-        </XStack>
-      </YStack>
+        </YStack>
 
-      {/* Quantity Controls */}
-      <QuantityControl>
-        <QuantityButton
-          onPress={() => decrementQuantity(product.id)}
-          backgroundColor={quantity <= 1 ? '$error' : '$background'}
-          hoverStyle={{ backgroundColor: quantity <= 1 ? '$error' : '$primary' }}
-        >
-          {quantity <= 1 ? (
-            <Trash2 size={14} color="white" />
-          ) : (
+        {/* Quantity Controls */}
+        <QuantityControl>
+          <QuantityButton onPress={() => decrementQuantity(product.id)}>
             <Minus size={14} color="$color" />
-          )}
-        </QuantityButton>
+          </QuantityButton>
 
-        <Text
-          fontSize="$3"
-          fontWeight="700"
-          color="$color"
-          minWidth={28}
-          textAlign="center"
-        >
-          {quantity}
-        </Text>
+          <Text fontSize="$3" fontWeight="600" color="$color" minWidth={24} textAlign="center">
+            {quantity}
+          </Text>
 
-        <QuantityButton onPress={() => incrementQuantity(product.id)}>
-          <Plus size={14} color="$color" />
-        </QuantityButton>
-      </QuantityControl>
+          <QuantityButton onPress={() => incrementQuantity(product.id)}>
+            <Plus size={14} color="$color" />
+          </QuantityButton>
+        </QuantityControl>
 
-      {/* Item Total */}
-      <YStack alignItems="flex-end" minWidth={70}>
-        <Text fontSize="$4" fontWeight="700" color="$primary">
+        {/* Item Total */}
+        <Text fontSize="$2" fontWeight="700" color={THEME.primary} minWidth={50} textAlign="right">
           {formatCurrency(itemTotal, settings.currency)}
         </Text>
-      </YStack>
-
-      {/* Quick Remove Button */}
-      <YStack
-        position="absolute"
-        top={-6}
-        right={-6}
-        width={20}
-        height={20}
-        borderRadius={10}
-        backgroundColor="$error"
-        alignItems="center"
-        justifyContent="center"
-        cursor="pointer"
-        opacity={0}
-        hoverStyle={{ opacity: 1 }}
-        pressStyle={{ transform: [{ scale: 0.9 }] }}
-        onPress={handleRemove}
-      >
-        <X size={12} color="white" />
-      </YStack>
-    </CartItemContainer>
+      </CartItemContainer>
+    </Swipeable>
   );
 }
 

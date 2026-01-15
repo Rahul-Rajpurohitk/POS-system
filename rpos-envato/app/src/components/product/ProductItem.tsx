@@ -64,7 +64,7 @@ const ProductCard = styled(YStack, {
         width: '100%',
         flexDirection: 'row',
         borderRadius: '$3',
-        height: 72,
+        height: 80,
       },
     },
     selected: {
@@ -110,8 +110,8 @@ const ImageContainer = styled(YStack, {
         height: 120,
       },
       compact: {
-        width: 72,
-        height: 72,
+        width: 80,
+        height: 80,
         flexShrink: 0,
       },
     },
@@ -230,27 +230,74 @@ export function ProductItem({
           )}
         </ImageContainer>
 
-        {/* Product Info - Right side */}
-        <YStack flex={1} padding={padding} justifyContent="center" gap="$1">
-          <Text
-            fontSize={nameFontSize}
-            fontWeight="600"
-            numberOfLines={1}
-            color="$color"
-          >
-            {product.name}
-          </Text>
-          <XStack alignItems="center" justifyContent="space-between">
-            <Text fontSize={priceFontSize} fontWeight="700" color="$primary">
-              {formatCurrency(product.sellingPrice, settings.currency)}
+        {/* Product Info - Center */}
+        <YStack flex={1} padding={padding} justifyContent="center" gap={2}>
+          <XStack alignItems="center" gap="$2">
+            <Text
+              fontSize="$3"
+              fontWeight="600"
+              numberOfLines={1}
+              color="$color"
+              flex={1}
+            >
+              {product.name}
             </Text>
-            {stockQty <= 10 && stockQty > 0 && (
-              <Text fontSize={10} color="#D97706" fontWeight="600">{stockQty} left</Text>
-            )}
-            {isOutOfStock && (
-              <Text fontSize={10} color="#DC2626" fontWeight="600">Out</Text>
+            {/* Category Badge */}
+            {product.category?.name && (
+              <XStack
+                backgroundColor="$backgroundHover"
+                paddingHorizontal="$2"
+                paddingVertical={2}
+                borderRadius="$1"
+              >
+                <Text fontSize={10} color="$colorSecondary" fontWeight="500">
+                  {product.category.name}
+                </Text>
+              </XStack>
             )}
           </XStack>
+
+          <XStack alignItems="center" gap="$3">
+            {/* SKU */}
+            {product.sku && (
+              <Text fontSize={11} color="$colorSecondary">
+                SKU: {product.sku}
+              </Text>
+            )}
+            {/* Stock Status */}
+            <XStack
+              backgroundColor={isOutOfStock ? STOCK_COLORS.outOfStock.bg : stockQty <= 10 ? STOCK_COLORS.lowStock.bg : STOCK_COLORS.inStock.bg}
+              paddingHorizontal={6}
+              paddingVertical={2}
+              borderRadius={4}
+              alignItems="center"
+              gap={3}
+            >
+              {stockQty <= 10 && stockQty > 0 && <AlertTriangle size={10} color={STOCK_COLORS.lowStock.text} />}
+              <Text
+                fontSize={10}
+                fontWeight="600"
+                color={isOutOfStock ? STOCK_COLORS.outOfStock.text : stockQty <= 10 ? STOCK_COLORS.lowStock.text : STOCK_COLORS.inStock.text}
+              >
+                {isOutOfStock ? 'Out of Stock' : stockQty <= 10 ? `${stockQty} left` : `${stockQty} in stock`}
+              </Text>
+            </XStack>
+          </XStack>
+        </YStack>
+
+        {/* Price & Add Section - Right */}
+        <YStack paddingRight="$3" alignItems="flex-end" justifyContent="center" gap={2}>
+          <Text fontSize="$4" fontWeight="700" color="$primary">
+            {formatCurrency(product.sellingPrice, settings.currency)}
+          </Text>
+          {product.purchasePrice && profitMargin > 0 && (
+            <XStack alignItems="center" gap={2}>
+              <TrendingUp size={10} color="#059669" />
+              <Text fontSize={10} color="#059669" fontWeight="500">
+                {profitMargin.toFixed(0)}% margin
+              </Text>
+            </XStack>
+          )}
         </YStack>
       </ProductCard>
     );

@@ -90,11 +90,17 @@ async function seed() {
       name: 'Demo POS Store',
       currency: Currency.USD,
       language: Language.EN,
-      tax: 8.5,
+      tax: 7.25, // California base rate - will be auto-calculated from state
+      address: '123 Market Street',
+      city: 'San Francisco',
+      state: 'CA', // California - 7.25% state tax
+      zipCode: '94102',
+      country: 'US',
+      timezone: 'America/Los_Angeles',
       enabled: true,
     });
     await businessRepo.save(business);
-    console.log(`  Created: ${business.name} (ID: ${business.id})\n`);
+    console.log(`  Created: ${business.name} in ${business.city}, ${business.state} (ID: ${business.id})\n`);
 
     // ============ CREATE USERS ============
     console.log('Creating users...');

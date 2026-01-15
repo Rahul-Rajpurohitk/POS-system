@@ -29,6 +29,13 @@ export interface AppSettings {
   currency: string;
   tax: number;
   language: string;
+  // Location fields for auto tax calculation
+  address?: string;
+  city?: string;
+  state?: string; // US state code (CA, NY, TX, etc.)
+  zipCode?: string;
+  country?: string; // ISO country code (US, CA, etc.)
+  timezone?: string;
 }
 
 export const settingsApi = {
@@ -51,10 +58,10 @@ export const settingsApi = {
   resetStaffPassword: (id: string, newPassword: string) =>
     apiClient.post(`/settings/staff/${id}/reset-password`, { newPassword }),
 
-  // App settings
+  // App settings - uses business endpoint
   getSettings: () =>
-    apiClient.get<AppSettings>('/settings'),
+    apiClient.get<{ data: AppSettings }>('/businesses/me').then(res => ({ data: res.data.data as unknown as AppSettings })),
 
   updateSettings: (data: Partial<AppSettings>) =>
-    apiClient.put<AppSettings>('/settings', data),
+    apiClient.put<AppSettings>('/businesses/me', data),
 };
