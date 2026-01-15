@@ -1,7 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { FlatList, ActivityIndicator, RefreshControl, Pressable, Image } from 'react-native';
 import { YStack, XStack, Text, Input } from 'tamagui';
-import { Search, Plus, Filter, RefreshCw, Eye, Edit, Trash2, Package } from '@tamagui/lucide-icons';
+import {
+  Search, Plus, Filter, RefreshCw, Eye, Edit, Trash2, Package,
+  TrendingUp, AlertTriangle, DollarSign, Layers, Box,
+} from '@tamagui/lucide-icons';
 import { Button, Badge } from '@/components/ui';
 import type { BadgeVariant } from '@/components/ui';
 import { formatCurrency } from '@/utils';
@@ -10,6 +13,14 @@ import { usePlatform } from '@/hooks';
 import { useProducts } from '@/features/products/hooks';
 import type { ProductScreenProps } from '@/navigation/types';
 import type { Product } from '@/types';
+
+// Stats card colors
+const STAT_COLORS = {
+  total: { bg: '#EEF2FF', icon: '#4F46E5', border: '#C7D2FE' },
+  value: { bg: '#ECFDF5', icon: '#059669', border: '#A7F3D0' },
+  lowStock: { bg: '#FEF3C7', icon: '#D97706', border: '#FCD34D' },
+  outOfStock: { bg: '#FEE2E2', icon: '#DC2626', border: '#FECACA' },
+};
 
 // Helper to get stock status badge variant
 const getStockBadgeVariant = (quantity: number): BadgeVariant => {
@@ -205,7 +216,7 @@ export default function ProductListScreen({ navigation }: ProductScreenProps<'Pr
     error
   } = useProducts({ limit: 100 });
 
-  const products = productsData?.data ?? [];
+  const products = productsData ?? [];
 
   const filteredProducts = useMemo(() => {
     if (!search) return products;
@@ -251,51 +262,194 @@ export default function ProductListScreen({ navigation }: ProductScreenProps<'Pr
 
   return (
     <YStack flex={1} backgroundColor="$background">
-      {/* Header */}
-      <XStack
-        padding="$4"
-        justifyContent="space-between"
-        alignItems="center"
-        backgroundColor="$cardBackground"
-        borderBottomWidth={1}
-        borderBottomColor="$borderColor"
-      >
-        <YStack>
-          <Text fontSize="$6" fontWeight="bold">Products</Text>
-          <XStack gap="$3">
-            <Text fontSize="$2" color="$colorSecondary">{stats.totalProducts} products</Text>
-            {stats.lowStock > 0 && (
-              <Text fontSize="$2" color="$warning">{stats.lowStock} low stock</Text>
-            )}
-            {stats.outOfStock > 0 && (
-              <Text fontSize="$2" color="$error">{stats.outOfStock} out of stock</Text>
-            )}
+      {/* Enhanced Header */}
+      <YStack backgroundColor="$cardBackground" borderBottomWidth={1} borderBottomColor="$borderColor">
+        <XStack
+          padding="$4"
+          justifyContent="space-between"
+          alignItems="center"
+        >
+          <XStack alignItems="center" gap="$3">
+            <YStack
+              width={48}
+              height={48}
+              borderRadius={24}
+              backgroundColor="#4F46E5"
+              alignItems="center"
+              justifyContent="center"
+            >
+              <Package size={24} color="white" />
+            </YStack>
+            <YStack>
+              <Text fontSize="$6" fontWeight="bold" color="$color">Inventory</Text>
+              <Text fontSize="$2" color="$colorSecondary">Manage your products</Text>
+            </YStack>
           </XStack>
-        </YStack>
-        <XStack gap="$2">
-          <Button variant="secondary" size="sm" onPress={() => navigation.navigate('Categories')}>
-            <Filter size={16} />
-            <Text>Categories</Text>
-          </Button>
-          <Button variant="primary" size="sm" onPress={() => navigation.navigate('AddProduct')}>
-            <Plus size={16} color="white" />
-            <Text color="white">Add</Text>
-          </Button>
+          <XStack gap="$2">
+            <Button variant="secondary" size="sm" onPress={() => navigation.navigate('Categories')}>
+              <Layers size={16} />
+              <Text>Categories</Text>
+            </Button>
+            <YStack
+              paddingHorizontal="$4"
+              paddingVertical="$2"
+              borderRadius="$3"
+              backgroundColor="#4F46E5"
+              cursor="pointer"
+              hoverStyle={{ opacity: 0.9 }}
+              pressStyle={{ transform: [{ scale: 0.97 }] }}
+              onPress={() => navigation.navigate('AddProduct')}
+            >
+              <XStack alignItems="center" gap="$2">
+                <Plus size={16} color="white" />
+                <Text color="white" fontWeight="600">Add Product</Text>
+              </XStack>
+            </YStack>
+          </XStack>
         </XStack>
-      </XStack>
 
-      {/* Search */}
+        {/* Stats Cards Row */}
+        <XStack paddingHorizontal="$4" paddingBottom="$4" gap="$3">
+          {/* Total Products */}
+          <YStack
+            flex={1}
+            padding="$3"
+            borderRadius="$3"
+            backgroundColor={STAT_COLORS.total.bg}
+            borderWidth={1}
+            borderColor={STAT_COLORS.total.border}
+          >
+            <XStack alignItems="center" gap="$2">
+              <YStack
+                width={32}
+                height={32}
+                borderRadius={16}
+                backgroundColor="white"
+                alignItems="center"
+                justifyContent="center"
+              >
+                <Box size={16} color={STAT_COLORS.total.icon} />
+              </YStack>
+              <YStack flex={1}>
+                <Text fontSize={10} color={STAT_COLORS.total.icon} textTransform="uppercase" fontWeight="600">
+                  Total Products
+                </Text>
+                <Text fontSize="$5" fontWeight="bold" color={STAT_COLORS.total.icon}>
+                  {stats.totalProducts}
+                </Text>
+              </YStack>
+            </XStack>
+          </YStack>
+
+          {/* Inventory Value */}
+          <YStack
+            flex={1}
+            padding="$3"
+            borderRadius="$3"
+            backgroundColor={STAT_COLORS.value.bg}
+            borderWidth={1}
+            borderColor={STAT_COLORS.value.border}
+          >
+            <XStack alignItems="center" gap="$2">
+              <YStack
+                width={32}
+                height={32}
+                borderRadius={16}
+                backgroundColor="white"
+                alignItems="center"
+                justifyContent="center"
+              >
+                <DollarSign size={16} color={STAT_COLORS.value.icon} />
+              </YStack>
+              <YStack flex={1}>
+                <Text fontSize={10} color={STAT_COLORS.value.icon} textTransform="uppercase" fontWeight="600">
+                  Total Value
+                </Text>
+                <Text fontSize="$4" fontWeight="bold" color={STAT_COLORS.value.icon}>
+                  {formatCurrency(stats.totalValue, settings.currency)}
+                </Text>
+              </YStack>
+            </XStack>
+          </YStack>
+
+          {/* Low Stock */}
+          <YStack
+            flex={1}
+            padding="$3"
+            borderRadius="$3"
+            backgroundColor={STAT_COLORS.lowStock.bg}
+            borderWidth={1}
+            borderColor={STAT_COLORS.lowStock.border}
+          >
+            <XStack alignItems="center" gap="$2">
+              <YStack
+                width={32}
+                height={32}
+                borderRadius={16}
+                backgroundColor="white"
+                alignItems="center"
+                justifyContent="center"
+              >
+                <AlertTriangle size={16} color={STAT_COLORS.lowStock.icon} />
+              </YStack>
+              <YStack flex={1}>
+                <Text fontSize={10} color={STAT_COLORS.lowStock.icon} textTransform="uppercase" fontWeight="600">
+                  Low Stock
+                </Text>
+                <Text fontSize="$5" fontWeight="bold" color={STAT_COLORS.lowStock.icon}>
+                  {stats.lowStock}
+                </Text>
+              </YStack>
+            </XStack>
+          </YStack>
+
+          {/* Out of Stock */}
+          <YStack
+            flex={1}
+            padding="$3"
+            borderRadius="$3"
+            backgroundColor={STAT_COLORS.outOfStock.bg}
+            borderWidth={1}
+            borderColor={STAT_COLORS.outOfStock.border}
+          >
+            <XStack alignItems="center" gap="$2">
+              <YStack
+                width={32}
+                height={32}
+                borderRadius={16}
+                backgroundColor="white"
+                alignItems="center"
+                justifyContent="center"
+              >
+                <Package size={16} color={STAT_COLORS.outOfStock.icon} />
+              </YStack>
+              <YStack flex={1}>
+                <Text fontSize={10} color={STAT_COLORS.outOfStock.icon} textTransform="uppercase" fontWeight="600">
+                  Out of Stock
+                </Text>
+                <Text fontSize="$5" fontWeight="bold" color={STAT_COLORS.outOfStock.icon}>
+                  {stats.outOfStock}
+                </Text>
+              </YStack>
+            </XStack>
+          </YStack>
+        </XStack>
+      </YStack>
+
+      {/* Enhanced Search */}
       <XStack padding="$3" backgroundColor="$cardBackground" borderBottomWidth={1} borderBottomColor="$borderColor">
         <XStack
           flex={1}
           backgroundColor="$background"
-          borderRadius="$2"
-          paddingHorizontal="$3"
+          borderRadius="$3"
+          paddingHorizontal="$4"
+          paddingVertical="$2"
           alignItems="center"
           borderWidth={1}
           borderColor="$borderColor"
+          gap="$2"
         >
-          <Search size={18} color="$placeholderColor" />
+          <Search size={18} color="#4F46E5" />
           <Input
             flex={1}
             placeholder="Search by name, SKU, or category..."
@@ -305,7 +459,15 @@ export default function ProductListScreen({ navigation }: ProductScreenProps<'Pr
             backgroundColor="transparent"
             size="$3"
           />
+          {search && (
+            <Pressable onPress={() => setSearch('')}>
+              <Text fontSize="$2" color="$colorSecondary">Clear</Text>
+            </Pressable>
+          )}
         </XStack>
+        <Button variant="ghost" size="icon" onPress={() => refetch()} marginLeft="$2">
+          <RefreshCw size={18} color={isRefetching ? '#4F46E5' : '$colorSecondary'} />
+        </Button>
       </XStack>
 
       {/* Table */}

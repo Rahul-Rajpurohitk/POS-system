@@ -1,7 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { FlatList, ActivityIndicator, RefreshControl, Pressable, ScrollView } from 'react-native';
 import { YStack, XStack, Text, Input } from 'tamagui';
-import { Search, RefreshCw, ChevronRight, Eye, Edit } from '@tamagui/lucide-icons';
+import {
+  Search, RefreshCw, ChevronRight, Eye, Edit, ShoppingBag,
+  Clock, CheckCircle, XCircle, DollarSign, TrendingUp, Calendar,
+} from '@tamagui/lucide-icons';
 import { Button, Badge } from '@/components/ui';
 import type { BadgeVariant } from '@/components/ui';
 import { formatCurrency, formatDate } from '@/utils';
@@ -10,6 +13,15 @@ import { usePlatform } from '@/hooks';
 import { useOrders } from '@/features/orders/hooks';
 import type { OrderScreenProps } from '@/navigation/types';
 import type { Order } from '@/types';
+
+// Status colors
+const STATUS_COLORS = {
+  completed: { bg: '#ECFDF5', text: '#059669', border: '#A7F3D0', icon: CheckCircle },
+  pending: { bg: '#FEF3C7', text: '#D97706', border: '#FCD34D', icon: Clock },
+  processing: { bg: '#DBEAFE', text: '#2563EB', border: '#93C5FD', icon: Clock },
+  cancelled: { bg: '#FEE2E2', text: '#DC2626', border: '#FECACA', icon: XCircle },
+  refunded: { bg: '#F3E8FF', text: '#7C3AED', border: '#C4B5FD', icon: XCircle },
+};
 
 // Helper to get badge variant from order status
 const getStatusBadgeVariant = (status?: string): BadgeVariant => {
@@ -158,7 +170,7 @@ export default function OrderListScreen({ navigation }: OrderScreenProps<'OrderL
     error
   } = useOrders({ limit: 100 });
 
-  const orders = ordersData?.data ?? [];
+  const orders = ordersData ?? [];
 
   const filtered = useMemo(() => {
     if (!search) return orders;
@@ -168,6 +180,23 @@ export default function OrderListScreen({ navigation }: OrderScreenProps<'OrderL
       (o.customer?.name || '').toLowerCase().includes(query)
     );
   }, [orders, search]);
+
+  // Calculate order stats
+  const orderStats = useMemo(() => {
+    const totalOrders = orders.length;
+    const totalRevenue = orders.reduce((sum, o) => {
+      const payment = o.payment || { total: o.total || 0 };
+      return sum + (payment.total || 0);
+    }, 0);
+    const completedOrders = orders.filter(o => (o.status || 'completed').toLowerCase() === 'completed').length;
+    const pendingOrders = orders.filter(o => ['pending', 'processing'].includes((o.status || '').toLowerCase())).length;
+    const todayOrders = orders.filter(o => {
+      const orderDate = new Date(o.createdAt);
+      const today = new Date();
+      return orderDate.toDateString() === today.toDateString();
+    }).length;
+    return { totalOrders, totalRevenue, completedOrders, pendingOrders, todayOrders };
+  }, [orders]);
 
   if (isLoading) {
     return (
@@ -194,36 +223,184 @@ export default function OrderListScreen({ navigation }: OrderScreenProps<'OrderL
 
   return (
     <YStack flex={1} backgroundColor="$background">
-      {/* Header */}
-      <XStack
-        padding="$4"
-        justifyContent="space-between"
-        alignItems="center"
-        backgroundColor="$cardBackground"
-        borderBottomWidth={1}
-        borderBottomColor="$borderColor"
-      >
-        <YStack>
-          <Text fontSize="$6" fontWeight="bold">Orders</Text>
-          <Text fontSize="$2" color="$colorSecondary">{filtered.length} total orders</Text>
-        </YStack>
-        <Button variant="ghost" size="icon" onPress={() => refetch()}>
-          <RefreshCw size={20} color="$primary" />
-        </Button>
-      </XStack>
+      {/* Enhanced Header */}
+      <YStack backgroundColor="$cardBackground" borderBottomWidth={1} borderBottomColor="$borderColor">
+        <XStack
+          padding="$4"
+          justifyContent="space-between"
+          alignItems="center"
+        >
+          <XStack alignItems="center" gap="$3">
+            <YStack
+              width={48}
+              height={48}
+              borderRadius={24}
+              backgroundColor="#8B5CF6"
+              alignItems="center"
+              justifyContent="center"
+            >
+              <ShoppingBag size={24} color="white" />
+            </YStack>
+            <YStack>
+              <Text fontSize="$6" fontWeight="bold" color="$color">Orders</Text>
+              <Text fontSize="$2" color="$colorSecondary">Track & manage orders</Text>
+            </YStack>
+          </XStack>
+          <YStack
+            padding="$2"
+            borderRadius="$2"
+            backgroundColor="$backgroundHover"
+            cursor="pointer"
+            hoverStyle={{ backgroundColor: '$primary' }}
+            pressStyle={{ transform: [{ scale: 0.95 }] }}
+            onPress={() => refetch()}
+          >
+            <RefreshCw size={20} color={isRefetching ? '#8B5CF6' : '$colorSecondary'} />
+          </YStack>
+        </XStack>
 
-      {/* Search */}
+        {/* Order Stats */}
+        <XStack paddingHorizontal="$4" paddingBottom="$4" gap="$3">
+          {/* Today's Orders */}
+          <YStack
+            flex={1}
+            padding="$3"
+            borderRadius="$3"
+            backgroundColor="#EEF2FF"
+            borderWidth={1}
+            borderColor="#C7D2FE"
+          >
+            <XStack alignItems="center" gap="$2">
+              <YStack
+                width={32}
+                height={32}
+                borderRadius={16}
+                backgroundColor="white"
+                alignItems="center"
+                justifyContent="center"
+              >
+                <Calendar size={16} color="#4F46E5" />
+              </YStack>
+              <YStack flex={1}>
+                <Text fontSize={10} color="#4F46E5" textTransform="uppercase" fontWeight="600">
+                  Today
+                </Text>
+                <Text fontSize="$5" fontWeight="bold" color="#4F46E5">
+                  {orderStats.todayOrders}
+                </Text>
+              </YStack>
+            </XStack>
+          </YStack>
+
+          {/* Total Revenue */}
+          <YStack
+            flex={1}
+            padding="$3"
+            borderRadius="$3"
+            backgroundColor="#ECFDF5"
+            borderWidth={1}
+            borderColor="#A7F3D0"
+          >
+            <XStack alignItems="center" gap="$2">
+              <YStack
+                width={32}
+                height={32}
+                borderRadius={16}
+                backgroundColor="white"
+                alignItems="center"
+                justifyContent="center"
+              >
+                <DollarSign size={16} color="#059669" />
+              </YStack>
+              <YStack flex={1}>
+                <Text fontSize={10} color="#059669" textTransform="uppercase" fontWeight="600">
+                  Revenue
+                </Text>
+                <Text fontSize="$4" fontWeight="bold" color="#059669">
+                  {formatCurrency(orderStats.totalRevenue, settings.currency)}
+                </Text>
+              </YStack>
+            </XStack>
+          </YStack>
+
+          {/* Completed */}
+          <YStack
+            flex={1}
+            padding="$3"
+            borderRadius="$3"
+            backgroundColor="#F0FDF4"
+            borderWidth={1}
+            borderColor="#BBF7D0"
+          >
+            <XStack alignItems="center" gap="$2">
+              <YStack
+                width={32}
+                height={32}
+                borderRadius={16}
+                backgroundColor="white"
+                alignItems="center"
+                justifyContent="center"
+              >
+                <CheckCircle size={16} color="#16A34A" />
+              </YStack>
+              <YStack flex={1}>
+                <Text fontSize={10} color="#16A34A" textTransform="uppercase" fontWeight="600">
+                  Completed
+                </Text>
+                <Text fontSize="$5" fontWeight="bold" color="#16A34A">
+                  {orderStats.completedOrders}
+                </Text>
+              </YStack>
+            </XStack>
+          </YStack>
+
+          {/* Pending */}
+          <YStack
+            flex={1}
+            padding="$3"
+            borderRadius="$3"
+            backgroundColor="#FEF3C7"
+            borderWidth={1}
+            borderColor="#FCD34D"
+          >
+            <XStack alignItems="center" gap="$2">
+              <YStack
+                width={32}
+                height={32}
+                borderRadius={16}
+                backgroundColor="white"
+                alignItems="center"
+                justifyContent="center"
+              >
+                <Clock size={16} color="#D97706" />
+              </YStack>
+              <YStack flex={1}>
+                <Text fontSize={10} color="#D97706" textTransform="uppercase" fontWeight="600">
+                  Pending
+                </Text>
+                <Text fontSize="$5" fontWeight="bold" color="#D97706">
+                  {orderStats.pendingOrders}
+                </Text>
+              </YStack>
+            </XStack>
+          </YStack>
+        </XStack>
+      </YStack>
+
+      {/* Enhanced Search */}
       <XStack padding="$3" backgroundColor="$cardBackground" borderBottomWidth={1} borderBottomColor="$borderColor">
         <XStack
           flex={1}
           backgroundColor="$background"
-          borderRadius="$2"
-          paddingHorizontal="$3"
+          borderRadius="$3"
+          paddingHorizontal="$4"
+          paddingVertical="$2"
           alignItems="center"
           borderWidth={1}
           borderColor="$borderColor"
+          gap="$2"
         >
-          <Search size={18} color="$placeholderColor" />
+          <Search size={18} color="#8B5CF6" />
           <Input
             flex={1}
             placeholder="Search by order # or customer..."
@@ -233,6 +410,11 @@ export default function OrderListScreen({ navigation }: OrderScreenProps<'OrderL
             backgroundColor="transparent"
             size="$3"
           />
+          {search && (
+            <Pressable onPress={() => setSearch('')}>
+              <Text fontSize="$2" color="$colorSecondary">Clear</Text>
+            </Pressable>
+          )}
         </XStack>
       </XStack>
 
