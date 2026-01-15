@@ -2,7 +2,7 @@ import React from 'react';
 import { YStack, XStack, Text, ScrollView, Avatar } from 'tamagui';
 import {
   ArrowLeft, User, Mail, Phone, MapPin, Calendar,
-  Edit2, Lock, LogOut, ChevronRight
+  Pencil, Lock, LogOut, ChevronRight
 } from '@tamagui/lucide-icons';
 import { Button, Card, ConfirmModal } from '@/components/ui';
 import { useAuthStore } from '@/store';
@@ -33,7 +33,7 @@ export default function ProfileScreen({ navigation }: MoreScreenProps<'Profile'>
         </Button>
         <Text fontSize="$6" fontWeight="bold" flex={1}>Profile</Text>
         <Button variant="ghost" size="icon" onPress={() => navigation.navigate('EditProfile')}>
-          <Edit2 size={20} />
+          <Pencil size={20} />
         </Button>
       </XStack>
 

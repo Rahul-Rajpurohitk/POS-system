@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Alert } from 'react-native';
 import { YStack, XStack, Text, ScrollView, Avatar, Spinner } from 'tamagui';
-import { ArrowLeft, Edit, Trash2, Mail, Phone, MapPin, User } from '@tamagui/lucide-icons';
+import { ArrowLeft, Pencil, Trash2, Mail, Phone, MapPin, User } from '@tamagui/lucide-icons';
 import { Button, Card, ConfirmModal } from '@/components/ui';
 import { useCustomer, useDeleteCustomer } from '@/features/customers';
 import { getInitials } from '@/utils';
@@ -57,7 +57,7 @@ export default function CustomerDetailScreen({ navigation, route }: MoreScreenPr
       <XStack padding="$4" alignItems="center" gap="$3" backgroundColor="$cardBackground" borderBottomWidth={1} borderBottomColor="$borderColor">
         <Button variant="ghost" size="icon" onPress={() => navigation.goBack()}><ArrowLeft size={24} /></Button>
         <Text fontSize="$6" fontWeight="bold" flex={1}>Customer</Text>
-        <Button variant="ghost" size="icon" onPress={() => navigation.navigate('EditCustomer', { id })}><Edit size={20} color="$primary" /></Button>
+        <Button variant="ghost" size="icon" onPress={() => navigation.navigate('EditCustomer', { id })}><Pencil size={20} color="$primary" /></Button>
         <Button variant="ghost" size="icon" onPress={() => setDeleteModal(true)} disabled={deleteCustomer.isPending}>
           <Trash2 size={20} color="$error" />
         </Button>

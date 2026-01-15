@@ -3,7 +3,7 @@ import { FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { Image } from 'tamagui';
 import { YStack, XStack, Text, Input } from 'tamagui';
 import {
-  Search, Plus, Filter, RefreshCw, Eye, Edit, Trash2, Package,
+  Search, Plus, Filter, RefreshCw, Eye, Pencil, Trash2, Package,
   TrendingUp, AlertTriangle, DollarSign, Layers, Box,
 } from '@tamagui/lucide-icons';
 import { Button, Badge } from '@/components/ui';
@@ -201,7 +201,7 @@ function TableRow({
           hoverStyle={{ backgroundColor: '$primary' }}
           onPress={(e: any) => { e.stopPropagation(); onEdit(); }}
         >
-          <Edit size={16} color="$colorSecondary" />
+          <Pencil size={16} color="$colorSecondary" />
         </YStack>
       </XStack>
     </XStack>

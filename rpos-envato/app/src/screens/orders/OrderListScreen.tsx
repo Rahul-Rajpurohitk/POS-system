@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { YStack, XStack, Text, Input } from 'tamagui';
 import {
-  Search, RefreshCw, ChevronRight, Eye, Edit, ShoppingBag,
+  Search, RefreshCw, ChevronRight, Eye, Pencil, ShoppingBag,
   Clock, CheckCircle, XCircle, DollarSign, TrendingUp, Calendar,
 } from '@tamagui/lucide-icons';
 import { Button, Badge } from '@/components/ui';
@@ -150,7 +150,7 @@ function TableRow({
           hoverStyle={{ backgroundColor: '$primary' }}
           onPress={(e: any) => { e.stopPropagation(); onEdit(); }}
         >
-          <Edit size={16} color="$colorSecondary" />
+          <Pencil size={16} color="$colorSecondary" />
         </YStack>
       </XStack>
     </XStack>

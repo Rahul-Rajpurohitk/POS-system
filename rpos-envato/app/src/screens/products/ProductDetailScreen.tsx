@@ -1,7 +1,7 @@
 import React from 'react';
 import { ActivityIndicator } from 'react-native';
 import { YStack, XStack, Text, ScrollView } from 'tamagui';
-import { ArrowLeft, Edit, Trash2, Package, RefreshCw } from '@tamagui/lucide-icons';
+import { ArrowLeft, Pencil, Trash2, Package, RefreshCw } from '@tamagui/lucide-icons';
 import { Button, Card, ConfirmModal } from '@/components/ui';
 import { formatCurrency } from '@/utils';
 import { useSettingsStore } from '@/store';
@@ -69,7 +69,7 @@ export default function ProductDetailScreen({ navigation, route }: ProductScreen
         </Button>
         <Text fontSize="$6" fontWeight="bold" flex={1}>Product Details</Text>
         <Button variant="ghost" size="icon" onPress={() => navigation.navigate('EditProduct', { id })}>
-          <Edit size={20} color="$primary" />
+          <Pencil size={20} color="$primary" />
         </Button>
         <Button variant="ghost" size="icon" onPress={() => setDeleteModalVisible(true)}>
           <Trash2 size={20} color="$error" />
