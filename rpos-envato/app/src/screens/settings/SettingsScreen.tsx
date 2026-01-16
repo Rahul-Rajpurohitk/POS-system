@@ -2,11 +2,15 @@ import React from 'react';
 import { YStack, XStack, Text, ScrollView, Switch } from 'tamagui';
 import {
   ArrowLeft, Globe, DollarSign, Percent, Moon, Printer, Users,
-  Bell, Shield, ChevronRight
+  Bell, Shield, ChevronRight, Info
 } from '@tamagui/lucide-icons';
 import { Button, Card } from '@/components/ui';
 import { useSettingsStore } from '@/store';
 import type { MoreScreenProps } from '@/navigation/types';
+
+// App version from package.json
+const APP_VERSION = '2.0.0';
+const BUILD_NUMBER = '1';
 
 interface SettingItemProps {
   icon: React.ReactNode;
@@ -154,6 +158,30 @@ export default function SettingsScreen({ navigation }: MoreScreenProps<'Settings
               subtitle="Data handling and permissions"
               onPress={() => {}}
             />
+          </YStack>
+
+          <YStack gap="$2">
+            <Text fontSize="$3" fontWeight="600" color="$colorSecondary" marginLeft="$2">
+              ABOUT
+            </Text>
+            <SettingItem
+              icon={<Info size={20} color="white" />}
+              title="App Version"
+              subtitle={`v${APP_VERSION} (Build ${BUILD_NUMBER})`}
+            />
+          </YStack>
+
+          {/* Version Footer */}
+          <YStack alignItems="center" paddingVertical="$4" marginTop="$4">
+            <Text fontSize="$2" color="$colorSecondary">
+              POS Universal
+            </Text>
+            <Text fontSize="$1" color="$colorSecondary" opacity={0.6}>
+              Version {APP_VERSION} • Build {BUILD_NUMBER}
+            </Text>
+            <Text fontSize="$1" color="$colorSecondary" opacity={0.4} marginTop="$1">
+              © 2024 All rights reserved
+            </Text>
           </YStack>
         </YStack>
       </ScrollView>
