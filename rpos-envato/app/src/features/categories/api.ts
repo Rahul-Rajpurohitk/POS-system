@@ -1,5 +1,5 @@
 import { apiClient } from '@/services/api/client';
-import type { Category } from '@/types';
+import type { Category, ApiResponse } from '@/types';
 
 export interface CreateCategoryRequest {
   name: string;
@@ -14,20 +14,20 @@ export interface UpdateCategoryRequest extends Partial<CreateCategoryRequest> {}
 
 export const categoriesApi = {
   getAll: () =>
-    apiClient.get<Category[]>('/categories'),
+    apiClient.get<ApiResponse<Category[]>>('/categories'),
 
   getById: (id: string) =>
-    apiClient.get<Category>(`/categories/${id}`),
+    apiClient.get<ApiResponse<Category>>(`/categories/${id}`),
 
   create: (data: CreateCategoryRequest) =>
-    apiClient.post<Category>('/categories', data),
+    apiClient.post<ApiResponse<Category>>('/categories', data),
 
   update: (id: string, data: UpdateCategoryRequest) =>
-    apiClient.put<Category>(`/categories/${id}`, data),
+    apiClient.put<ApiResponse<Category>>(`/categories/${id}`, data),
 
   delete: (id: string) =>
     apiClient.delete(`/categories/${id}`),
 
   getWithProductCount: () =>
-    apiClient.get<Array<Category & { productCount: number }>>('/categories/with-count'),
+    apiClient.get<ApiResponse<Array<Category & { productCount: number }>>>('/categories/with-count'),
 };

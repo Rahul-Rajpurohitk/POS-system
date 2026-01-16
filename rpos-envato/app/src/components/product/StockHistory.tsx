@@ -1,11 +1,17 @@
-import React, { useState } from 'react';
-import { YStack, XStack, Text, Input, ScrollView } from 'tamagui';
+import React from 'react';
+import { YStack, XStack, Text, Spinner } from 'tamagui';
 import {
-  Package, TrendingUp, TrendingDown, Clock, Truck, Plus,
-  Calendar, DollarSign, User, ChevronRight, AlertTriangle,
+  Package, TrendingDown, Truck, Plus,
+  ChevronRight, AlertTriangle,
   RefreshCw, FileText, CheckCircle,
 } from '@tamagui/lucide-icons';
-import type { Product, Supplier } from '@/types';
+import type { Product } from '@/types';
+import {
+  useProductRecentActivity,
+  useProductLastBatchOrder,
+  useProductStockStats,
+} from '@/features/inventory/hooks';
+import type { StockAdjustment as APIStockAdjustment } from '@/features/inventory/api';
 
 /**
  * Stock History Component
@@ -34,86 +40,10 @@ const COLORS = {
   border: '#E5E7EB',
 };
 
-// Stock adjustment reasons
-type AdjustmentType = 'purchase_order' | 'sale' | 'return' | 'damage' | 'count' | 'transfer';
+// Stock adjustment type for display
+type AdjustmentType = 'purchase_order' | 'sale' | 'return' | 'damage' | 'loss' | 'count' | 'transfer_in' | 'transfer_out' | 'write_off' | 'initial' | 'correction';
 
-interface StockAdjustment {
-  id: string;
-  type: AdjustmentType;
-  quantity: number; // Positive = added, Negative = removed
-  previousStock: number;
-  newStock: number;
-  date: string;
-  note?: string;
-  supplier?: { id: string; name: string };
-  orderNumber?: string;
-  unitCost?: number;
-  totalCost?: number;
-  createdBy?: string;
-}
-
-interface BatchOrder {
-  id: string;
-  orderNumber: string;
-  supplier: { id: string; name: string; code: string };
-  quantity: number;
-  unitCost: number;
-  totalCost: number;
-  orderDate: string;
-  receivedDate?: string;
-  status: 'pending' | 'shipped' | 'received' | 'partial';
-  note?: string;
-}
-
-// Mock data for demonstration - will be replaced with real API data
-const MOCK_ADJUSTMENTS: StockAdjustment[] = [
-  {
-    id: '1',
-    type: 'purchase_order',
-    quantity: 50,
-    previousStock: 150,
-    newStock: 200,
-    date: '2024-01-15T10:30:00Z',
-    supplier: { id: 's1', name: 'ABC Distributors' },
-    orderNumber: 'PO-2024-0142',
-    unitCost: 7.50,
-    totalCost: 375.00,
-    createdBy: 'John Manager',
-  },
-  {
-    id: '2',
-    type: 'sale',
-    quantity: -12,
-    previousStock: 200,
-    newStock: 188,
-    date: '2024-01-14T14:22:00Z',
-    note: 'Daily sales',
-  },
-  {
-    id: '3',
-    type: 'damage',
-    quantity: -3,
-    previousStock: 188,
-    newStock: 185,
-    date: '2024-01-13T09:15:00Z',
-    note: 'Damaged during storage',
-    createdBy: 'Sarah Staff',
-  },
-];
-
-const MOCK_LAST_ORDER: BatchOrder = {
-  id: 'bo1',
-  orderNumber: 'PO-2024-0142',
-  supplier: { id: 's1', name: 'ABC Distributors', code: 'ABC' },
-  quantity: 50,
-  unitCost: 7.50,
-  totalCost: 375.00,
-  orderDate: '2024-01-12T00:00:00Z',
-  receivedDate: '2024-01-15T10:30:00Z',
-  status: 'received',
-};
-
-const getAdjustmentIcon = (type: AdjustmentType) => {
+const getAdjustmentIcon = (type: AdjustmentType | string) => {
   switch (type) {
     case 'purchase_order':
       return <Truck size={14} color={COLORS.success} />;
@@ -122,24 +52,35 @@ const getAdjustmentIcon = (type: AdjustmentType) => {
     case 'return':
       return <RefreshCw size={14} color={COLORS.warning} />;
     case 'damage':
+    case 'loss':
+    case 'write_off':
       return <AlertTriangle size={14} color={COLORS.error} />;
     case 'count':
+    case 'correction':
       return <FileText size={14} color={COLORS.gray} />;
-    case 'transfer':
+    case 'transfer_in':
+    case 'transfer_out':
       return <Package size={14} color={COLORS.primary} />;
+    case 'initial':
+      return <CheckCircle size={14} color={COLORS.success} />;
     default:
       return <Package size={14} color={COLORS.gray} />;
   }
 };
 
-const getAdjustmentLabel = (type: AdjustmentType) => {
-  const labels: Record<AdjustmentType, string> = {
+const getAdjustmentLabel = (type: AdjustmentType | string) => {
+  const labels: Record<string, string> = {
     purchase_order: 'Purchase Order',
     sale: 'Sales',
     return: 'Customer Return',
-    damage: 'Damage/Loss',
+    damage: 'Damage',
+    loss: 'Loss',
     count: 'Inventory Count',
-    transfer: 'Transfer',
+    transfer_in: 'Transfer In',
+    transfer_out: 'Transfer Out',
+    write_off: 'Write Off',
+    initial: 'Initial Stock',
+    correction: 'Correction',
   };
   return labels[type] || type;
 };
@@ -164,8 +105,6 @@ const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
 
 interface StockHistoryProps {
   product: Product;
-  adjustments?: StockAdjustment[];
-  lastOrder?: BatchOrder | null;
   onAddStock?: () => void;
   onViewAllHistory?: () => void;
   compact?: boolean;
@@ -173,26 +112,63 @@ interface StockHistoryProps {
 
 export function StockHistory({
   product,
-  adjustments = MOCK_ADJUSTMENTS,
-  lastOrder = MOCK_LAST_ORDER,
   onAddStock,
   onViewAllHistory,
   compact = false,
 }: StockHistoryProps) {
+  // Fetch real data from database
+  const {
+    data: activityData,
+    isLoading: activityLoading,
+    error: activityError,
+  } = useProductRecentActivity(product.id, 5);
+  const {
+    data: lastOrderData,
+    isLoading: orderLoading,
+    error: orderError,
+  } = useProductLastBatchOrder(product.id);
+  const { data: statsData } = useProductStockStats(product.id, 30);
+
+  const adjustments = activityData?.adjustments ?? [];
+  const lastOrder = lastOrderData?.purchaseOrder;
+  const receivedQuantity = lastOrderData?.receivedQuantity ?? 0;
+  const unitCost = lastOrderData?.unitCost ?? 0;
+  const totalCost = lastOrderData?.totalCost ?? 0;
+
   const currentStock = product.quantity ?? 0;
   const isLowStock = currentStock <= 10;
   const isOutOfStock = currentStock === 0;
 
-  // Calculate reorder suggestion
-  const avgDailySales = 5; // This would come from analytics
+  // Calculate reorder suggestion from real stats
+  const avgDailySales = statsData?.avgDailySales ?? 0;
   const daysOfStock = avgDailySales > 0 ? Math.floor(currentStock / avgDailySales) : 999;
   const shouldReorder = daysOfStock <= 7;
 
+  const isLoading = activityLoading || orderLoading;
+  const hasError = activityError || orderError;
+
   if (compact) {
+    if (isLoading) {
+      return (
+        <YStack padding="$2" alignItems="center">
+          <Spinner size="small" color={COLORS.primary} />
+        </YStack>
+      );
+    }
+
+    if (hasError) {
+      return (
+        <YStack padding="$2" alignItems="center">
+          <AlertTriangle size={16} color={COLORS.warning} />
+          <Text fontSize={10} color={COLORS.gray}>Unable to load</Text>
+        </YStack>
+      );
+    }
+
     return (
       <YStack gap="$2">
         {/* Last Order Summary */}
-        {lastOrder && (
+        {lastOrder && receivedQuantity > 0 && (
           <XStack
             backgroundColor={COLORS.successLight}
             padding="$2"
@@ -203,10 +179,10 @@ export function StockHistory({
             <Truck size={14} color={COLORS.success} />
             <YStack flex={1}>
               <Text fontSize={11} color={COLORS.success} fontWeight="600">
-                Last Order: {lastOrder.quantity} units
+                Last Order: {receivedQuantity} units
               </Text>
               <Text fontSize={10} color={COLORS.gray}>
-                {formatDate(lastOrder.receivedDate || lastOrder.orderDate)}
+                {formatDate(lastOrder.receivedAt || lastOrder.orderDate)}
               </Text>
             </YStack>
           </XStack>
@@ -339,7 +315,7 @@ export function StockHistory({
       </XStack>
 
       {/* Last Batch Order */}
-      {lastOrder && (
+      {lastOrder && receivedQuantity > 0 && (
         <YStack
           backgroundColor="white"
           borderRadius={12}
@@ -394,7 +370,7 @@ export function StockHistory({
               <YStack alignItems="flex-end">
                 <Text fontSize={11} color={COLORS.gray}>Received</Text>
                 <Text fontSize={13} fontWeight="600" color="#111827">
-                  {formatDate(lastOrder.receivedDate || lastOrder.orderDate)}
+                  {formatDate(lastOrder.receivedAt || lastOrder.orderDate)}
                 </Text>
               </YStack>
             </XStack>
@@ -408,21 +384,21 @@ export function StockHistory({
               <YStack alignItems="center">
                 <Text fontSize={10} color={COLORS.gray}>Quantity</Text>
                 <Text fontSize={15} fontWeight="700" color="#111827">
-                  {lastOrder.quantity}
+                  {receivedQuantity}
                 </Text>
               </YStack>
               <YStack width={1} backgroundColor={COLORS.border} />
               <YStack alignItems="center">
                 <Text fontSize={10} color={COLORS.gray}>Unit Cost</Text>
                 <Text fontSize={15} fontWeight="700" color="#111827">
-                  {formatCurrency(lastOrder.unitCost)}
+                  {formatCurrency(unitCost)}
                 </Text>
               </YStack>
               <YStack width={1} backgroundColor={COLORS.border} />
               <YStack alignItems="center">
                 <Text fontSize={10} color={COLORS.gray}>Total</Text>
                 <Text fontSize={15} fontWeight="700" color={COLORS.success}>
-                  {formatCurrency(lastOrder.totalCost)}
+                  {formatCurrency(totalCost)}
                 </Text>
               </YStack>
             </XStack>
@@ -459,54 +435,80 @@ export function StockHistory({
           borderColor={COLORS.border}
           overflow="hidden"
         >
-          {adjustments.slice(0, 5).map((adjustment, index) => (
-            <XStack
-              key={adjustment.id}
-              padding="$3"
-              alignItems="center"
-              gap="$3"
-              borderBottomWidth={index < adjustments.length - 1 ? 1 : 0}
-              borderBottomColor={COLORS.border}
-            >
-              <YStack
-                width={32}
-                height={32}
-                borderRadius={8}
-                backgroundColor={
-                  adjustment.quantity > 0 ? COLORS.successLight :
-                  adjustment.type === 'damage' ? COLORS.errorLight :
-                  COLORS.grayLight
-                }
+          {isLoading ? (
+            <YStack padding="$4" alignItems="center">
+              <Spinner size="small" color={COLORS.primary} />
+              <Text fontSize={11} color={COLORS.gray} marginTop="$2">
+                Loading activity...
+              </Text>
+            </YStack>
+          ) : hasError ? (
+            <YStack padding="$4" alignItems="center">
+              <AlertTriangle size={24} color={COLORS.warning} />
+              <Text fontSize={12} color={COLORS.gray} marginTop="$2">
+                Unable to load stock activity
+              </Text>
+              <Text fontSize={10} color={COLORS.gray}>
+                Check your connection and try again
+              </Text>
+            </YStack>
+          ) : adjustments.length === 0 ? (
+            <YStack padding="$4" alignItems="center">
+              <Package size={24} color={COLORS.gray} />
+              <Text fontSize={12} color={COLORS.gray} marginTop="$2">
+                No stock activity yet
+              </Text>
+            </YStack>
+          ) : (
+            adjustments.slice(0, 5).map((adjustment, index) => (
+              <XStack
+                key={adjustment.id}
+                padding="$3"
                 alignItems="center"
-                justifyContent="center"
+                gap="$3"
+                borderBottomWidth={index < Math.min(adjustments.length, 5) - 1 ? 1 : 0}
+                borderBottomColor={COLORS.border}
               >
-                {getAdjustmentIcon(adjustment.type)}
-              </YStack>
-
-              <YStack flex={1}>
-                <Text fontSize={12} fontWeight="600" color="#111827">
-                  {getAdjustmentLabel(adjustment.type)}
-                </Text>
-                <Text fontSize={10} color={COLORS.gray}>
-                  {formatDate(adjustment.date)}
-                  {adjustment.supplier && ` • ${adjustment.supplier.name}`}
-                </Text>
-              </YStack>
-
-              <YStack alignItems="flex-end">
-                <Text
-                  fontSize={14}
-                  fontWeight="700"
-                  color={adjustment.quantity > 0 ? COLORS.success : COLORS.error}
+                <YStack
+                  width={32}
+                  height={32}
+                  borderRadius={8}
+                  backgroundColor={
+                    adjustment.quantity > 0 ? COLORS.successLight :
+                    adjustment.type === 'damage' || adjustment.type === 'loss' ? COLORS.errorLight :
+                    COLORS.grayLight
+                  }
+                  alignItems="center"
+                  justifyContent="center"
                 >
-                  {adjustment.quantity > 0 ? '+' : ''}{adjustment.quantity}
-                </Text>
-                <Text fontSize={10} color={COLORS.gray}>
-                  {adjustment.previousStock} → {adjustment.newStock}
-                </Text>
-              </YStack>
-            </XStack>
-          ))}
+                  {getAdjustmentIcon(adjustment.type)}
+                </YStack>
+
+                <YStack flex={1}>
+                  <Text fontSize={12} fontWeight="600" color="#111827">
+                    {getAdjustmentLabel(adjustment.type)}
+                  </Text>
+                  <Text fontSize={10} color={COLORS.gray}>
+                    {formatDate(adjustment.createdAt)}
+                    {adjustment.supplier && ` • ${adjustment.supplier.name}`}
+                  </Text>
+                </YStack>
+
+                <YStack alignItems="flex-end">
+                  <Text
+                    fontSize={14}
+                    fontWeight="700"
+                    color={adjustment.quantity > 0 ? COLORS.success : COLORS.error}
+                  >
+                    {adjustment.quantity > 0 ? '+' : ''}{adjustment.quantity}
+                  </Text>
+                  <Text fontSize={10} color={COLORS.gray}>
+                    {adjustment.previousStock} → {adjustment.newStock}
+                  </Text>
+                </YStack>
+              </XStack>
+            ))
+          )}
         </YStack>
       </YStack>
     </YStack>

@@ -97,7 +97,7 @@ export default function EditProductScreen({ navigation, route }: ProductScreenPr
           <Text color="$colorSecondary" textAlign="center" marginTop="$2">
             {error?.message || 'Unable to load product details'}
           </Text>
-          <Button variant="outline" marginTop="$4" onPress={() => navigation.goBack()}>
+          <Button variant="secondary" marginTop="$4" onPress={() => navigation.goBack()}>
             <Text>Go Back</Text>
           </Button>
         </YStack>

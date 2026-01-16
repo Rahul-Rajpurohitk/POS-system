@@ -5,6 +5,8 @@ import { Like, FindOptionsWhere } from 'typeorm';
 import categoryService from './category.service';
 import logService from './log.service';
 import { User } from '../entities/User.entity';
+import { priceHistoryService } from './price-history.service';
+import { PriceChangeType, PriceChangeReason } from '../entities/PriceHistory.entity';
 
 export interface CreateProductParams {
   name: string;
@@ -30,6 +32,20 @@ export interface CreateProductParams {
   partnerAvailability?: Record<string, boolean>;
   tags?: string[];
   defaultSupplierId?: string;
+  // Case/Pack Configuration
+  packSize?: number;
+  packUnitName?: string;
+  caseSize?: number;
+  caseUnitName?: string;
+  casePurchasePrice?: number;
+  caseSellingPrice?: number;
+  packPurchasePrice?: number;
+  packSellingPrice?: number;
+  allowUnitSales?: boolean;
+  allowPackSales?: boolean;
+  allowCaseSales?: boolean;
+  minOrderQuantity?: number;
+  orderInCasesOnly?: boolean;
 }
 
 export interface ProductFilterOptions {
@@ -88,6 +104,20 @@ export class ProductService {
       partnerAvailability: params.partnerAvailability || {},
       tags: params.tags || [],
       defaultSupplierId: params.defaultSupplierId || null,
+      // Case/Pack Configuration
+      packSize: params.packSize || null,
+      packUnitName: params.packUnitName || null,
+      caseSize: params.caseSize || null,
+      caseUnitName: params.caseUnitName || null,
+      casePurchasePrice: params.casePurchasePrice || null,
+      caseSellingPrice: params.caseSellingPrice || null,
+      packPurchasePrice: params.packPurchasePrice || null,
+      packSellingPrice: params.packSellingPrice || null,
+      allowUnitSales: params.allowUnitSales ?? true,
+      allowPackSales: params.allowPackSales ?? false,
+      allowCaseSales: params.allowCaseSales ?? false,
+      minOrderQuantity: params.minOrderQuantity ?? 1,
+      orderInCasesOnly: params.orderInCasesOnly ?? false,
     });
 
     const savedProduct = await this.productRepository.save(product);
@@ -99,6 +129,32 @@ export class ProductService {
 
     // Create log entry
     await logService.createNewProduct(savedProduct, user);
+
+    // Record initial prices in price history
+    if (params.sellingPrice) {
+      await priceHistoryService.recordPriceChange({
+        businessId: params.businessId,
+        productId: savedProduct.id,
+        priceType: PriceChangeType.SELLING_PRICE,
+        oldPrice: null,
+        newPrice: params.sellingPrice,
+        reason: PriceChangeReason.INITIAL,
+        changedById: user.id,
+        costAtChange: params.purchasePrice || 0,
+      });
+    }
+
+    if (params.purchasePrice) {
+      await priceHistoryService.recordPriceChange({
+        businessId: params.businessId,
+        productId: savedProduct.id,
+        priceType: PriceChangeType.PURCHASE_PRICE,
+        oldPrice: null,
+        newPrice: params.purchasePrice,
+        reason: PriceChangeReason.INITIAL,
+        changedById: user.id,
+      });
+    }
 
     return savedProduct;
   }
@@ -119,6 +175,14 @@ export class ProductService {
     if (!product) {
       return null;
     }
+
+    // Store old prices for change tracking
+    const oldSellingPrice = Number(product.sellingPrice);
+    const oldPurchasePrice = Number(product.purchasePrice);
+    const oldCasePurchasePrice = product.casePurchasePrice ? Number(product.casePurchasePrice) : null;
+    const oldCaseSellingPrice = product.caseSellingPrice ? Number(product.caseSellingPrice) : null;
+    const oldPackPurchasePrice = product.packPurchasePrice ? Number(product.packPurchasePrice) : null;
+    const oldPackSellingPrice = product.packSellingPrice ? Number(product.packSellingPrice) : null;
 
     // Handle category change
     const oldCategoryId = product.categoryId;
@@ -159,12 +223,123 @@ export class ProductService {
       partnerAvailability: params.partnerAvailability ?? product.partnerAvailability,
       tags: params.tags ?? product.tags,
       defaultSupplierId: params.defaultSupplierId ?? product.defaultSupplierId,
+      // Case/Pack Configuration
+      packSize: params.packSize ?? product.packSize,
+      packUnitName: params.packUnitName ?? product.packUnitName,
+      caseSize: params.caseSize ?? product.caseSize,
+      caseUnitName: params.caseUnitName ?? product.caseUnitName,
+      casePurchasePrice: params.casePurchasePrice ?? product.casePurchasePrice,
+      caseSellingPrice: params.caseSellingPrice ?? product.caseSellingPrice,
+      packPurchasePrice: params.packPurchasePrice ?? product.packPurchasePrice,
+      packSellingPrice: params.packSellingPrice ?? product.packSellingPrice,
+      allowUnitSales: params.allowUnitSales ?? product.allowUnitSales,
+      allowPackSales: params.allowPackSales ?? product.allowPackSales,
+      allowCaseSales: params.allowCaseSales ?? product.allowCaseSales,
+      minOrderQuantity: params.minOrderQuantity ?? product.minOrderQuantity,
+      orderInCasesOnly: params.orderInCasesOnly ?? product.orderInCasesOnly,
     });
 
     const savedProduct = await this.productRepository.save(product);
 
     // Create log entry
     await logService.editProduct(savedProduct, user);
+
+    // ============ Track Price Changes ============
+    const newSellingPrice = Number(savedProduct.sellingPrice);
+    const newPurchasePrice = Number(savedProduct.purchasePrice);
+
+    // Track selling price changes
+    if (params.sellingPrice !== undefined && newSellingPrice !== oldSellingPrice) {
+      await priceHistoryService.recordPriceChange({
+        businessId,
+        productId,
+        priceType: PriceChangeType.SELLING_PRICE,
+        oldPrice: oldSellingPrice,
+        newPrice: newSellingPrice,
+        reason: PriceChangeReason.MANUAL,
+        changedById: user.id,
+        costAtChange: newPurchasePrice,
+      });
+    }
+
+    // Track purchase price changes
+    if (params.purchasePrice !== undefined && newPurchasePrice !== oldPurchasePrice) {
+      await priceHistoryService.recordPriceChange({
+        businessId,
+        productId,
+        priceType: PriceChangeType.PURCHASE_PRICE,
+        oldPrice: oldPurchasePrice,
+        newPrice: newPurchasePrice,
+        reason: PriceChangeReason.MANUAL,
+        changedById: user.id,
+      });
+    }
+
+    // Track case purchase price changes
+    if (params.casePurchasePrice !== undefined) {
+      const newCasePurchasePrice = savedProduct.casePurchasePrice ? Number(savedProduct.casePurchasePrice) : null;
+      if (newCasePurchasePrice !== oldCasePurchasePrice && newCasePurchasePrice !== null) {
+        await priceHistoryService.recordPriceChange({
+          businessId,
+          productId,
+          priceType: PriceChangeType.CASE_PURCHASE_PRICE,
+          oldPrice: oldCasePurchasePrice,
+          newPrice: newCasePurchasePrice,
+          reason: PriceChangeReason.MANUAL,
+          changedById: user.id,
+        });
+      }
+    }
+
+    // Track case selling price changes
+    if (params.caseSellingPrice !== undefined) {
+      const newCaseSellingPrice = savedProduct.caseSellingPrice ? Number(savedProduct.caseSellingPrice) : null;
+      if (newCaseSellingPrice !== oldCaseSellingPrice && newCaseSellingPrice !== null) {
+        await priceHistoryService.recordPriceChange({
+          businessId,
+          productId,
+          priceType: PriceChangeType.CASE_SELLING_PRICE,
+          oldPrice: oldCaseSellingPrice,
+          newPrice: newCaseSellingPrice,
+          reason: PriceChangeReason.MANUAL,
+          changedById: user.id,
+          costAtChange: savedProduct.casePurchasePrice ? Number(savedProduct.casePurchasePrice) : undefined,
+        });
+      }
+    }
+
+    // Track pack purchase price changes
+    if (params.packPurchasePrice !== undefined) {
+      const newPackPurchasePrice = savedProduct.packPurchasePrice ? Number(savedProduct.packPurchasePrice) : null;
+      if (newPackPurchasePrice !== oldPackPurchasePrice && newPackPurchasePrice !== null) {
+        await priceHistoryService.recordPriceChange({
+          businessId,
+          productId,
+          priceType: PriceChangeType.PACK_PURCHASE_PRICE,
+          oldPrice: oldPackPurchasePrice,
+          newPrice: newPackPurchasePrice,
+          reason: PriceChangeReason.MANUAL,
+          changedById: user.id,
+        });
+      }
+    }
+
+    // Track pack selling price changes
+    if (params.packSellingPrice !== undefined) {
+      const newPackSellingPrice = savedProduct.packSellingPrice ? Number(savedProduct.packSellingPrice) : null;
+      if (newPackSellingPrice !== oldPackSellingPrice && newPackSellingPrice !== null) {
+        await priceHistoryService.recordPriceChange({
+          businessId,
+          productId,
+          priceType: PriceChangeType.PACK_SELLING_PRICE,
+          oldPrice: oldPackSellingPrice,
+          newPrice: newPackSellingPrice,
+          reason: PriceChangeReason.MANUAL,
+          changedById: user.id,
+          costAtChange: savedProduct.packPurchasePrice ? Number(savedProduct.packPurchasePrice) : undefined,
+        });
+      }
+    }
 
     return savedProduct;
   }

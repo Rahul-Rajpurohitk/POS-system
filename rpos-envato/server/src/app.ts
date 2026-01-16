@@ -61,7 +61,7 @@ export function createApp(): Application {
   app.use('/public', express.static(path.join(__dirname, '../public')));
 
   // API Routes
-  app.use('/', routes);
+  app.use('/api', routes);
 
   // Swagger API Documentation
   setupSwagger(app);

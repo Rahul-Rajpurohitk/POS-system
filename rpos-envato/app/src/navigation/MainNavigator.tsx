@@ -11,6 +11,7 @@ import DashboardScreen from '@/screens/main/DashboardScreen';
 import POSScreen from '@/screens/main/POSScreen';
 import ProductListScreen from '@/screens/products/ProductListScreen';
 import AddProductScreen from '@/screens/products/AddProductScreen';
+import ProductImportScreen from '@/screens/products/ProductImportScreen';
 import ProductDetailScreen from '@/screens/products/ProductDetailScreen';
 import EditProductScreen from '@/screens/products/EditProductScreen';
 import CategoriesScreen from '@/screens/categories/CategoriesScreen';
@@ -61,6 +62,7 @@ function ProductNavigator() {
     >
       <ProductStack.Screen name="ProductList" component={ProductListScreen} />
       <ProductStack.Screen name="AddProduct" component={AddProductScreen} />
+      <ProductStack.Screen name="ProductImport" component={ProductImportScreen} />
       <ProductStack.Screen name="ProductDetail" component={ProductDetailScreen} />
       <ProductStack.Screen name="EditProduct" component={EditProductScreen} />
       <ProductStack.Screen name="Categories" component={CategoriesScreen} />

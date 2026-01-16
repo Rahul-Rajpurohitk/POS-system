@@ -18,6 +18,7 @@ interface CartStore {
   setCustomer: (customer: Customer | null) => void;
   setCoupon: (coupon: Coupon | null) => void;
   clear: () => void;
+  clearCart: () => void; // Alias for clear()
 
   // Computed values (matching original POS logic exactly)
   getSubTotal: () => number;
@@ -112,6 +113,14 @@ export const useCartStore = create<CartStore>()(
 
     // Clear cart
     clear: () =>
+      set((state) => {
+        state.items = [];
+        state.customer = null;
+        state.coupon = null;
+      }),
+
+    // Alias for clear()
+    clearCart: () =>
       set((state) => {
         state.items = [];
         state.customer = null;

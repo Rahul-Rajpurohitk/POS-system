@@ -1,5 +1,5 @@
 import { apiClient } from '@/services/api/client';
-import type { Order, OrderItem, PaginatedResponse } from '@/types';
+import type { Order, OrderItem, ApiListResponse, ApiResponse } from '@/types';
 
 export interface OrdersQuery {
   page?: number;
@@ -41,32 +41,32 @@ export interface OrderStats {
 
 export const ordersApi = {
   getAll: (params?: OrdersQuery) =>
-    apiClient.get<PaginatedResponse<Order>>('/orders', { params }),
+    apiClient.get<ApiListResponse<Order>>('/orders', { params }),
 
   getById: (id: string) =>
-    apiClient.get<Order>(`/orders/${id}`),
+    apiClient.get<ApiResponse<Order>>(`/orders/${id}`),
 
   create: (data: CreateOrderRequest) =>
-    apiClient.post<Order>('/orders', data),
+    apiClient.post<ApiResponse<Order>>('/orders', data),
 
   update: (id: string, data: UpdateOrderRequest) =>
-    apiClient.put<Order>(`/orders/${id}`, data),
+    apiClient.put<ApiResponse<Order>>(`/orders/${id}`, data),
 
   delete: (id: string) =>
     apiClient.delete(`/orders/${id}`),
 
   getStats: () =>
-    apiClient.get<OrderStats>('/orders/stats'),
+    apiClient.get<ApiResponse<OrderStats>>('/orders/stats'),
 
   getByCustomer: (customerId: string) =>
-    apiClient.get<Order[]>(`/orders/customer/${customerId}`),
+    apiClient.get<ApiResponse<Order[]>>(`/orders/customer/${customerId}`),
 
   getRecent: (limit?: number) =>
-    apiClient.get<Order[]>('/orders/recent', { params: { limit } }),
+    apiClient.get<ApiResponse<Order[]>>('/orders/recent', { params: { limit } }),
 
   void: (id: string) =>
-    apiClient.post<Order>(`/orders/${id}/void`),
+    apiClient.post<ApiResponse<Order>>(`/orders/${id}/void`),
 
   refund: (id: string, amount: number) =>
-    apiClient.post<Order>(`/orders/${id}/refund`, { amount }),
+    apiClient.post<ApiResponse<Order>>(`/orders/${id}/refund`, { amount }),
 };

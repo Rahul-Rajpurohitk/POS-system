@@ -59,6 +59,7 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
+  name?: string; // Computed or separate name field
   avatar?: string;
   role: UserRole;
   businessName?: string;
@@ -161,6 +162,7 @@ export interface Product extends BaseEntity {
   description?: string; // Alias for desc
   images: string[];
   quantity: number;
+  stock?: number; // Alias for quantity
   sellingPrice: number;
   purchasePrice: number;
   category?: Category;
@@ -194,6 +196,25 @@ export interface Product extends BaseEntity {
   // Partner-ready: Availability & Tags
   partnerAvailability?: PartnerAvailability;
   tags?: string[];
+
+  // Case/Pack Configuration
+  packSize?: number;           // Units per pack (e.g., 6)
+  packUnitName?: string;       // e.g., "6-pack", "box", "dozen"
+  caseSize?: number;           // Units per case (e.g., 24) OR packs per case
+  caseUnitName?: string;       // e.g., "case", "carton", "pallet"
+
+  // Case/Pack Pricing
+  casePurchasePrice?: number;  // Cost to buy one case
+  caseSellingPrice?: number;   // Price to sell one case (wholesale)
+  packPurchasePrice?: number;
+  packSellingPrice?: number;
+
+  // Sales Configuration
+  allowUnitSales?: boolean;    // Can sell individual units?
+  allowPackSales?: boolean;    // Can sell packs?
+  allowCaseSales?: boolean;    // Can sell cases?
+  minOrderQuantity?: number;   // Minimum units for ordering
+  orderInCasesOnly?: boolean;  // Force case-based ordering from suppliers
 }
 
 // ============================================
@@ -241,13 +262,23 @@ export interface OrderPayment {
   total: number;
 }
 
+export type OrderStatus = 'pending' | 'completed' | 'cancelled' | 'refunded';
+
 export interface Order extends BaseEntity {
   number: string;
+  orderNumber?: string; // Alias for number
   items: OrderItem[];
   payment: OrderPayment;
   customer?: Customer;
   coupon?: Coupon;
   createdBy: string;
+  // Direct access fields (duplicated from payment for convenience)
+  status?: OrderStatus;
+  subTotal?: number;
+  discount?: number;
+  tax?: number;
+  total?: number;
+  guestName?: string;
 }
 
 // ============================================
@@ -286,6 +317,19 @@ export interface PaginatedResponse<T> {
   total: number;
   page: number;
   limit: number;
+  totalPages?: number;
+}
+
+// Actual backend API response for paginated lists
+export interface ApiListResponse<T> {
+  success: boolean;
+  data: T[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 export interface RequestState<T> {

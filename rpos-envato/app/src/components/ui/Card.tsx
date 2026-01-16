@@ -69,21 +69,24 @@ const StyledCard = styled(YStack, {
       },
     },
   } as const,
-
-  defaultVariants: {
-    variant: 'default',
-    size: 'md',
-  },
 });
 
-type StyledCardProps = GetProps<typeof StyledCard>;
+// Explicitly define variant types for proper TypeScript inference
+export type CardVariant = 'default' | 'elevated' | 'outlined' | 'ghost';
+export type CardSize = 'sm' | 'md' | 'lg';
 
-export interface CardProps extends StyledCardProps {
+export interface CardProps {
+  variant?: CardVariant;
+  size?: CardSize;
+  pressable?: boolean;
   children: React.ReactNode;
+  onPress?: () => void;
+  // Allow any additional style props from Tamagui
+  [key: string]: any;
 }
 
-export function Card({ children, ...props }: CardProps) {
-  return <StyledCard {...props}>{children}</StyledCard>;
+export function Card({ children, variant = 'default', size = 'md', ...props }: CardProps) {
+  return <StyledCard variant={variant as any} size={size as any} {...(props as any)}>{children}</StyledCard>;
 }
 
 // Card Header

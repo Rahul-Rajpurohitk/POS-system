@@ -21,7 +21,7 @@ export function useProducts(params?: ProductsQuery) {
   return useQuery({
     queryKey: productKeys.list(params),
     queryFn: () => productsApi.getAll(params),
-    select: (response) => response.data,
+    select: (response) => response.data.data, // Extract data array from { success, data, pagination }
   });
 }
 
@@ -31,7 +31,7 @@ export function useInfiniteProducts(params?: Omit<ProductsQuery, 'page'>) {
     queryFn: ({ pageParam = 1 }) => productsApi.getAll({ ...params, page: pageParam }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => {
-      const { page, totalPages } = lastPage.data;
+      const { page, totalPages } = lastPage.data.pagination;
       return page < totalPages ? page + 1 : undefined;
     },
     select: (data) => ({

@@ -44,7 +44,7 @@ export default function CustomerDetailScreen({ navigation, route }: MoreScreenPr
           <Text color="$colorSecondary" textAlign="center" marginTop="$2">
             {error?.message || 'Unable to load customer details'}
           </Text>
-          <Button variant="outline" marginTop="$4" onPress={() => navigation.goBack()}>
+          <Button variant="secondary" marginTop="$4" onPress={() => navigation.goBack()}>
             <Text>Go Back</Text>
           </Button>
         </YStack>

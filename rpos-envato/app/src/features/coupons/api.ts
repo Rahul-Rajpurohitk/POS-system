@@ -1,5 +1,5 @@
 import { apiClient } from '@/services/api/client';
-import type { Coupon } from '@/types';
+import type { Coupon, ApiResponse } from '@/types';
 
 export interface CreateCouponRequest {
   code: string;
@@ -23,26 +23,26 @@ export interface ValidateCouponResponse {
 
 export const couponsApi = {
   getAll: () =>
-    apiClient.get<Coupon[]>('/coupons'),
+    apiClient.get<ApiResponse<Coupon[]>>('/coupons'),
 
   getById: (id: string) =>
-    apiClient.get<Coupon>(`/coupons/${id}`),
+    apiClient.get<ApiResponse<Coupon>>(`/coupons/${id}`),
 
   create: (data: CreateCouponRequest) =>
-    apiClient.post<Coupon>('/coupons', data),
+    apiClient.post<ApiResponse<Coupon>>('/coupons', data),
 
   update: (id: string, data: UpdateCouponRequest) =>
-    apiClient.put<Coupon>(`/coupons/${id}`, data),
+    apiClient.put<ApiResponse<Coupon>>(`/coupons/${id}`, data),
 
   delete: (id: string) =>
     apiClient.delete(`/coupons/${id}`),
 
   validate: (code: string, orderTotal: number) =>
-    apiClient.post<ValidateCouponResponse>('/coupons/validate', { code, orderTotal }),
+    apiClient.post<ApiResponse<ValidateCouponResponse>>('/coupons/validate', { code, orderTotal }),
 
   getByCode: (code: string) =>
-    apiClient.get<Coupon>(`/coupons/code/${code}`),
+    apiClient.get<ApiResponse<Coupon>>(`/coupons/code/${code}`),
 
   getActive: () =>
-    apiClient.get<Coupon[]>('/coupons/active'),
+    apiClient.get<ApiResponse<Coupon[]>>('/coupons/active'),
 };

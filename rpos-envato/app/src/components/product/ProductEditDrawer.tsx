@@ -156,7 +156,7 @@ function CategorySelector({
       </XStack>
 
       {/* Category options */}
-      {categoryList.map((cat) => {
+      {categoryList.map((cat: Category) => {
         const isSelected = value === cat.id;
         const catColor = cat.color || COLORS.gray;
         return (
@@ -208,13 +208,17 @@ export function ProductEditDrawer({ product, isOpen, onClose, onSuccess, supplie
 
   // Partner availability state (separate from form as it's handled differently)
   const [partnerAvailability, setPartnerAvailability] = useState<PartnerAvailability>({});
+  const [initialPartnerAvailability, setInitialPartnerAvailability] = useState<PartnerAvailability>({});
+
+  // Track if partner availability changed
+  const isPartnerDirty = JSON.stringify(partnerAvailability) !== JSON.stringify(initialPartnerAvailability);
 
   const {
     control,
     handleSubmit,
     reset,
     watch,
-    formState: { errors, isDirty },
+    formState: { errors, isDirty: isFormDirty },
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
@@ -274,10 +278,15 @@ export function ProductEditDrawer({ product, isOpen, onClose, onSuccess, supplie
         dimensionUnit: product.dimensionUnit || 'cm',
         tags: product.tags || [],
       });
-      // Set partner availability
-      setPartnerAvailability(product.partnerAvailability || {});
+      // Set partner availability and store initial value
+      const initialPartners = product.partnerAvailability || {};
+      setPartnerAvailability(initialPartners);
+      setInitialPartnerAvailability(initialPartners);
     }
   }, [product, isOpen, reset]);
+
+  // Combined dirty state
+  const isDirty = isFormDirty || isPartnerDirty;
 
   const onSubmit = async (data: ProductFormData) => {
     if (!product) return;

@@ -19,7 +19,7 @@ export function useCustomers(params?: CustomersQuery) {
   return useQuery({
     queryKey: customerKeys.list(params),
     queryFn: () => customersApi.getAll(params),
-    select: (response) => response.data,
+    select: (response) => response.data.data, // Extract data array from { success, data, pagination }
   });
 }
 
@@ -29,7 +29,7 @@ export function useInfiniteCustomers(params?: Omit<CustomersQuery, 'page'>) {
     queryFn: ({ pageParam = 1 }) => customersApi.getAll({ ...params, page: pageParam }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => {
-      const { page, totalPages } = lastPage.data;
+      const { page, totalPages } = lastPage.data.pagination;
       return page < totalPages ? page + 1 : undefined;
     },
     select: (data) => ({
@@ -43,7 +43,7 @@ export function useCustomer(id: string) {
   return useQuery({
     queryKey: customerKeys.detail(id),
     queryFn: () => customersApi.getById(id),
-    select: (response) => response.data,
+    select: (response) => response.data.data, // Extract customer from { success, data }
     enabled: !!id && !id.startsWith('local-'),
   });
 }
@@ -52,7 +52,7 @@ export function useCustomerSearch(query: string) {
   return useQuery({
     queryKey: customerKeys.search(query),
     queryFn: () => customersApi.search(query),
-    select: (response) => response.data,
+    select: (response) => response.data.data, // Extract data array from { success, data }
     enabled: query.length >= 2,
   });
 }
@@ -61,7 +61,7 @@ export function useCustomerStats(id: string) {
   return useQuery({
     queryKey: customerKeys.stats(id),
     queryFn: () => customersApi.getStats(id),
-    select: (response) => response.data,
+    select: (response) => response.data.data, // Extract stats from { success, data }
     enabled: !!id && !id.startsWith('local-'),
   });
 }

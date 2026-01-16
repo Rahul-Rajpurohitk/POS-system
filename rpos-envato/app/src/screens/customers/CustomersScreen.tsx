@@ -28,12 +28,12 @@ export default function CustomersScreen({ navigation }: MoreScreenProps<'Custome
     error
   } = useCustomers({ limit: 100 });
 
-  const customers = customersData?.data ?? [];
+  const customers = customersData ?? [];
 
   const filtered = useMemo(() => {
     if (!search) return customers;
     const query = search.toLowerCase();
-    return customers.filter(c =>
+    return customers.filter((c: typeof customers[number]) =>
       c.name.toLowerCase().includes(query) ||
       c.email?.toLowerCase().includes(query)
     );

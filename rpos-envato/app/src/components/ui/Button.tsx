@@ -127,21 +127,24 @@ const StyledButton = styled(TamaguiButton, {
       },
     },
   } as const,
-
-  defaultVariants: {
-    variant: 'primary',
-    size: 'md',
-  },
 });
 
-type StyledButtonProps = GetProps<typeof StyledButton>;
+// Explicitly define variant types for proper TypeScript inference
+export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'success' | 'ghost' | 'link';
+export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';
 
-export interface ButtonProps extends Omit<StyledButtonProps, 'disabled'> {
+export interface ButtonProps {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  fullWidth?: boolean;
   loading?: boolean;
   disabled?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   children?: React.ReactNode;
+  onPress?: () => void;
+  // Allow any additional style props from Tamagui
+  [key: string]: any;
 }
 
 export function Button({
@@ -151,6 +154,7 @@ export function Button({
   rightIcon,
   children,
   variant = 'primary',
+  size = 'md',
   ...props
 }: ButtonProps) {
   const isDisabled = disabled || loading;
@@ -158,9 +162,10 @@ export function Button({
 
   return (
     <StyledButton
-      variant={variant}
+      variant={variant as any}
+      size={size as any}
       disabled={isDisabled}
-      {...props}
+      {...(props as any)}
     >
       {loading ? (
         <Spinner size="small" color={spinnerColor} />

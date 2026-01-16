@@ -1,5 +1,5 @@
 import { apiClient } from '@/services/api/client';
-import type { Product, PaginatedResponse, PartnerAvailability } from '@/types';
+import type { Product, ApiListResponse, PartnerAvailability } from '@/types';
 
 export interface ProductsQuery {
   page?: number;
@@ -80,7 +80,7 @@ export interface BulkPartnerUpdateRequest {
 export const productsApi = {
   // Core CRUD operations
   getAll: (params?: ProductsQuery) =>
-    apiClient.get<PaginatedResponse<Product>>('/products', { params }),
+    apiClient.get<ApiListResponse<Product>>('/products', { params }),
 
   getById: (id: string) =>
     apiClient.get<Product>(`/products/${id}`),

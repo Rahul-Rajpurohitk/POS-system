@@ -170,12 +170,12 @@ export default function OrderListScreen({ navigation }: OrderScreenProps<'OrderL
     error
   } = useOrders({ limit: 100 });
 
-  const orders = ordersData?.data ?? [];
+  const orders = ordersData ?? [];
 
   const filtered = useMemo(() => {
     if (!search) return orders;
     const query = search.toLowerCase();
-    return orders.filter(o =>
+    return orders.filter((o: typeof orders[number]) =>
       (o.number || o.orderNumber || '').toLowerCase().includes(query) ||
       (o.customer?.name || '').toLowerCase().includes(query)
     );
@@ -184,13 +184,13 @@ export default function OrderListScreen({ navigation }: OrderScreenProps<'OrderL
   // Calculate order stats
   const orderStats = useMemo(() => {
     const totalOrders = orders.length;
-    const totalRevenue = orders.reduce((sum, o) => {
+    const totalRevenue = orders.reduce((sum: number, o: typeof orders[number]) => {
       const payment = o.payment || { total: o.total || 0 };
       return sum + (payment.total || 0);
     }, 0);
-    const completedOrders = orders.filter(o => (o.status || 'completed').toLowerCase() === 'completed').length;
-    const pendingOrders = orders.filter(o => ['pending', 'processing'].includes((o.status || '').toLowerCase())).length;
-    const todayOrders = orders.filter(o => {
+    const completedOrders = orders.filter((o: typeof orders[number]) => (o.status || 'completed').toLowerCase() === 'completed').length;
+    const pendingOrders = orders.filter((o: typeof orders[number]) => ['pending', 'processing'].includes((o.status || '').toLowerCase())).length;
+    const todayOrders = orders.filter((o: typeof orders[number]) => {
       const orderDate = new Date(o.createdAt);
       const today = new Date();
       return orderDate.toDateString() === today.toDateString();

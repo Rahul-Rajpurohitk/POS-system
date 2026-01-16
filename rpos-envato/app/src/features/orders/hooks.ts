@@ -20,7 +20,7 @@ export function useOrders(params?: OrdersQuery) {
   return useQuery({
     queryKey: orderKeys.list(params),
     queryFn: () => ordersApi.getAll(params),
-    select: (response) => response.data,
+    select: (response) => response.data.data, // Extract data array from { success, data, pagination }
   });
 }
 
@@ -30,7 +30,7 @@ export function useInfiniteOrders(params?: Omit<OrdersQuery, 'page'>) {
     queryFn: ({ pageParam = 1 }) => ordersApi.getAll({ ...params, page: pageParam }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => {
-      const { page, totalPages } = lastPage.data;
+      const { page, totalPages } = lastPage.data.pagination;
       return page < totalPages ? page + 1 : undefined;
     },
     select: (data) => ({
@@ -44,7 +44,7 @@ export function useOrder(id: string) {
   return useQuery({
     queryKey: orderKeys.detail(id),
     queryFn: () => ordersApi.getById(id),
-    select: (response) => response.data,
+    select: (response) => response.data.data, // Extract order from { success, data }
     enabled: !!id && !id.startsWith('local-'),
   });
 }
@@ -53,7 +53,7 @@ export function useOrderStats() {
   return useQuery({
     queryKey: orderKeys.stats(),
     queryFn: () => ordersApi.getStats(),
-    select: (response) => response.data,
+    select: (response) => response.data.data, // Extract stats from { success, data }
   });
 }
 
@@ -61,7 +61,7 @@ export function useCustomerOrders(customerId: string) {
   return useQuery({
     queryKey: orderKeys.customer(customerId),
     queryFn: () => ordersApi.getByCustomer(customerId),
-    select: (response) => response.data,
+    select: (response) => response.data.data, // Extract data array from { success, data }
     enabled: !!customerId,
   });
 }
@@ -70,7 +70,7 @@ export function useRecentOrders(limit?: number) {
   return useQuery({
     queryKey: orderKeys.recent(limit),
     queryFn: () => ordersApi.getRecent(limit),
-    select: (response) => response.data,
+    select: (response) => response.data.data, // Extract data array from { success, data }
   });
 }
 

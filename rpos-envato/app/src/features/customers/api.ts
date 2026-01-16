@@ -1,5 +1,5 @@
 import { apiClient } from '@/services/api/client';
-import type { Customer, PaginatedResponse } from '@/types';
+import type { Customer, ApiListResponse, ApiResponse } from '@/types';
 
 export interface CustomersQuery {
   page?: number;
@@ -25,23 +25,23 @@ export interface CustomerStats {
 
 export const customersApi = {
   getAll: (params?: CustomersQuery) =>
-    apiClient.get<PaginatedResponse<Customer>>('/customers', { params }),
+    apiClient.get<ApiListResponse<Customer>>('/customers', { params }),
 
   getById: (id: string) =>
-    apiClient.get<Customer>(`/customers/${id}`),
+    apiClient.get<ApiResponse<Customer>>(`/customers/${id}`),
 
   create: (data: CreateCustomerRequest) =>
-    apiClient.post<Customer>('/customers', data),
+    apiClient.post<ApiResponse<Customer>>('/customers', data),
 
   update: (id: string, data: UpdateCustomerRequest) =>
-    apiClient.put<Customer>(`/customers/${id}`, data),
+    apiClient.put<ApiResponse<Customer>>(`/customers/${id}`, data),
 
   delete: (id: string) =>
     apiClient.delete(`/customers/${id}`),
 
   search: (query: string) =>
-    apiClient.get<Customer[]>('/customers/search', { params: { q: query } }),
+    apiClient.get<ApiResponse<Customer[]>>('/customers/search', { params: { q: query } }),
 
   getStats: (id: string) =>
-    apiClient.get<CustomerStats>(`/customers/${id}/stats`),
+    apiClient.get<ApiResponse<CustomerStats>>(`/customers/${id}/stats`),
 };

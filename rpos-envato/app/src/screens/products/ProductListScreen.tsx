@@ -428,7 +428,7 @@ export default function ProductListScreen({ navigation }: ProductScreenProps<'Pr
   } = useProducts({ limit: 100 });
 
   const { data: categories = [] } = useCategories();
-  const products = productsData?.data ?? [];
+  const products = productsData ?? [];
 
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();

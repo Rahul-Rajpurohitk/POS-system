@@ -24,6 +24,9 @@ interface SyncStore {
   addCouponToQueue: (coupon: Coupon) => void;
   addCategoryToQueue: (category: Category) => void;
 
+  // Generic queue method for offline sync
+  addToQueue: (queueItem: { type: 'create' | 'update' | 'delete'; entity: string; data: any; localId?: string }) => void;
+
   // Delete tracking
   markProductDeleted: (id: ID) => void;
   markCustomerDeleted: (id: ID) => void;
@@ -80,6 +83,69 @@ export const useSyncStore = create<SyncStore>()((set, get) => ({
   lastSyncAt: null,
   syncErrors: [],
   isOnline: true,
+
+  // Generic add to queue method for offline sync
+  addToQueue: (queueItem: { type: 'create' | 'update' | 'delete'; entity: string; data: any; localId?: string }) => {
+    const { entity, data } = queueItem;
+    // Route to appropriate queue based on entity type
+    const entityMap: Record<string, keyof Omit<SyncQueue, 'deletedIds'>> = {
+      product: 'products',
+      products: 'products',
+      category: 'categories',
+      categories: 'categories',
+      customer: 'customers',
+      customers: 'customers',
+      coupon: 'coupons',
+      coupons: 'coupons',
+      order: 'orders',
+      orders: 'orders',
+    };
+
+    const queueKey = entityMap[entity.toLowerCase()];
+    if (!queueKey) {
+      console.warn(`Unknown entity type: ${entity}`);
+      return;
+    }
+
+    set((state) => {
+      const queueItems = state.queue[queueKey] as any[];
+      const itemId = data?.id || queueItem.localId;
+
+      if (queueItem.type === 'delete') {
+        // Handle delete by adding to deletedIds
+        const deletedKey = queueKey as keyof SyncQueue['deletedIds'];
+        if (state.queue.deletedIds[deletedKey] && itemId) {
+          return {
+            queue: {
+              ...state.queue,
+              deletedIds: {
+                ...state.queue.deletedIds,
+                [deletedKey]: [...state.queue.deletedIds[deletedKey], itemId],
+              },
+            },
+          };
+        }
+      }
+
+      // Handle create/update
+      const exists = queueItems.some((i) => i.id === itemId);
+      if (!exists) {
+        return {
+          queue: {
+            ...state.queue,
+            [queueKey]: [...queueItems, { ...data, id: itemId }],
+          },
+        };
+      } else {
+        return {
+          queue: {
+            ...state.queue,
+            [queueKey]: queueItems.map((i) => i.id === itemId ? { ...i, ...data } : i),
+          },
+        };
+      }
+    });
+  },
 
   // Add to queue actions
   addOrderToQueue: (order) =>

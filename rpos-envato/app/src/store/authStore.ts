@@ -12,6 +12,7 @@ interface AuthStore extends AuthState {
 
   // Actions
   setAuth: (user: User, token: string) => void;
+  setUser: (user: User) => void; // Alias for setting user without changing token
   updateUser: (userData: Partial<User>) => void;
   setToken: (token: string) => void;
   logout: () => void;
@@ -60,6 +61,14 @@ const createAuthStore = (set: any, get: any) => ({
   setAuth: (user: User, token: string) => {
     set({ user, token, isAuthenticated: true });
     persistAuthState(user, token);
+  },
+
+  setUser: (user: User) => {
+    const state = get();
+    set({ user, isAuthenticated: true });
+    if (state.token) {
+      persistAuthState(user, state.token);
+    }
   },
 
   updateUser: (userData: Partial<User>) => {

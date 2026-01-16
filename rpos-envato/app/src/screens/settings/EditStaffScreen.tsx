@@ -105,7 +105,7 @@ export default function EditStaffScreen({ navigation, route }: MoreScreenProps<'
           <Text color="$colorSecondary" textAlign="center" marginTop="$2">
             {error?.message || 'Unable to load staff member details'}
           </Text>
-          <Button variant="outline" marginTop="$4" onPress={() => navigation.goBack()}>
+          <Button variant="secondary" marginTop="$4" onPress={() => navigation.goBack()}>
             <Text>Go Back</Text>
           </Button>
         </YStack>

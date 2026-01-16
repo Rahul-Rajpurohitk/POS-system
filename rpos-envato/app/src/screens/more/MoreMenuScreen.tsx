@@ -6,7 +6,7 @@ import {
 } from '@tamagui/lucide-icons';
 import { Button, Card, ConfirmModal } from '@/components/ui';
 import { useAuthStore } from '@/store';
-import type { MainTabScreenProps } from '@/navigation/types';
+import type { MoreScreenProps } from '@/navigation/types';
 
 interface MenuItem {
   icon: React.ReactNode;
@@ -56,7 +56,7 @@ const menuItems: MenuItem[] = [
   },
 ];
 
-export default function MoreMenuScreen({ navigation }: MainTabScreenProps<'More'>) {
+export default function MoreMenuScreen({ navigation }: MoreScreenProps<'MoreMenu'>) {
   const { user, logout } = useAuthStore();
   const [logoutModal, setLogoutModal] = React.useState(false);
 
@@ -100,7 +100,7 @@ export default function MoreMenuScreen({ navigation }: MainTabScreenProps<'More'
                 )}
               </Avatar>
               <YStack flex={1}>
-                <Text fontSize="$5" fontWeight="600">{user?.name || 'User'}</Text>
+                <Text fontSize="$5" fontWeight="600">{user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'User'}</Text>
                 <Text fontSize="$2" color="$colorSecondary">{user?.email || 'View profile'}</Text>
               </YStack>
               <ChevronRight size={24} color="$colorSecondary" />

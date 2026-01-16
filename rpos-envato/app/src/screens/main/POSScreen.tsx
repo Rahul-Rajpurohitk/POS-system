@@ -154,12 +154,12 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
     isLoading: categoriesLoading
   } = useCategories();
 
-  // Extract data with fallbacks - API returns PaginatedResponse with data array
-  const products = productsData?.data ?? [];
-  const customers = customersData?.data ?? [];
-  const coupons = couponsData?.data ?? [];
+  // Extract data with fallbacks - hooks already use select to extract data array
+  const products = productsData ?? [];
+  const customers = customersData ?? [];
+  const coupons = couponsData ?? [];
   // Filter out test/regression categories
-  const categories = (categoriesData?.data ?? []).filter(
+  const categories = (categoriesData ?? []).filter(
     (c: Category) => !c.name.toLowerCase().includes('test') && !c.name.toLowerCase().includes('regression')
   );
 

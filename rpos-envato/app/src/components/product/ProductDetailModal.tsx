@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ScrollView, KeyboardAvoidingView, Platform, Modal, TouchableOpacity, Alert } from 'react-native';
-import { YStack, XStack, Text, Input, TextArea } from 'tamagui';
+import { YStack, XStack, Text, Input, TextArea, Spinner } from 'tamagui';
 import {
   X, Save, Package, DollarSign, Layers, Hash, FileText, AlertCircle,
   TrendingUp, Box, Check, Truck, Barcode, Tag, Store, Edit3, Trash2,
   Clock, ChevronRight, Copy, ExternalLink, MoreHorizontal, Eye,
-  History, Settings, Share2, Printer,
+  History, Settings, Share2, Printer, RefreshCw, AlertTriangle,
 } from '@tamagui/lucide-icons';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,10 +14,22 @@ import { formatCurrency } from '@/utils';
 import { useSettingsStore } from '@/store';
 import { useCategories } from '@/features/categories/hooks';
 import { useUpdateProduct, useDeleteProduct } from '@/features/products/hooks';
+import { useProductActivity } from '@/features/inventory/hooks';
+import type { ProductActivity } from '@/features/inventory/api';
 import { PartnerToggle, PartnerStatus } from './PartnerToggle';
 import { TagInput } from './TagInput';
 import { SupplierSelector } from './SupplierSelector';
 import { StockHistory } from './StockHistory';
+import { AddStockModal } from './AddStockModal';
+import {
+  IdentifiersSection,
+  SupplierSection,
+  DimensionsSection,
+  TaxUnitSection,
+  TagsSection,
+  CasePackSection,
+} from './ProductInfoSections';
+import { PriceHistorySection } from './PriceHistorySection';
 import type { Product, Category, Supplier, PartnerAvailability } from '@/types';
 
 /**
@@ -55,7 +67,7 @@ const COLORS = {
   dark: '#111827',
 };
 
-type TabId = 'overview' | 'inventory' | 'partners' | 'activity';
+type TabId = 'overview' | 'inventory' | 'pricing' | 'partners' | 'activity';
 
 interface Tab {
   id: TabId;
@@ -66,6 +78,7 @@ interface Tab {
 const TABS: Tab[] = [
   { id: 'overview', label: 'Overview', icon: <Package size={16} /> },
   { id: 'inventory', label: 'Inventory', icon: <Box size={16} /> },
+  { id: 'pricing', label: 'Pricing', icon: <DollarSign size={16} /> },
   { id: 'partners', label: 'Partners', icon: <Store size={16} /> },
   { id: 'activity', label: 'Activity', icon: <History size={16} /> },
 ];
@@ -237,6 +250,174 @@ function StatCard({
   );
 }
 
+// Helper function to format relative time
+function formatRelativeTime(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const diffWeeks = Math.floor(diffDays / 7);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffWeeks === 1) return '1 week ago';
+  if (diffWeeks < 4) return `${diffWeeks} weeks ago`;
+
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// Get activity icon based on type
+function getActivityIcon(type: string) {
+  switch (type) {
+    case 'created':
+      return <Package size={14} color={COLORS.success} />;
+    case 'updated':
+      return <Edit3 size={14} color={COLORS.primary} />;
+    case 'deleted':
+      return <Trash2 size={14} color={COLORS.error} />;
+    case 'price_changed':
+      return <DollarSign size={14} color={COLORS.warning} />;
+    case 'stock_adjusted':
+      return <Box size={14} color={COLORS.primary} />;
+    case 'category_changed':
+      return <Layers size={14} color={COLORS.purple} />;
+    case 'partner_enabled':
+    case 'partner_disabled':
+      return <Store size={14} color={COLORS.primary} />;
+    case 'supplier_changed':
+      return <Truck size={14} color={COLORS.gray} />;
+    case 'tag_added':
+    case 'tag_removed':
+      return <Tag size={14} color={COLORS.purple} />;
+    case 'barcode_scanned':
+      return <Barcode size={14} color={COLORS.gray} />;
+    default:
+      return <Clock size={14} color={COLORS.gray} />;
+  }
+}
+
+// Get activity background color based on type
+function getActivityBgColor(type: string) {
+  switch (type) {
+    case 'created':
+      return COLORS.successLight;
+    case 'deleted':
+      return COLORS.errorLight;
+    case 'price_changed':
+      return COLORS.warningLight;
+    case 'stock_adjusted':
+      return COLORS.primaryLight;
+    default:
+      return COLORS.grayLight;
+  }
+}
+
+// Activity Tab Component (uses real data)
+function ActivityTab({ productId }: { productId: string }) {
+  const { data, isLoading, error } = useProductActivity(productId, 20);
+
+  if (isLoading) {
+    return (
+      <YStack
+        backgroundColor={COLORS.white}
+        borderRadius={12}
+        padding="$6"
+        alignItems="center"
+        justifyContent="center"
+        gap="$3"
+      >
+        <Spinner size="small" color={COLORS.primary} />
+        <Text fontSize={12} color={COLORS.gray}>Loading activity...</Text>
+      </YStack>
+    );
+  }
+
+  if (error) {
+    return (
+      <YStack
+        backgroundColor={COLORS.white}
+        borderRadius={12}
+        padding="$6"
+        alignItems="center"
+        justifyContent="center"
+        gap="$3"
+      >
+        <AlertTriangle size={24} color={COLORS.error} />
+        <Text fontSize={12} color={COLORS.error}>Failed to load activity</Text>
+      </YStack>
+    );
+  }
+
+  const activities = data?.activities || [];
+
+  return (
+    <YStack
+      backgroundColor={COLORS.white}
+      borderRadius={12}
+      padding="$4"
+      gap="$4"
+    >
+      <XStack alignItems="center" gap="$2">
+        <YStack width={4} height={20} borderRadius={2} backgroundColor={COLORS.gray} />
+        <Text fontSize={15} fontWeight="700" color={COLORS.dark}>
+          Activity Log
+        </Text>
+      </XStack>
+
+      <YStack gap="$3">
+        {activities.length === 0 ? (
+          <YStack alignItems="center" paddingVertical="$4" gap="$2">
+            <History size={32} color={COLORS.gray} />
+            <Text fontSize={13} color={COLORS.gray}>No activity recorded yet</Text>
+            <Text fontSize={11} color={COLORS.gray}>
+              Changes to this product will appear here
+            </Text>
+          </YStack>
+        ) : (
+          activities.map((activity, index) => (
+            <XStack
+              key={activity.id}
+              alignItems="center"
+              gap="$3"
+              paddingVertical="$2"
+              borderBottomWidth={index < activities.length - 1 ? 1 : 0}
+              borderBottomColor={COLORS.border}
+            >
+              <YStack
+                width={32}
+                height={32}
+                borderRadius={16}
+                backgroundColor={getActivityBgColor(activity.type)}
+                alignItems="center"
+                justifyContent="center"
+              >
+                {getActivityIcon(activity.type)}
+              </YStack>
+              <YStack flex={1}>
+                <Text fontSize={13} color={COLORS.dark} fontWeight="500">
+                  {activity.action}
+                </Text>
+                <Text fontSize={11} color={COLORS.gray}>
+                  {activity.user ? `by ${activity.user.name}` : 'System'}
+                  {activity.description && ` • ${activity.description}`}
+                </Text>
+              </YStack>
+              <Text fontSize={11} color={COLORS.gray}>
+                {formatRelativeTime(activity.createdAt)}
+              </Text>
+            </XStack>
+          ))
+        )}
+      </YStack>
+    </YStack>
+  );
+}
+
 interface ProductDetailModalProps {
   product: Product | null;
   isOpen: boolean;
@@ -259,6 +440,8 @@ export function ProductDetailModal({
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const [isEditing, setIsEditing] = useState(editMode);
   const [partnerAvailability, setPartnerAvailability] = useState<PartnerAvailability>({});
+  const [originalPartnerAvailability, setOriginalPartnerAvailability] = useState<PartnerAvailability>({});
+  const [addStockOpen, setAddStockOpen] = useState(false);
 
   const { settings } = useSettingsStore();
   const { data: categories = [] } = useCategories();
@@ -300,6 +483,26 @@ export function ProductDetailModal({
     return { profit, margin };
   }, [sellingPrice, purchasePrice]);
 
+  // Check if partner availability has changed
+  const partnerAvailabilityChanged = useMemo(() => {
+    const originalKeys = Object.keys(originalPartnerAvailability);
+    const currentKeys = Object.keys(partnerAvailability);
+
+    // Different number of keys
+    if (originalKeys.length !== currentKeys.length) return true;
+
+    // Check each key's value
+    for (const key of currentKeys) {
+      if (originalPartnerAvailability[key] !== partnerAvailability[key]) {
+        return true;
+      }
+    }
+    return false;
+  }, [partnerAvailability, originalPartnerAvailability]);
+
+  // Combined check for any changes (form fields OR partner availability)
+  const hasChanges = isDirty || partnerAvailabilityChanged;
+
   useEffect(() => {
     if (product && isOpen) {
       reset({
@@ -317,7 +520,9 @@ export function ProductDetailModal({
         defaultSupplierId: product.defaultSupplierId || '',
         tags: product.tags || [],
       });
-      setPartnerAvailability(product.partnerAvailability || {});
+      const initialPartners = product.partnerAvailability || {};
+      setPartnerAvailability(initialPartners);
+      setOriginalPartnerAvailability(initialPartners);
       setIsEditing(editMode);
       setActiveTab(initialTab);
     }
@@ -383,6 +588,7 @@ export function ProductDetailModal({
   const stockStatus = (product.quantity ?? 0) === 0 ? 'out' : (product.quantity ?? 0) <= 10 ? 'low' : 'good';
 
   return (
+    <>
     <Modal
       visible={isOpen}
       animationType="fade"
@@ -485,6 +691,7 @@ export function ProductDetailModal({
                     hoverStyle={{ backgroundColor: '#F3F4F6' }}
                     onPress={() => {
                       reset();
+                      setPartnerAvailability(originalPartnerAvailability);
                       setIsEditing(false);
                     }}
                   >
@@ -496,13 +703,13 @@ export function ProductDetailModal({
                     paddingHorizontal="$4"
                     paddingVertical="$2"
                     borderRadius={8}
-                    backgroundColor={isDirty ? COLORS.primary : '#D1D5DB'}
+                    backgroundColor={hasChanges ? COLORS.primary : '#D1D5DB'}
                     alignItems="center"
                     gap="$2"
-                    cursor={isDirty ? 'pointer' : 'not-allowed'}
+                    cursor={hasChanges ? 'pointer' : 'not-allowed'}
                     opacity={updateProduct.isPending ? 0.7 : 1}
-                    hoverStyle={isDirty ? { backgroundColor: '#2563EB' } : {}}
-                    onPress={isDirty ? handleSubmit(onSubmit) : undefined}
+                    hoverStyle={hasChanges ? { backgroundColor: '#2563EB' } : {}}
+                    onPress={hasChanges ? handleSubmit(onSubmit) : undefined}
                   >
                     <Save size={14} color={COLORS.white} />
                     <Text fontSize={13} fontWeight="600" color={COLORS.white}>
@@ -783,40 +990,7 @@ export function ProductDetailModal({
                             )}
                           />
                         </YStack>
-                      ) : (
-                        <YStack gap="$3">
-                          {product.desc && (
-                            <YStack gap="$1">
-                              <Text fontSize={12} color={COLORS.gray} fontWeight="500">Description</Text>
-                              <Text fontSize={13} color={COLORS.dark} lineHeight={20}>
-                                {product.desc}
-                              </Text>
-                            </YStack>
-                          )}
-                          <XStack gap="$4" flexWrap="wrap">
-                            <YStack gap="$1" minWidth={120}>
-                              <Text fontSize={11} color={COLORS.gray}>Tax Class</Text>
-                              <Text fontSize={13} color={COLORS.dark} fontWeight="500">
-                                {product.taxClass || 'Standard'}
-                              </Text>
-                            </YStack>
-                            <YStack gap="$1" minWidth={120}>
-                              <Text fontSize={11} color={COLORS.gray}>Unit</Text>
-                              <Text fontSize={13} color={COLORS.dark} fontWeight="500">
-                                {product.unitOfMeasure || 'Each'}
-                              </Text>
-                            </YStack>
-                            {product.defaultSupplier && (
-                              <YStack gap="$1" minWidth={120}>
-                                <Text fontSize={11} color={COLORS.gray}>Default Supplier</Text>
-                                <Text fontSize={13} color={COLORS.dark} fontWeight="500">
-                                  {product.defaultSupplier.name}
-                                </Text>
-                              </YStack>
-                            )}
-                          </XStack>
-                        </YStack>
-                      )}
+                      ) : null}
                     </YStack>
 
                     {/* Pricing Card */}
@@ -905,21 +1079,21 @@ export function ProductDetailModal({
                       </YStack>
                     )}
 
-                    {/* Tags */}
-                    <YStack
-                      backgroundColor={COLORS.white}
-                      borderRadius={12}
-                      padding="$4"
-                      gap="$4"
-                    >
-                      <XStack alignItems="center" gap="$2">
-                        <YStack width={4} height={20} borderRadius={2} backgroundColor={COLORS.purple} />
-                        <Text fontSize={15} fontWeight="700" color={COLORS.dark}>
-                          Tags
-                        </Text>
-                      </XStack>
+                    {/* Tags - Edit Mode */}
+                    {isEditing && (
+                      <YStack
+                        backgroundColor={COLORS.white}
+                        borderRadius={12}
+                        padding="$4"
+                        gap="$4"
+                      >
+                        <XStack alignItems="center" gap="$2">
+                          <YStack width={4} height={20} borderRadius={2} backgroundColor={COLORS.purple} />
+                          <Text fontSize={15} fontWeight="700" color={COLORS.dark}>
+                            Tags
+                          </Text>
+                        </XStack>
 
-                      {isEditing ? (
                         <Controller
                           control={control}
                           name="tags"
@@ -927,131 +1101,278 @@ export function ProductDetailModal({
                             <TagInput value={value || []} onChange={onChange} maxTags={10} />
                           )}
                         />
-                      ) : (
-                        <XStack flexWrap="wrap" gap="$1">
-                          {(product.tags || []).length > 0 ? (
-                            product.tags?.map((tag) => (
-                              <XStack
-                                key={tag}
-                                backgroundColor={COLORS.purpleLight}
-                                paddingHorizontal="$2"
-                                paddingVertical={4}
-                                borderRadius={6}
-                              >
-                                <Text fontSize={11} color={COLORS.purple} fontWeight="500">
-                                  {tag}
-                                </Text>
-                              </XStack>
-                            ))
-                          ) : (
-                            <Text fontSize={12} color={COLORS.gray}>No tags</Text>
-                          )}
-                        </XStack>
-                      )}
-                    </YStack>
+                      </YStack>
+                    )}
+
+                    {/* Rich Detail Sections - View Mode */}
+                    {!isEditing && (
+                      <>
+                        {/* Product Identifiers */}
+                        <IdentifiersSection
+                          sku={product.sku}
+                          barcode={product.primaryBarcode}
+                          brand={product.brand}
+                        />
+
+                        {/* Supplier & Sourcing */}
+                        <SupplierSection
+                          supplier={product.defaultSupplier ? {
+                            id: product.defaultSupplier.id,
+                            name: product.defaultSupplier.name,
+                            code: product.defaultSupplier.code,
+                          } : null}
+                        />
+
+                        {/* Shipping Dimensions */}
+                        <DimensionsSection
+                          weight={product.weight}
+                          weightUnit={product.weightUnit}
+                          length={product.length}
+                          width={product.width}
+                          height={product.height}
+                          dimensionUnit={product.dimensionUnit}
+                        />
+
+                        {/* Classification */}
+                        <TaxUnitSection
+                          taxClass={product.taxClass}
+                          unitOfMeasure={product.unitOfMeasure}
+                          description={product.desc || product.description}
+                        />
+
+                        {/* Tags */}
+                        <TagsSection tags={product.tags} />
+                      </>
+                    )}
                   </>
                 )}
 
                 {/* Inventory Tab */}
                 {activeTab === 'inventory' && (
-                  <StockHistory
-                    product={product}
-                    onAddStock={() => {/* Open add stock modal */}}
-                    onViewAllHistory={() => {/* Navigate to full history */}}
-                  />
+                  <YStack gap="$4">
+                    {/* Case/Pack Configuration */}
+                    <CasePackSection product={product} />
+
+                    {/* Stock History */}
+                    <StockHistory
+                      product={product}
+                      onAddStock={() => setAddStockOpen(true)}
+                      onViewAllHistory={() => setActiveTab('activity')}
+                    />
+                  </YStack>
+                )}
+
+                {/* Pricing Tab */}
+                {activeTab === 'pricing' && (
+                  <PriceHistorySection product={product} />
                 )}
 
                 {/* Partners Tab */}
                 {activeTab === 'partners' && (
-                  <YStack
-                    backgroundColor={COLORS.white}
-                    borderRadius={12}
-                    padding="$4"
-                    gap="$4"
-                  >
-                    <XStack alignItems="center" gap="$2">
-                      <YStack width={4} height={20} borderRadius={2} backgroundColor={COLORS.primary} />
-                      <Text fontSize={15} fontWeight="700" color={COLORS.dark}>
-                        Delivery Partner Availability
+                  <>
+                    {/* Partner Availability Section */}
+                    <YStack
+                      backgroundColor={COLORS.white}
+                      borderRadius={12}
+                      padding="$4"
+                      gap="$4"
+                    >
+                      <XStack alignItems="center" gap="$2">
+                        <YStack width={4} height={20} borderRadius={2} backgroundColor={COLORS.primary} />
+                        <Text fontSize={15} fontWeight="700" color={COLORS.dark}>
+                          Delivery Partner Availability
+                        </Text>
+                      </XStack>
+
+                      <Text fontSize={13} color={COLORS.gray} lineHeight={20}>
+                        Select which delivery platforms this product should be available on.
+                        Products marked as available will be synced with partner catalogs.
                       </Text>
-                    </XStack>
 
-                    <Text fontSize={13} color={COLORS.gray} lineHeight={20}>
-                      Select which delivery platforms this product should be available on.
-                      Products marked as available will be synced with partner catalogs.
-                    </Text>
+                      {isEditing ? (
+                        <PartnerToggle
+                          value={partnerAvailability}
+                          onChange={setPartnerAvailability}
+                          size="lg"
+                        />
+                      ) : (
+                        <PartnerToggle
+                          value={product.partnerAvailability || {}}
+                          onChange={() => {}}
+                          disabled
+                          size="lg"
+                        />
+                      )}
+                    </YStack>
 
-                    {isEditing ? (
-                      <PartnerToggle
-                        value={partnerAvailability}
-                        onChange={setPartnerAvailability}
-                        size="lg"
-                      />
-                    ) : (
-                      <PartnerToggle
-                        value={product.partnerAvailability || {}}
-                        onChange={() => {}}
-                        disabled
-                        size="lg"
-                      />
-                    )}
-                  </YStack>
+                    {/* Partner Sync Status Section */}
+                    <YStack
+                      backgroundColor={COLORS.white}
+                      borderRadius={12}
+                      padding="$4"
+                      gap="$4"
+                    >
+                      <XStack alignItems="center" justifyContent="space-between">
+                        <XStack alignItems="center" gap="$2">
+                          <YStack width={4} height={20} borderRadius={2} backgroundColor={COLORS.success} />
+                          <Text fontSize={15} fontWeight="700" color={COLORS.dark}>
+                            Sync Status
+                          </Text>
+                        </XStack>
+                        <XStack
+                          paddingHorizontal="$3"
+                          paddingVertical="$1"
+                          borderRadius={6}
+                          backgroundColor={COLORS.primaryLight}
+                          alignItems="center"
+                          gap="$1"
+                          cursor="pointer"
+                          hoverStyle={{ backgroundColor: COLORS.primaryBorder }}
+                        >
+                          <RefreshCw size={12} color={COLORS.primary} />
+                          <Text fontSize={11} color={COLORS.primary} fontWeight="600">
+                            Sync All
+                          </Text>
+                        </XStack>
+                      </XStack>
+
+                      {/* Partner Status Cards */}
+                      <YStack gap="$3">
+                        {(['doordash', 'ubereats', 'grubhub', 'postmates', 'instacart'] as const).map((partner) => {
+                          const isEnabled = product.partnerAvailability?.[partner] ?? false;
+                          const partnerNames: Record<string, { name: string; icon: string; color: string }> = {
+                            doordash: { name: 'DoorDash', icon: '🚗', color: '#FF3008' },
+                            ubereats: { name: 'Uber Eats', icon: '🍔', color: '#5FB709' },
+                            grubhub: { name: 'Grubhub', icon: '🍕', color: '#F63440' },
+                            postmates: { name: 'Postmates', icon: '📦', color: '#000000' },
+                            instacart: { name: 'Instacart', icon: '🛒', color: '#43B02A' },
+                          };
+                          const meta = partnerNames[partner];
+                          // Simulated sync status - in production this would come from the backend
+                          const syncStatus = isEnabled ? 'synced' : 'not_configured';
+                          const lastSyncTime = isEnabled ? new Date(Date.now() - Math.random() * 86400000).toISOString() : null;
+
+                          return (
+                            <XStack
+                              key={partner}
+                              backgroundColor={isEnabled ? `${meta.color}08` : COLORS.grayLight}
+                              borderRadius={10}
+                              padding="$3"
+                              alignItems="center"
+                              gap="$3"
+                              borderWidth={1}
+                              borderColor={isEnabled ? `${meta.color}20` : COLORS.border}
+                            >
+                              {/* Partner Icon */}
+                              <YStack
+                                width={44}
+                                height={44}
+                                borderRadius={10}
+                                backgroundColor={isEnabled ? meta.color : COLORS.border}
+                                alignItems="center"
+                                justifyContent="center"
+                              >
+                                <Text fontSize={22}>{meta.icon}</Text>
+                              </YStack>
+
+                              {/* Partner Info */}
+                              <YStack flex={1} gap="$1">
+                                <XStack alignItems="center" gap="$2">
+                                  <Text fontSize={14} fontWeight="700" color={COLORS.dark}>
+                                    {meta.name}
+                                  </Text>
+                                  {isEnabled && (
+                                    <XStack
+                                      backgroundColor={COLORS.successLight}
+                                      paddingHorizontal={6}
+                                      paddingVertical={2}
+                                      borderRadius={4}
+                                    >
+                                      <Text fontSize={9} color={COLORS.success} fontWeight="700">
+                                        ACTIVE
+                                      </Text>
+                                    </XStack>
+                                  )}
+                                </XStack>
+                                <Text fontSize={11} color={COLORS.gray}>
+                                  {isEnabled
+                                    ? `Last synced ${lastSyncTime ? formatRelativeTime(lastSyncTime) : 'recently'}`
+                                    : 'Not configured for this product'
+                                  }
+                                </Text>
+                              </YStack>
+
+                              {/* Sync Status Indicator */}
+                              <YStack alignItems="flex-end" gap="$1">
+                                {isEnabled ? (
+                                  <>
+                                    <XStack
+                                      width={10}
+                                      height={10}
+                                      borderRadius={5}
+                                      backgroundColor={COLORS.success}
+                                    />
+                                    <Text fontSize={10} color={COLORS.success} fontWeight="600">
+                                      Synced
+                                    </Text>
+                                  </>
+                                ) : (
+                                  <>
+                                    <XStack
+                                      width={10}
+                                      height={10}
+                                      borderRadius={5}
+                                      backgroundColor={COLORS.gray}
+                                      opacity={0.4}
+                                    />
+                                    <Text fontSize={10} color={COLORS.gray}>
+                                      Disabled
+                                    </Text>
+                                  </>
+                                )}
+                              </YStack>
+                            </XStack>
+                          );
+                        })}
+                      </YStack>
+                    </YStack>
+
+                    {/* Integration Tips */}
+                    <YStack
+                      backgroundColor={COLORS.warningLight}
+                      borderRadius={12}
+                      padding="$4"
+                      gap="$3"
+                      borderWidth={1}
+                      borderColor="#FDE68A"
+                    >
+                      <XStack alignItems="center" gap="$2">
+                        <AlertTriangle size={16} color={COLORS.warning} />
+                        <Text fontSize={13} fontWeight="700" color="#92400E">
+                          Integration Tips
+                        </Text>
+                      </XStack>
+                      <YStack gap="$2">
+                        <Text fontSize={12} color="#92400E" lineHeight={18}>
+                          • Ensure product images are high-quality (min 800x800px)
+                        </Text>
+                        <Text fontSize={12} color="#92400E" lineHeight={18}>
+                          • Add accurate dimensions for delivery estimates
+                        </Text>
+                        <Text fontSize={12} color="#92400E" lineHeight={18}>
+                          • Keep pricing consistent across platforms
+                        </Text>
+                        <Text fontSize={12} color="#92400E" lineHeight={18}>
+                          • Changes may take up to 24 hours to reflect on partner apps
+                        </Text>
+                      </YStack>
+                    </YStack>
+                  </>
                 )}
 
                 {/* Activity Tab */}
                 {activeTab === 'activity' && (
-                  <YStack
-                    backgroundColor={COLORS.white}
-                    borderRadius={12}
-                    padding="$4"
-                    gap="$4"
-                  >
-                    <XStack alignItems="center" gap="$2">
-                      <YStack width={4} height={20} borderRadius={2} backgroundColor={COLORS.gray} />
-                      <Text fontSize={15} fontWeight="700" color={COLORS.dark}>
-                        Activity Log
-                      </Text>
-                    </XStack>
-
-                    <YStack gap="$3">
-                      {/* Mock activity items */}
-                      {[
-                        { action: 'Product updated', user: 'John Manager', time: '2 hours ago' },
-                        { action: 'Stock adjusted (+50)', user: 'Sarah Staff', time: 'Yesterday' },
-                        { action: 'Price changed', user: 'John Manager', time: '3 days ago' },
-                        { action: 'Product created', user: 'Admin', time: '2 weeks ago' },
-                      ].map((item, index) => (
-                        <XStack
-                          key={index}
-                          alignItems="center"
-                          gap="$3"
-                          paddingVertical="$2"
-                          borderBottomWidth={index < 3 ? 1 : 0}
-                          borderBottomColor={COLORS.border}
-                        >
-                          <YStack
-                            width={32}
-                            height={32}
-                            borderRadius={16}
-                            backgroundColor={COLORS.grayLight}
-                            alignItems="center"
-                            justifyContent="center"
-                          >
-                            <Clock size={14} color={COLORS.gray} />
-                          </YStack>
-                          <YStack flex={1}>
-                            <Text fontSize={13} color={COLORS.dark} fontWeight="500">
-                              {item.action}
-                            </Text>
-                            <Text fontSize={11} color={COLORS.gray}>
-                              by {item.user}
-                            </Text>
-                          </YStack>
-                          <Text fontSize={11} color={COLORS.gray}>{item.time}</Text>
-                        </XStack>
-                      ))}
-                    </YStack>
-                  </YStack>
+                  <ActivityTab productId={product.id} />
                 )}
               </YStack>
             </ScrollView>
@@ -1059,6 +1380,19 @@ export function ProductDetailModal({
         </YStack>
       </YStack>
     </Modal>
+
+      {/* Add Stock Modal */}
+      <AddStockModal
+        open={addStockOpen}
+        onClose={() => setAddStockOpen(false)}
+        product={product}
+        suppliers={suppliers}
+        onSuccess={() => {
+          setAddStockOpen(false);
+          // Data refresh is handled by the hook's onSuccess
+        }}
+      />
+    </>
   );
 }
 

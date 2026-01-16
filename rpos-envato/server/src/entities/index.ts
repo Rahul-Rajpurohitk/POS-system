@@ -72,6 +72,36 @@ export {
   SupplierPaymentStatus,
 } from './Supplier.entity';
 
+// Stock Adjustments (Inventory Tracking)
+export {
+  StockAdjustment,
+  StockAdjustmentType,
+  StockAdjustmentStatus,
+} from './StockAdjustment.entity';
+
+// Product Activity (Audit Trail)
+export {
+  ProductActivity,
+  ProductActivityType,
+} from './ProductActivity.entity';
+
+// Price History (Price Tracking)
+export {
+  PriceHistory,
+  PriceChangeType,
+  PriceChangeReason,
+} from './PriceHistory.entity';
+
+// Product Import Jobs
+export {
+  ProductImportJob,
+  ImportJobStatus,
+  DuplicateAction,
+  ImportRowError,
+  ImportRowResult,
+  ImportSummary,
+} from './ProductImportJob.entity';
+
 // Array of all entities for TypeORM configuration
 export const entities = [
   'Business',
@@ -117,4 +147,12 @@ export const entities = [
   'PurchaseOrderReceiving',
   'PurchaseOrderReceivingItem',
   'SupplierPayment',
+  // Stock Adjustments
+  'StockAdjustment',
+  // Product Activity
+  'ProductActivity',
+  // Price History
+  'PriceHistory',
+  // Product Import Jobs
+  'ProductImportJob',
 ];

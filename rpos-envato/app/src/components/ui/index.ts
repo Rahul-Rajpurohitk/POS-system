@@ -1,12 +1,12 @@
 // Core UI Components
 export { Button } from './Button';
-export type { ButtonProps } from './Button';
+export type { ButtonProps, ButtonVariant, ButtonSize } from './Button';
 
 export { Input, SecureInput } from './Input';
-export type { InputProps, SecureInputProps } from './Input';
+export type { InputProps, SecureInputProps, InputSize } from './Input';
 
 export { Card, CardHeader, CardBody, CardFooter } from './Card';
-export type { CardProps, CardHeaderProps } from './Card';
+export type { CardProps, CardHeaderProps, CardVariant, CardSize } from './Card';
 
 export { Modal, ConfirmModal } from './Modal';
 export type { ModalProps, ConfirmModalProps } from './Modal';
@@ -50,7 +50,6 @@ export {
   Popover,
   Tooltip,
   Sheet,
-  Toast,
 } from 'tamagui';
 
 // Re-export icons

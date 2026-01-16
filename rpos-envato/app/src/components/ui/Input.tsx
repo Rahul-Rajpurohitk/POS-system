@@ -76,9 +76,13 @@ const StyledInput = styled(TamaguiInput, {
 
 type StyledInputProps = GetProps<typeof StyledInput>;
 
-export interface InputProps extends StyledInputProps {
+// Explicitly define size type for proper TypeScript inference
+export type InputSize = 'sm' | 'md' | 'lg';
+
+export interface InputProps extends Omit<StyledInputProps, 'error' | 'size'> {
+  size?: InputSize;
   label?: string;
-  error?: string;
+  error?: string; // String error message (converted to boolean for styled variant)
   helperText?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;

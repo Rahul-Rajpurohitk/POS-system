@@ -161,7 +161,7 @@ export default function StaffScreen({ navigation }: MoreScreenProps<'Staff'>) {
             <YStack flex={1} justifyContent="center" alignItems="center" paddingVertical="$10">
               <Users size={48} color="$colorSecondary" />
               <Text color="$colorSecondary" marginTop="$3">No staff members found</Text>
-              <Button variant="outline" marginTop="$3" onPress={() => navigation.navigate('AddStaff')}>
+              <Button variant="secondary" marginTop="$3" onPress={() => navigation.navigate('AddStaff')}>
                 <Text>Add Staff Member</Text>
               </Button>
             </YStack>

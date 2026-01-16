@@ -5,6 +5,7 @@ export { ProductEditDrawer } from './ProductEditDrawer';
 export { ProductFilters } from './ProductFilters';
 export type { ProductFiltersState, StockStatus, PriceRange, MarginRange, BarcodeFilter } from './ProductFilters';
 export { StockAdjustment } from './StockAdjustment';
+export { AddStockModal } from './AddStockModal';
 export { BulkActionBar } from './BulkActionBar';
 
 // Partner-ready components

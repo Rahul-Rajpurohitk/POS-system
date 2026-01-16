@@ -17,7 +17,7 @@ export function useCategories() {
   return useQuery({
     queryKey: categoryKeys.lists(),
     queryFn: () => categoriesApi.getAll(),
-    select: (response) => response.data,
+    select: (response) => response.data.data, // Extract data array from { success, data }
   });
 }
 
@@ -25,7 +25,7 @@ export function useCategory(id: string) {
   return useQuery({
     queryKey: categoryKeys.detail(id),
     queryFn: () => categoriesApi.getById(id),
-    select: (response) => response.data,
+    select: (response) => response.data.data, // Extract category from { success, data }
     enabled: !!id && !id.startsWith('local-'),
   });
 }
@@ -34,7 +34,7 @@ export function useCategoriesWithCount() {
   return useQuery({
     queryKey: categoryKeys.withCount(),
     queryFn: () => categoriesApi.getWithProductCount(),
-    select: (response) => response.data,
+    select: (response) => response.data.data, // Extract data array from { success, data }
   });
 }
 

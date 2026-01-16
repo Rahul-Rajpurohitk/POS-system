@@ -1,36 +1,55 @@
-import React, { useState } from 'react';
-import { YStack, XStack, Text, Input } from 'tamagui';
+import React, { useState, useMemo } from 'react';
+import { YStack, XStack, Text, Input, TextArea } from 'tamagui';
 import {
-  Plus, Minus, RefreshCw, Package, ChevronDown, Check, AlertCircle,
+  Plus, Minus, RefreshCw, ChevronDown, Check, AlertCircle,
+  TrendingUp, TrendingDown, Package, ArrowRight, History,
 } from '@tamagui/lucide-icons';
-import { useUpdateProductStock } from '@/features/products/hooks';
+import { useCreateStockAdjustment } from '@/features/inventory/hooks';
+import type { StockAdjustmentType } from '@/features/inventory/api';
 import type { Product } from '@/types';
 
-// Professional blue theme instead of bright purple
+// Professional color palette
 const COLORS = {
   primary: '#3B82F6',
+  primaryLight: '#EFF6FF',
   success: '#10B981',
+  successLight: '#D1FAE5',
   warning: '#F59E0B',
+  warningLight: '#FEF3C7',
   error: '#EF4444',
-  teal: '#14B8A6',
+  errorLight: '#FEE2E2',
+  gray: '#6B7280',
+  grayLight: '#F3F4F6',
+  border: '#E5E7EB',
+  white: '#FFFFFF',
+  dark: '#111827',
 };
 
-type AdjustmentReason =
-  | 'restock'
-  | 'sale'
-  | 'return'
-  | 'damage'
-  | 'inventory_count'
-  | 'other';
-
-const ADJUSTMENT_REASONS: { value: AdjustmentReason; label: string; icon: string }[] = [
-  { value: 'restock', label: 'Restock / Purchase', icon: '📦' },
-  { value: 'sale', label: 'Sale', icon: '🛒' },
-  { value: 'return', label: 'Customer Return', icon: '↩️' },
-  { value: 'damage', label: 'Damage / Loss', icon: '💔' },
-  { value: 'inventory_count', label: 'Inventory Count', icon: '📋' },
-  { value: 'other', label: 'Other', icon: '📝' },
+// Adjustment reasons mapped to API types
+const ADJUSTMENT_REASONS: {
+  value: StockAdjustmentType;
+  label: string;
+  icon: string;
+  description: string;
+  type: 'add' | 'remove' | 'both';
+}[] = [
+  { value: 'purchase_order', label: 'Restock / Purchase', icon: '📦', description: 'Stock received from supplier', type: 'add' },
+  { value: 'return', label: 'Customer Return', icon: '↩️', description: 'Returned item back to stock', type: 'add' },
+  { value: 'count', label: 'Inventory Count', icon: '📋', description: 'Physical count correction', type: 'both' },
+  { value: 'sale', label: 'Sale Adjustment', icon: '🛒', description: 'Correct for unrecorded sale', type: 'remove' },
+  { value: 'damage', label: 'Damaged Goods', icon: '💔', description: 'Product damaged or broken', type: 'remove' },
+  { value: 'loss', label: 'Loss / Theft', icon: '🚨', description: 'Missing or stolen inventory', type: 'remove' },
+  { value: 'write_off', label: 'Write Off', icon: '🗑️', description: 'Expired or unsellable items', type: 'remove' },
+  { value: 'correction', label: 'General Correction', icon: '📝', description: 'Other stock correction', type: 'both' },
 ];
+
+// Quick adjustment presets
+const QUICK_ADJUSTMENTS = {
+  add: [1, 5, 10, 25, 50, 100],
+  remove: [-1, -5, -10, -25, -50, -100],
+};
+
+type AdjustmentMode = 'adjust' | 'set';
 
 interface StockAdjustmentProps {
   product: Product;
@@ -39,275 +58,470 @@ interface StockAdjustmentProps {
 }
 
 export function StockAdjustment({ product, onSuccess, compact = false }: StockAdjustmentProps) {
-  const [adjustment, setAdjustment] = useState(0);
-  const [reason, setReason] = useState<AdjustmentReason | null>(null);
+  const [mode, setMode] = useState<AdjustmentMode>('adjust');
+  const [adjustmentValue, setAdjustmentValue] = useState('');
+  const [setToValue, setSetToValue] = useState('');
+  const [reason, setReason] = useState<StockAdjustmentType | null>(null);
   const [showReasonDropdown, setShowReasonDropdown] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notes, setNotes] = useState('');
 
-  const updateStock = useUpdateProductStock();
+  const createAdjustment = useCreateStockAdjustment();
   const currentStock = product.quantity ?? 0;
-  const newStock = currentStock + adjustment;
 
-  const handleAdjust = (delta: number) => {
-    const newAdjustment = adjustment + delta;
-    if (currentStock + newAdjustment < 0) {
+  // Calculate actual adjustment and new stock
+  const { adjustment, newStock, isValid } = useMemo(() => {
+    if (mode === 'set') {
+      const setTo = parseInt(setToValue) || 0;
+      const adj = setTo - currentStock;
+      return {
+        adjustment: adj,
+        newStock: setTo,
+        isValid: setToValue !== '' && setTo >= 0
+      };
+    } else {
+      const adj = parseInt(adjustmentValue) || 0;
+      const newStk = currentStock + adj;
+      return {
+        adjustment: adj,
+        newStock: newStk,
+        isValid: adjustmentValue !== '' && adj !== 0 && newStk >= 0
+      };
+    }
+  }, [mode, adjustmentValue, setToValue, currentStock]);
+
+  const handleQuickAdjust = (value: number) => {
+    setMode('adjust');
+    const currentAdj = parseInt(adjustmentValue) || 0;
+    const newAdj = currentAdj + value;
+    if (currentStock + newAdj < 0) {
       setError('Cannot reduce stock below 0');
       return;
     }
     setError(null);
-    setAdjustment(newAdjustment);
+    setAdjustmentValue(newAdj.toString());
   };
 
-  const handleInputChange = (text: string) => {
-    const value = parseInt(text) || 0;
-    if (currentStock + value < 0) {
-      setError('Cannot reduce stock below 0');
+  const handleAdjustmentInput = (text: string) => {
+    // Allow empty, numbers, and negative sign
+    const cleaned = text.replace(/[^0-9-]/g, '');
+    if (cleaned === '' || cleaned === '-') {
+      setAdjustmentValue(cleaned);
+      setError(null);
       return;
     }
-    setError(null);
-    setAdjustment(value);
+    const value = parseInt(cleaned) || 0;
+    if (currentStock + value < 0) {
+      setError('Cannot reduce stock below 0');
+    } else {
+      setError(null);
+    }
+    setAdjustmentValue(cleaned);
+  };
+
+  const handleSetToInput = (text: string) => {
+    const cleaned = text.replace(/[^0-9]/g, '');
+    setSetToValue(cleaned);
+    const value = parseInt(cleaned) || 0;
+    if (value < 0) {
+      setError('Stock cannot be negative');
+    } else {
+      setError(null);
+    }
   };
 
   const handleApply = async () => {
     if (!reason) {
-      setError('Please select a reason');
+      setError('Please select a reason for this adjustment');
       return;
     }
-    if (adjustment === 0) {
-      setError('Please adjust the quantity');
+    if (!isValid || adjustment === 0) {
+      setError('Please enter a valid adjustment amount');
       return;
     }
 
     try {
-      await updateStock.mutateAsync({
-        id: product.id,
-        quantity: newStock,
+      await createAdjustment.mutateAsync({
+        productId: product.id,
+        type: reason,
+        quantity: adjustment,
+        reason: ADJUSTMENT_REASONS.find(r => r.value === reason)?.label || reason,
+        notes: notes.trim() || undefined,
       });
-      setAdjustment(0);
+      // Reset form
+      setAdjustmentValue('');
+      setSetToValue('');
       setReason(null);
+      setNotes('');
       setError(null);
+      setMode('adjust');
       onSuccess?.();
     } catch (err) {
-      setError('Failed to update stock');
+      setError('Failed to save stock adjustment');
     }
   };
 
   const selectedReason = ADJUSTMENT_REASONS.find(r => r.value === reason);
 
+  // Compact mode for inline editing
   if (compact) {
     return (
       <XStack alignItems="center" gap="$2">
-        <YStack
-          width={28}
-          height={28}
-          borderRadius="$2"
-          backgroundColor="$backgroundHover"
+        <XStack
+          width={32}
+          height={32}
+          borderRadius={8}
+          backgroundColor={COLORS.errorLight}
           alignItems="center"
           justifyContent="center"
           cursor="pointer"
-          hoverStyle={{ backgroundColor: '$backgroundPress' }}
+          hoverStyle={{ backgroundColor: '#FECACA' }}
           pressStyle={{ transform: [{ scale: 0.95 }] }}
-          onPress={() => handleAdjust(-1)}
+          onPress={() => handleQuickAdjust(-1)}
         >
-          <Minus size={14} color="$color" />
-        </YStack>
-
-        <Input
-          width={60}
-          textAlign="center"
-          value={newStock.toString()}
-          onChangeText={(text) => {
-            const value = parseInt(text) || 0;
-            setAdjustment(value - currentStock);
-          }}
-          keyboardType="number-pad"
-          borderWidth={1}
-          borderColor="$borderColor"
-          borderRadius="$2"
-          size="$3"
-          paddingHorizontal="$1"
-        />
+          <Minus size={16} color={COLORS.error} />
+        </XStack>
 
         <YStack
-          width={28}
-          height={28}
-          borderRadius="$2"
-          backgroundColor="$backgroundHover"
+          backgroundColor={COLORS.grayLight}
+          paddingHorizontal="$3"
+          paddingVertical="$2"
+          borderRadius={8}
+          minWidth={60}
+          alignItems="center"
+        >
+          <Text fontSize={14} fontWeight="700" color={COLORS.dark}>
+            {currentStock}
+          </Text>
+        </YStack>
+
+        <XStack
+          width={32}
+          height={32}
+          borderRadius={8}
+          backgroundColor={COLORS.successLight}
           alignItems="center"
           justifyContent="center"
           cursor="pointer"
-          hoverStyle={{ backgroundColor: '$backgroundPress' }}
+          hoverStyle={{ backgroundColor: '#A7F3D0' }}
           pressStyle={{ transform: [{ scale: 0.95 }] }}
-          onPress={() => handleAdjust(1)}
+          onPress={() => handleQuickAdjust(1)}
         >
-          <Plus size={14} color="$color" />
-        </YStack>
-
-        {adjustment !== 0 && (
-          <YStack
-            paddingHorizontal="$2"
-            paddingVertical="$1"
-            backgroundColor={COLORS.teal}
-            borderRadius="$2"
-            cursor="pointer"
-            hoverStyle={{ opacity: 0.9 }}
-            onPress={handleApply}
-          >
-            <Check size={14} color="white" />
-          </YStack>
-        )}
+          <Plus size={16} color={COLORS.success} />
+        </XStack>
       </XStack>
     );
   }
 
   return (
     <YStack
-      backgroundColor="$cardBackground"
-      borderRadius="$3"
+      backgroundColor={COLORS.white}
+      borderRadius={12}
       padding="$4"
       borderWidth={1}
-      borderColor="$borderColor"
+      borderColor={COLORS.border}
       gap="$4"
     >
-      <XStack alignItems="center" gap="$2">
-        <RefreshCw size={18} color={COLORS.teal} />
-        <Text fontSize="$4" fontWeight="600" color="$color">
-          Stock Adjustment
-        </Text>
+      {/* Header */}
+      <XStack alignItems="center" justifyContent="space-between">
+        <XStack alignItems="center" gap="$2">
+          <YStack
+            width={36}
+            height={36}
+            borderRadius={8}
+            backgroundColor={COLORS.primaryLight}
+            alignItems="center"
+            justifyContent="center"
+          >
+            <Package size={18} color={COLORS.primary} />
+          </YStack>
+          <YStack>
+            <Text fontSize={16} fontWeight="700" color={COLORS.dark}>
+              Stock Adjustment
+            </Text>
+            <Text fontSize={12} color={COLORS.gray}>
+              {product.name}
+            </Text>
+          </YStack>
+        </XStack>
       </XStack>
 
       {/* Current Stock Display */}
       <XStack
-        backgroundColor="$backgroundHover"
-        padding="$3"
-        borderRadius="$2"
+        backgroundColor={COLORS.grayLight}
+        padding="$4"
+        borderRadius={10}
         justifyContent="space-between"
         alignItems="center"
       >
-        <YStack>
-          <Text fontSize={11} color="$colorSecondary">Current Stock</Text>
-          <Text fontSize="$5" fontWeight="bold" color="$color">{currentStock} units</Text>
-        </YStack>
-        <YStack alignItems="flex-end">
-          <Text fontSize={11} color="$colorSecondary">After Adjustment</Text>
-          <Text
-            fontSize="$5"
-            fontWeight="bold"
-            color={newStock < 0 ? COLORS.error : adjustment > 0 ? COLORS.success : adjustment < 0 ? COLORS.warning : '$color'}
-          >
-            {newStock} units
+        <YStack alignItems="center" flex={1}>
+          <Text fontSize={11} color={COLORS.gray} fontWeight="600" textTransform="uppercase">
+            Current
           </Text>
+          <Text fontSize={28} fontWeight="800" color={COLORS.dark}>
+            {currentStock}
+          </Text>
+          <Text fontSize={11} color={COLORS.gray}>units</Text>
+        </YStack>
+
+        <YStack alignItems="center" paddingHorizontal="$4">
+          <ArrowRight size={24} color={adjustment === 0 ? COLORS.border : adjustment > 0 ? COLORS.success : COLORS.error} />
+          {adjustment !== 0 && (
+            <Text
+              fontSize={12}
+              fontWeight="700"
+              color={adjustment > 0 ? COLORS.success : COLORS.error}
+            >
+              {adjustment > 0 ? `+${adjustment}` : adjustment}
+            </Text>
+          )}
+        </YStack>
+
+        <YStack alignItems="center" flex={1}>
+          <Text fontSize={11} color={COLORS.gray} fontWeight="600" textTransform="uppercase">
+            After
+          </Text>
+          <Text
+            fontSize={28}
+            fontWeight="800"
+            color={newStock < 0 ? COLORS.error : adjustment > 0 ? COLORS.success : adjustment < 0 ? COLORS.warning : COLORS.dark}
+          >
+            {newStock}
+          </Text>
+          <Text fontSize={11} color={COLORS.gray}>units</Text>
         </YStack>
       </XStack>
 
-      {/* Adjustment Controls */}
-      <YStack gap="$2">
-        <Text fontSize={12} color="$colorSecondary" fontWeight="600">Adjustment Amount</Text>
-        <XStack alignItems="center" gap="$3">
-          <YStack
-            width={44}
-            height={44}
-            borderRadius="$3"
-            backgroundColor={adjustment < 0 ? COLORS.error : '$backgroundHover'}
-            alignItems="center"
-            justifyContent="center"
-            cursor="pointer"
-            hoverStyle={{ backgroundColor: adjustment < 0 ? COLORS.error : '$backgroundPress' }}
-            pressStyle={{ transform: [{ scale: 0.95 }] }}
-            onPress={() => handleAdjust(-10)}
+      {/* Mode Toggle */}
+      <XStack gap="$2">
+        <XStack
+          flex={1}
+          backgroundColor={mode === 'adjust' ? COLORS.primary : COLORS.white}
+          borderRadius={8}
+          paddingVertical="$2"
+          alignItems="center"
+          justifyContent="center"
+          borderWidth={1}
+          borderColor={mode === 'adjust' ? COLORS.primary : COLORS.border}
+          cursor="pointer"
+          hoverStyle={{ borderColor: COLORS.primary }}
+          onPress={() => {
+            setMode('adjust');
+            setSetToValue('');
+            setError(null);
+          }}
+        >
+          <Text
+            fontSize={13}
+            fontWeight="600"
+            color={mode === 'adjust' ? COLORS.white : COLORS.gray}
           >
-            <Text fontSize="$3" fontWeight="bold" color={adjustment < 0 ? 'white' : '$color'}>-10</Text>
-          </YStack>
-
-          <YStack
-            width={44}
-            height={44}
-            borderRadius="$3"
-            backgroundColor={adjustment < 0 ? COLORS.error : '$backgroundHover'}
-            alignItems="center"
-            justifyContent="center"
-            cursor="pointer"
-            hoverStyle={{ backgroundColor: adjustment < 0 ? COLORS.error : '$backgroundPress' }}
-            pressStyle={{ transform: [{ scale: 0.95 }] }}
-            onPress={() => handleAdjust(-1)}
-          >
-            <Minus size={20} color={adjustment < 0 ? 'white' : '$color'} />
-          </YStack>
-
-          <YStack flex={1} alignItems="center">
-            <Input
-              textAlign="center"
-              value={adjustment >= 0 ? `+${adjustment}` : adjustment.toString()}
-              onChangeText={handleInputChange}
-              keyboardType="number-pad"
-              borderWidth={2}
-              borderColor={adjustment === 0 ? '$borderColor' : adjustment > 0 ? COLORS.success : COLORS.error}
-              borderRadius="$3"
-              size="$5"
-              fontWeight="bold"
-              backgroundColor="$background"
-            />
-            <Text fontSize={10} color="$colorSecondary" marginTop="$1">
-              {adjustment > 0 ? 'Adding' : adjustment < 0 ? 'Removing' : 'No change'}
-            </Text>
-          </YStack>
-
-          <YStack
-            width={44}
-            height={44}
-            borderRadius="$3"
-            backgroundColor={adjustment > 0 ? COLORS.success : '$backgroundHover'}
-            alignItems="center"
-            justifyContent="center"
-            cursor="pointer"
-            hoverStyle={{ backgroundColor: adjustment > 0 ? COLORS.success : '$backgroundPress' }}
-            pressStyle={{ transform: [{ scale: 0.95 }] }}
-            onPress={() => handleAdjust(1)}
-          >
-            <Plus size={20} color={adjustment > 0 ? 'white' : '$color'} />
-          </YStack>
-
-          <YStack
-            width={44}
-            height={44}
-            borderRadius="$3"
-            backgroundColor={adjustment > 0 ? COLORS.success : '$backgroundHover'}
-            alignItems="center"
-            justifyContent="center"
-            cursor="pointer"
-            hoverStyle={{ backgroundColor: adjustment > 0 ? COLORS.success : '$backgroundPress' }}
-            pressStyle={{ transform: [{ scale: 0.95 }] }}
-            onPress={() => handleAdjust(10)}
-          >
-            <Text fontSize="$3" fontWeight="bold" color={adjustment > 0 ? 'white' : '$color'}>+10</Text>
-          </YStack>
+            Add / Remove
+          </Text>
         </XStack>
-      </YStack>
+        <XStack
+          flex={1}
+          backgroundColor={mode === 'set' ? COLORS.primary : COLORS.white}
+          borderRadius={8}
+          paddingVertical="$2"
+          alignItems="center"
+          justifyContent="center"
+          borderWidth={1}
+          borderColor={mode === 'set' ? COLORS.primary : COLORS.border}
+          cursor="pointer"
+          hoverStyle={{ borderColor: COLORS.primary }}
+          onPress={() => {
+            setMode('set');
+            setAdjustmentValue('');
+            setError(null);
+          }}
+        >
+          <Text
+            fontSize={13}
+            fontWeight="600"
+            color={mode === 'set' ? COLORS.white : COLORS.gray}
+          >
+            Set To Exact
+          </Text>
+        </XStack>
+      </XStack>
+
+      {/* Adjustment Input */}
+      {mode === 'adjust' ? (
+        <YStack gap="$3">
+          {/* Main Input with +/- Buttons */}
+          <XStack alignItems="center" gap="$3">
+            <XStack
+              width={52}
+              height={52}
+              borderRadius={10}
+              backgroundColor={COLORS.errorLight}
+              alignItems="center"
+              justifyContent="center"
+              cursor="pointer"
+              hoverStyle={{ backgroundColor: '#FECACA' }}
+              pressStyle={{ transform: [{ scale: 0.95 }] }}
+              onPress={() => handleQuickAdjust(-1)}
+            >
+              <Minus size={24} color={COLORS.error} strokeWidth={3} />
+            </XStack>
+
+            <YStack flex={1}>
+              <Input
+                textAlign="center"
+                value={adjustmentValue}
+                onChangeText={handleAdjustmentInput}
+                keyboardType="number-pad"
+                placeholder="0"
+                backgroundColor={COLORS.white}
+                borderWidth={2}
+                borderColor={
+                  adjustmentValue === '' || parseInt(adjustmentValue) === 0
+                    ? COLORS.border
+                    : parseInt(adjustmentValue) > 0
+                      ? COLORS.success
+                      : COLORS.error
+                }
+                borderRadius={10}
+                size="$5"
+                fontSize={24}
+                fontWeight="700"
+                color={COLORS.dark}
+                focusStyle={{ borderColor: COLORS.primary }}
+              />
+            </YStack>
+
+            <XStack
+              width={52}
+              height={52}
+              borderRadius={10}
+              backgroundColor={COLORS.successLight}
+              alignItems="center"
+              justifyContent="center"
+              cursor="pointer"
+              hoverStyle={{ backgroundColor: '#A7F3D0' }}
+              pressStyle={{ transform: [{ scale: 0.95 }] }}
+              onPress={() => handleQuickAdjust(1)}
+            >
+              <Plus size={24} color={COLORS.success} strokeWidth={3} />
+            </XStack>
+          </XStack>
+
+          {/* Quick Adjustment Presets */}
+          <YStack gap="$2">
+            <Text fontSize={11} color={COLORS.gray} fontWeight="600" textTransform="uppercase">
+              Quick Add
+            </Text>
+            <XStack gap="$2" flexWrap="wrap">
+              {QUICK_ADJUSTMENTS.add.map((value) => (
+                <XStack
+                  key={value}
+                  paddingHorizontal="$3"
+                  paddingVertical="$2"
+                  borderRadius={8}
+                  backgroundColor={COLORS.successLight}
+                  cursor="pointer"
+                  hoverStyle={{ backgroundColor: '#A7F3D0' }}
+                  pressStyle={{ transform: [{ scale: 0.95 }] }}
+                  onPress={() => handleQuickAdjust(value)}
+                >
+                  <Text fontSize={13} fontWeight="600" color={COLORS.success}>
+                    +{value}
+                  </Text>
+                </XStack>
+              ))}
+            </XStack>
+          </YStack>
+
+          <YStack gap="$2">
+            <Text fontSize={11} color={COLORS.gray} fontWeight="600" textTransform="uppercase">
+              Quick Remove
+            </Text>
+            <XStack gap="$2" flexWrap="wrap">
+              {QUICK_ADJUSTMENTS.remove.map((value) => (
+                <XStack
+                  key={value}
+                  paddingHorizontal="$3"
+                  paddingVertical="$2"
+                  borderRadius={8}
+                  backgroundColor={COLORS.errorLight}
+                  cursor="pointer"
+                  hoverStyle={{ backgroundColor: '#FECACA' }}
+                  pressStyle={{ transform: [{ scale: 0.95 }] }}
+                  onPress={() => handleQuickAdjust(value)}
+                >
+                  <Text fontSize={13} fontWeight="600" color={COLORS.error}>
+                    {value}
+                  </Text>
+                </XStack>
+              ))}
+            </XStack>
+          </YStack>
+        </YStack>
+      ) : (
+        <YStack gap="$2">
+          <Text fontSize={12} color={COLORS.gray} fontWeight="600">
+            Set stock to exact amount
+          </Text>
+          <Input
+            textAlign="center"
+            value={setToValue}
+            onChangeText={handleSetToInput}
+            keyboardType="number-pad"
+            placeholder={currentStock.toString()}
+            backgroundColor={COLORS.white}
+            borderWidth={2}
+            borderColor={setToValue === '' ? COLORS.border : COLORS.primary}
+            borderRadius={10}
+            size="$5"
+            fontSize={24}
+            fontWeight="700"
+            color={COLORS.dark}
+            focusStyle={{ borderColor: COLORS.primary }}
+          />
+          {setToValue !== '' && (
+            <Text fontSize={12} color={adjustment > 0 ? COLORS.success : adjustment < 0 ? COLORS.error : COLORS.gray} textAlign="center">
+              {adjustment === 0
+                ? 'No change'
+                : adjustment > 0
+                  ? `Will add ${adjustment} units`
+                  : `Will remove ${Math.abs(adjustment)} units`
+              }
+            </Text>
+          )}
+        </YStack>
+      )}
 
       {/* Reason Selector */}
-      <YStack gap="$2" position="relative">
-        <Text fontSize={12} color="$colorSecondary" fontWeight="600">Reason for Adjustment</Text>
+      <YStack gap="$2" position="relative" zIndex={100}>
+        <Text fontSize={12} color={COLORS.gray} fontWeight="600">
+          Reason for Adjustment *
+        </Text>
         <XStack
-          backgroundColor="$background"
-          borderRadius="$2"
+          backgroundColor={COLORS.white}
+          borderRadius={10}
           borderWidth={1}
-          borderColor={error && !reason ? COLORS.error : '$borderColor'}
+          borderColor={error && !reason ? COLORS.error : COLORS.border}
           paddingHorizontal="$3"
           paddingVertical="$3"
           alignItems="center"
           gap="$2"
           cursor="pointer"
+          hoverStyle={{ borderColor: COLORS.primary }}
           onPress={() => setShowReasonDropdown(!showReasonDropdown)}
         >
           {selectedReason ? (
             <>
-              <Text fontSize="$3">{selectedReason.icon}</Text>
-              <Text fontSize="$3" color="$color" flex={1}>{selectedReason.label}</Text>
+              <Text fontSize={16}>{selectedReason.icon}</Text>
+              <YStack flex={1}>
+                <Text fontSize={14} color={COLORS.dark} fontWeight="500">{selectedReason.label}</Text>
+                <Text fontSize={11} color={COLORS.gray}>{selectedReason.description}</Text>
+              </YStack>
             </>
           ) : (
-            <Text fontSize="$3" color="$colorSecondary" flex={1}>Select a reason...</Text>
+            <Text fontSize={14} color={COLORS.gray} flex={1}>Select a reason...</Text>
           )}
-          <ChevronDown size={16} color="$colorSecondary" />
+          <ChevronDown size={18} color={COLORS.gray} />
         </XStack>
 
         {showReasonDropdown && (
@@ -327,10 +541,10 @@ export function StockAdjustment({ product, onSuccess, compact = false }: StockAd
               left={0}
               right={0}
               marginTop="$1"
-              backgroundColor="$cardBackground"
-              borderRadius="$2"
+              backgroundColor={COLORS.white}
+              borderRadius={10}
               borderWidth={1}
-              borderColor="$borderColor"
+              borderColor={COLORS.border}
               shadowColor="#000"
               shadowOffset={{ width: 0, height: 4 }}
               shadowOpacity={0.15}
@@ -338,6 +552,7 @@ export function StockAdjustment({ product, onSuccess, compact = false }: StockAd
               elevation={8}
               zIndex={100}
               overflow="hidden"
+              maxHeight={300}
             >
               {ADJUSTMENT_REASONS.map((r) => (
                 <XStack
@@ -346,17 +561,20 @@ export function StockAdjustment({ product, onSuccess, compact = false }: StockAd
                   paddingVertical="$3"
                   alignItems="center"
                   gap="$2"
-                  backgroundColor={reason === r.value ? '$backgroundHover' : 'transparent'}
+                  backgroundColor={reason === r.value ? COLORS.primaryLight : 'transparent'}
                   cursor="pointer"
-                  hoverStyle={{ backgroundColor: '$backgroundHover' }}
+                  hoverStyle={{ backgroundColor: COLORS.grayLight }}
                   onPress={() => {
                     setReason(r.value);
                     setShowReasonDropdown(false);
                     setError(null);
                   }}
                 >
-                  <Text fontSize="$3">{r.icon}</Text>
-                  <Text fontSize="$3" color="$color" flex={1}>{r.label}</Text>
+                  <Text fontSize={18}>{r.icon}</Text>
+                  <YStack flex={1}>
+                    <Text fontSize={14} color={COLORS.dark} fontWeight="500">{r.label}</Text>
+                    <Text fontSize={11} color={COLORS.gray}>{r.description}</Text>
+                  </YStack>
                   {reason === r.value && <Check size={16} color={COLORS.primary} />}
                 </XStack>
               ))}
@@ -365,40 +583,85 @@ export function StockAdjustment({ product, onSuccess, compact = false }: StockAd
         )}
       </YStack>
 
+      {/* Notes Field */}
+      <YStack gap="$2">
+        <Text fontSize={12} color={COLORS.gray} fontWeight="600">
+          Notes (Optional)
+        </Text>
+        <TextArea
+          placeholder="Add notes about this adjustment..."
+          value={notes}
+          onChangeText={setNotes}
+          borderWidth={1}
+          borderColor={COLORS.border}
+          borderRadius={10}
+          backgroundColor={COLORS.white}
+          minHeight={70}
+          padding="$3"
+          fontSize={14}
+          color={COLORS.dark}
+          placeholderTextColor={COLORS.gray}
+          focusStyle={{ borderColor: COLORS.primary }}
+        />
+      </YStack>
+
       {/* Error Message */}
       {error && (
         <XStack
-          backgroundColor="#FEE2E2"
-          padding="$2"
-          borderRadius="$2"
+          backgroundColor={COLORS.errorLight}
+          padding="$3"
+          borderRadius={8}
           alignItems="center"
           gap="$2"
         >
-          <AlertCircle size={14} color={COLORS.error} />
-          <Text fontSize={12} color={COLORS.error}>{error}</Text>
+          <AlertCircle size={16} color={COLORS.error} />
+          <Text fontSize={13} color={COLORS.error} fontWeight="500">{error}</Text>
         </XStack>
       )}
 
       {/* Apply Button */}
-      <YStack
-        backgroundColor={adjustment === 0 || !reason ? '$borderColor' : COLORS.teal}
-        borderRadius="$3"
-        paddingVertical="$3"
+      <XStack
+        backgroundColor={
+          !isValid || adjustment === 0 || !reason
+            ? COLORS.grayLight
+            : adjustment > 0
+              ? COLORS.success
+              : COLORS.warning
+        }
+        borderRadius={10}
+        paddingVertical="$4"
         alignItems="center"
         justifyContent="center"
-        cursor={adjustment === 0 || !reason ? 'not-allowed' : 'pointer'}
-        opacity={updateStock.isPending ? 0.7 : 1}
-        hoverStyle={adjustment !== 0 && reason ? { opacity: 0.9 } : {}}
-        pressStyle={adjustment !== 0 && reason ? { transform: [{ scale: 0.98 }] } : {}}
-        onPress={adjustment !== 0 && reason ? handleApply : undefined}
+        cursor={!isValid || adjustment === 0 || !reason || createAdjustment.isPending ? 'not-allowed' : 'pointer'}
+        opacity={createAdjustment.isPending ? 0.7 : 1}
+        hoverStyle={isValid && adjustment !== 0 && reason && !createAdjustment.isPending ? { opacity: 0.9 } : {}}
+        pressStyle={isValid && adjustment !== 0 && reason && !createAdjustment.isPending ? { transform: [{ scale: 0.98 }] } : {}}
+        onPress={isValid && adjustment !== 0 && reason && !createAdjustment.isPending ? handleApply : undefined}
       >
         <XStack alignItems="center" gap="$2">
-          <RefreshCw size={18} color="white" />
-          <Text color="white" fontWeight="600" fontSize="$3">
-            {updateStock.isPending ? 'Applying...' : 'Apply Adjustment'}
+          {adjustment > 0 ? (
+            <TrendingUp size={20} color={COLORS.white} />
+          ) : adjustment < 0 ? (
+            <TrendingDown size={20} color={COLORS.white} />
+          ) : (
+            <RefreshCw size={20} color={COLORS.gray} />
+          )}
+          <Text
+            color={!isValid || adjustment === 0 || !reason ? COLORS.gray : COLORS.white}
+            fontWeight="700"
+            fontSize={15}
+          >
+            {createAdjustment.isPending
+              ? 'Saving...'
+              : adjustment > 0
+                ? `Add ${adjustment} Units`
+                : adjustment < 0
+                  ? `Remove ${Math.abs(adjustment)} Units`
+                  : 'Enter Adjustment'
+            }
           </Text>
         </XStack>
-      </YStack>
+      </XStack>
     </YStack>
   );
 }

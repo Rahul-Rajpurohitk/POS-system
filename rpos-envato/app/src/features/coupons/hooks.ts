@@ -18,7 +18,7 @@ export function useCoupons() {
   return useQuery({
     queryKey: couponKeys.lists(),
     queryFn: () => couponsApi.getAll(),
-    select: (response) => response.data,
+    select: (response) => response.data.data, // Extract data array from { success, data }
   });
 }
 
@@ -26,7 +26,7 @@ export function useCoupon(id: string) {
   return useQuery({
     queryKey: couponKeys.detail(id),
     queryFn: () => couponsApi.getById(id),
-    select: (response) => response.data,
+    select: (response) => response.data.data, // Extract coupon from { success, data }
     enabled: !!id && !id.startsWith('local-'),
   });
 }
@@ -35,7 +35,7 @@ export function useCouponByCode(code: string) {
   return useQuery({
     queryKey: couponKeys.code(code),
     queryFn: () => couponsApi.getByCode(code),
-    select: (response) => response.data,
+    select: (response) => response.data.data, // Extract coupon from { success, data }
     enabled: !!code,
   });
 }
@@ -44,7 +44,7 @@ export function useActiveCoupons() {
   return useQuery({
     queryKey: couponKeys.active(),
     queryFn: () => couponsApi.getActive(),
-    select: (response) => response.data,
+    select: (response) => response.data.data, // Extract data array from { success, data }
   });
 }
 

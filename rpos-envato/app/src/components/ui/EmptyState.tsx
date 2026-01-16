@@ -8,7 +8,7 @@ type YStackProps = GetProps<typeof YStack>;
 interface EmptyStateAction {
   label: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline';
+  variant?: 'primary' | 'secondary' | 'ghost';
 }
 
 interface EmptyStateProps extends YStackProps {
@@ -136,7 +136,7 @@ export function EmptyState({
               variant={action.variant || 'primary'}
               onPress={action.onPress}
             >
-              <Text color={action.variant === 'outline' ? '$color' : 'white'}>
+              <Text color={action.variant === 'secondary' || action.variant === 'ghost' ? '$color' : 'white'}>
                 {action.label}
               </Text>
             </Button>
@@ -144,7 +144,7 @@ export function EmptyState({
 
           {secondaryAction && (
             <Button
-              variant={secondaryAction.variant || 'outline'}
+              variant={secondaryAction.variant || 'secondary'}
               onPress={secondaryAction.onPress}
             >
               <Text color={secondaryAction.variant === 'primary' ? 'white' : '$color'}>
@@ -194,7 +194,7 @@ export function EmptyStateInline({
         </Text>
       )}
       {action && (
-        <Button variant="outline" size="sm" onPress={action.onPress}>
+        <Button variant="secondary" size="sm" onPress={action.onPress}>
           <Text fontSize="$2">{action.label}</Text>
         </Button>
       )}
