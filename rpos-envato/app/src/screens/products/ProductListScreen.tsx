@@ -25,9 +25,9 @@ import { useCategories } from '@/features/categories/hooks';
 import type { ProductScreenProps } from '@/navigation/types';
 import type { Product, Category } from '@/types';
 
-// Color constants
+// Color constants - Using professional blue instead of bright purple
 const COLORS = {
-  primary: '#4F46E5',
+  primary: '#3B82F6',  // Blue-500 - cleaner, more professional
   success: '#10B981',
   warning: '#F59E0B',
   error: '#EF4444',
@@ -35,13 +35,13 @@ const COLORS = {
   purple: '#8B5CF6',
 };
 
-// Stats card colors
+// Stats card colors - using professional blue theme
 const STAT_COLORS = {
-  total: { bg: '#EEF2FF', icon: '#4F46E5', border: '#C7D2FE' },
+  total: { bg: '#EFF6FF', icon: '#2563EB', border: '#BFDBFE' },
   value: { bg: '#ECFDF5', icon: '#059669', border: '#A7F3D0' },
   lowStock: { bg: '#FEF3C7', icon: '#D97706', border: '#FCD34D' },
   outOfStock: { bg: '#FEE2E2', icon: '#DC2626', border: '#FECACA' },
-  avgMargin: { bg: '#F3E8FF', icon: '#7C3AED', border: '#DDD6FE' },
+  avgMargin: { bg: '#F0FDF4', icon: '#16A34A', border: '#BBF7D0' },
   categories: { bg: '#E0F2FE', icon: '#0284C7', border: '#BAE6FD' },
 };
 

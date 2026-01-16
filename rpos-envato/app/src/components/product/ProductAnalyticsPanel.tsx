@@ -12,9 +12,9 @@ import { useInventoryIntelligence, useProductPerformance } from '@/features/anal
 import type { Product } from '@/types';
 import type { ABCCategory } from '@/features/analytics/types';
 
-// Color constants
+// Professional blue theme instead of bright purple
 const COLORS = {
-  primary: '#4F46E5',
+  primary: '#3B82F6',
   success: '#10B981',
   warning: '#F59E0B',
   error: '#EF4444',

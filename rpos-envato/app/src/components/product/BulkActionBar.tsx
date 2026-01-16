@@ -8,8 +8,9 @@ import {
 import { Button } from '@/components/ui';
 import type { Product, Category } from '@/types';
 
+// Professional blue theme instead of bright purple
 const COLORS = {
-  primary: '#4F46E5',
+  primary: '#3B82F6',
   success: '#10B981',
   warning: '#F59E0B',
   error: '#EF4444',
@@ -147,7 +148,9 @@ export function BulkActionBar({
   return (
     <>
       <XStack
-        backgroundColor={COLORS.primary}
+        backgroundColor="$cardBackground"
+        borderBottomWidth={1}
+        borderBottomColor="$borderColor"
         paddingHorizontal="$4"
         paddingVertical="$3"
         alignItems="center"
@@ -162,31 +165,31 @@ export function BulkActionBar({
             onPress={allSelected ? onClearSelection : onSelectAll}
           >
             {allSelected ? (
-              <CheckSquare size={20} color="white" />
+              <CheckSquare size={20} color={COLORS.primary} />
             ) : (
-              <Square size={20} color="white" />
+              <Square size={20} color={COLORS.primary} />
             )}
           </YStack>
-          <Text color="white" fontWeight="600">
+          <Text color={COLORS.primary} fontWeight="600">
             {selectedCount} product{selectedCount !== 1 ? 's' : ''} selected
           </Text>
         </XStack>
 
         {/* Divider */}
-        <YStack width={1} height={24} backgroundColor="rgba(255,255,255,0.3)" />
+        <YStack width={1} height={24} backgroundColor="$borderColor" />
 
         {/* Actions */}
         <XStack flex={1} gap="$2">
           {/* Update Category */}
           <XStack
-            backgroundColor="rgba(255,255,255,0.2)"
+            backgroundColor={COLORS.primary}
             borderRadius="$2"
             paddingHorizontal="$3"
             paddingVertical="$2"
             alignItems="center"
             gap="$2"
             cursor="pointer"
-            hoverStyle={{ backgroundColor: 'rgba(255,255,255,0.3)' }}
+            hoverStyle={{ opacity: 0.9 }}
             onPress={() => setShowCategoryModal(true)}
           >
             <Layers size={16} color="white" />
@@ -195,14 +198,14 @@ export function BulkActionBar({
 
           {/* Adjust Price */}
           <XStack
-            backgroundColor="rgba(255,255,255,0.2)"
+            backgroundColor={COLORS.primary}
             borderRadius="$2"
             paddingHorizontal="$3"
             paddingVertical="$2"
             alignItems="center"
             gap="$2"
             cursor="pointer"
-            hoverStyle={{ backgroundColor: 'rgba(255,255,255,0.3)' }}
+            hoverStyle={{ opacity: 0.9 }}
             onPress={() => setShowPriceModal(true)}
           >
             <Percent size={16} color="white" />
@@ -211,14 +214,14 @@ export function BulkActionBar({
 
           {/* Delete */}
           <XStack
-            backgroundColor="rgba(239,68,68,0.8)"
+            backgroundColor={COLORS.error}
             borderRadius="$2"
             paddingHorizontal="$3"
             paddingVertical="$2"
             alignItems="center"
             gap="$2"
             cursor="pointer"
-            hoverStyle={{ backgroundColor: 'rgba(239,68,68,1)' }}
+            hoverStyle={{ opacity: 0.9 }}
             onPress={() => setShowDeleteModal(true)}
           >
             <Trash2 size={16} color="white" />
@@ -230,11 +233,12 @@ export function BulkActionBar({
         <YStack
           padding="$2"
           borderRadius="$2"
+          backgroundColor="$backgroundHover"
           cursor="pointer"
-          hoverStyle={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
+          hoverStyle={{ backgroundColor: '$backgroundPress' }}
           onPress={onClearSelection}
         >
-          <X size={18} color="white" />
+          <X size={18} color="$colorSecondary" />
         </YStack>
       </XStack>
 

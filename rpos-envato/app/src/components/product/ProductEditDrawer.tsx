@@ -12,8 +12,9 @@ import { useCategories } from '@/features/categories/hooks';
 import { useUpdateProduct } from '@/features/products/hooks';
 import type { Product, Category } from '@/types';
 
+// Professional blue theme instead of bright purple
 const COLORS = {
-  primary: '#4F46E5',
+  primary: '#3B82F6',
   success: '#10B981',
   error: '#EF4444',
 };
