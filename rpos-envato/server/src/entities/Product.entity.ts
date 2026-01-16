@@ -10,9 +10,13 @@ import {
 } from 'typeorm';
 import { Business } from './Business.entity';
 import { Category } from './Category.entity';
+import { Supplier } from './Supplier.entity';
 
 @Entity('products')
 @Index(['businessId', 'sku'], { unique: true })
+@Index(['businessId', 'brand'])
+@Index(['businessId', 'primaryBarcode'])
+@Index(['businessId', 'defaultSupplierId'])
 export class Product {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -50,6 +54,54 @@ export class Product {
 
   @Column({ type: 'boolean', default: true })
   enabled!: boolean;
+
+  // Partner-Ready Fields: Sourcing & Brand
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  brand!: string | null;
+
+  @Column({ name: 'primary_barcode', type: 'varchar', length: 100, nullable: true })
+  primaryBarcode!: string | null;
+
+  @Column({ name: 'tax_class', type: 'varchar', length: 50, default: 'standard' })
+  taxClass!: string;
+
+  @Column({ name: 'unit_of_measure', type: 'varchar', length: 20, default: 'each' })
+  unitOfMeasure!: string;
+
+  // Partner-Ready Fields: Shipping Dimensions
+  @Column({ type: 'decimal', precision: 8, scale: 3, nullable: true })
+  weight!: number | null;
+
+  @Column({ name: 'weight_unit', type: 'varchar', length: 10, default: 'kg' })
+  weightUnit!: string;
+
+  @Column({ type: 'decimal', precision: 8, scale: 2, nullable: true })
+  length!: number | null;
+
+  @Column({ type: 'decimal', precision: 8, scale: 2, nullable: true })
+  width!: number | null;
+
+  @Column({ type: 'decimal', precision: 8, scale: 2, nullable: true })
+  height!: number | null;
+
+  @Column({ name: 'dimension_unit', type: 'varchar', length: 10, default: 'cm' })
+  dimensionUnit!: string;
+
+  // Partner-Ready Fields: Partner Availability (JSONB for flexibility)
+  @Column({ name: 'partner_availability', type: 'jsonb', default: '{}' })
+  partnerAvailability!: Record<string, boolean>;
+
+  // Partner-Ready Fields: Tags for flexible categorization
+  @Column({ type: 'text', array: true, default: '{}' })
+  tags!: string[];
+
+  // Partner-Ready Fields: Default Supplier
+  @Column({ name: 'default_supplier_id', type: 'uuid', nullable: true })
+  defaultSupplierId!: string | null;
+
+  @ManyToOne(() => Supplier, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'default_supplier_id' })
+  defaultSupplier!: Supplier | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

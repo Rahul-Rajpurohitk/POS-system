@@ -5,17 +5,36 @@ import { AppDataSource } from '../config/database';
 import { User } from '../entities/User.entity';
 
 /**
- * Get all products (paginated)
+ * Get all products (paginated with advanced filtering)
  * GET /products
  */
 export const getProducts = asyncHandler(async (req: Request, res: Response) => {
-  const { page = 1, limit = 20, category, search } = req.query;
+  const {
+    page = 1,
+    limit = 20,
+    category,
+    search,
+    supplier,
+    brand,
+    hasBarcode,
+    partner,
+    tags,
+    minMargin,
+    maxMargin,
+  } = req.query;
 
   const result = await productService.getProducts(req.business!, {
     page: Number(page),
     limit: Number(limit),
     categoryId: category as string,
     search: search as string,
+    supplierId: supplier as string,
+    brand: brand as string,
+    hasBarcode: hasBarcode === 'true' ? true : hasBarcode === 'false' ? false : undefined,
+    partnerAvailable: partner as string,
+    tags: tags ? (tags as string).split(',') : undefined,
+    minMargin: minMargin ? Number(minMargin) : undefined,
+    maxMargin: maxMargin ? Number(maxMargin) : undefined,
   });
 
   res.json({
@@ -155,6 +174,116 @@ export const getProductLogs = asyncHandler(async (req: Request, res: Response) =
   });
 });
 
+/**
+ * Get unique brands for filter dropdown
+ * GET /products/brands
+ */
+export const getBrands = asyncHandler(async (req: Request, res: Response) => {
+  const brands = await productService.getBrands(req.business!);
+
+  res.json({
+    success: true,
+    data: brands,
+  });
+});
+
+/**
+ * Get unique tags for filter dropdown
+ * GET /products/tags
+ */
+export const getTags = asyncHandler(async (req: Request, res: Response) => {
+  const tags = await productService.getTags(req.business!);
+
+  res.json({
+    success: true,
+    data: tags,
+  });
+});
+
+/**
+ * Export products for a specific partner
+ * GET /products/export/:partner
+ */
+export const exportForPartner = asyncHandler(async (req: Request, res: Response) => {
+  const { partner } = req.params;
+
+  if (!partner) {
+    return res.status(400).json({ message: 'Partner name is required' });
+  }
+
+  const exportData = await productService.exportForPartner(req.business!, partner);
+
+  res.json({
+    success: true,
+    data: exportData,
+  });
+});
+
+/**
+ * Get product by barcode
+ * GET /products/barcode/:barcode
+ */
+export const getProductByBarcode = asyncHandler(async (req: Request, res: Response) => {
+  const { barcode } = req.params;
+
+  const product = await productService.getProductByBarcode(req.business!, barcode);
+
+  if (!product) {
+    return res.status(404).json({ message: 'Product not found' });
+  }
+
+  res.json({
+    success: true,
+    data: product,
+  });
+});
+
+/**
+ * Get partner availability summary
+ * GET /products/partners/summary
+ */
+export const getPartnerSummary = asyncHandler(async (req: Request, res: Response) => {
+  const summary = await productService.getPartnerSummary(req.business!);
+
+  res.json({
+    success: true,
+    data: summary,
+  });
+});
+
+/**
+ * Bulk update partner availability
+ * POST /products/partners/bulk-update
+ */
+export const bulkUpdatePartnerAvailability = asyncHandler(async (req: Request, res: Response) => {
+  const { productIds, partner, available } = req.body;
+
+  if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+    return res.status(400).json({ message: 'Product IDs are required' });
+  }
+
+  if (!partner) {
+    return res.status(400).json({ message: 'Partner name is required' });
+  }
+
+  if (typeof available !== 'boolean') {
+    return res.status(400).json({ message: 'Available must be a boolean' });
+  }
+
+  const updated = await productService.bulkUpdatePartnerAvailability(
+    req.business!,
+    productIds,
+    partner,
+    available
+  );
+
+  res.json({
+    success: true,
+    message: `Updated ${updated} products`,
+    data: { updated },
+  });
+});
+
 export default {
   getProducts,
   syncProducts,
@@ -162,4 +291,10 @@ export default {
   editProduct,
   deleteProduct,
   getProductLogs,
+  getBrands,
+  getTags,
+  exportForPartner,
+  getProductByBarcode,
+  getPartnerSummary,
+  bulkUpdatePartnerAvailability,
 };

@@ -101,13 +101,64 @@ export interface Category extends BaseEntity {
 }
 
 // ============================================
+// Supplier
+// ============================================
+
+export interface Supplier extends BaseEntity {
+  name: string;
+  code: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  contactPerson?: string;
+  status?: 'editing';
+}
+
+export interface SupplierRef {
+  id: ID;
+  name: string;
+  code: string;
+}
+
+// ============================================
+// Partner Availability
+// ============================================
+
+export interface PartnerAvailability {
+  doordash?: boolean;
+  ubereats?: boolean;
+  grubhub?: boolean;
+  postmates?: boolean;
+  instacart?: boolean;
+  [key: string]: boolean | undefined;  // For custom partners
+}
+
+export const PARTNER_COLORS: Record<string, string> = {
+  doordash: '#FF3008',
+  ubereats: '#5FB709',
+  grubhub: '#F63440',
+  postmates: '#000000',
+  instacart: '#43B02A',
+};
+
+export const PARTNER_NAMES: Record<string, string> = {
+  doordash: 'DoorDash',
+  ubereats: 'Uber Eats',
+  grubhub: 'Grubhub',
+  postmates: 'Postmates',
+  instacart: 'Instacart',
+};
+
+// ============================================
 // Product
 // ============================================
 
 export interface Product extends BaseEntity {
+  // Core fields
   name: string;
   sku: string;
   desc?: string;
+  description?: string; // Alias for desc
   images: string[];
   quantity: number;
   sellingPrice: number;
@@ -115,6 +166,34 @@ export interface Product extends BaseEntity {
   category?: Category;
   categoryId?: ID;
   status?: 'editing';
+  enabled?: boolean;
+
+  // Sales tracking
+  soldQuantity?: number;
+  soldAmount?: number;
+  profit?: number;
+
+  // Partner-ready: Sourcing & Brand
+  brand?: string;
+  primaryBarcode?: string;
+  taxClass?: string;
+  unitOfMeasure?: string;
+
+  // Partner-ready: Default Supplier
+  defaultSupplierId?: ID;
+  defaultSupplier?: SupplierRef;
+
+  // Partner-ready: Shipping Dimensions
+  weight?: number;
+  weightUnit?: string;
+  length?: number;
+  width?: number;
+  height?: number;
+  dimensionUnit?: string;
+
+  // Partner-ready: Availability & Tags
+  partnerAvailability?: PartnerAvailability;
+  tags?: string[];
 }
 
 // ============================================

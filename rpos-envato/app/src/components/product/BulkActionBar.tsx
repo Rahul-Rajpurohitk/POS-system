@@ -1,19 +1,28 @@
 import React, { useState } from 'react';
-import { Modal, TouchableOpacity } from 'react-native';
-import { YStack, XStack, Text, Input } from 'tamagui';
+import { Modal } from 'react-native';
+import { YStack, XStack, Text, Input, ScrollView } from 'tamagui';
 import {
   X, CheckSquare, Square, Layers, Percent, Trash2, AlertTriangle,
-  Check, ChevronDown,
+  Check, TrendingUp, TrendingDown, Tag,
 } from '@tamagui/lucide-icons';
-import { Button } from '@/components/ui';
 import type { Product, Category } from '@/types';
 
-// Professional blue theme instead of bright purple
+// Modern color palette
 const COLORS = {
   primary: '#3B82F6',
+  primaryLight: '#EFF6FF',
+  primaryBorder: '#BFDBFE',
   success: '#10B981',
-  warning: '#F59E0B',
+  successLight: '#ECFDF5',
+  successBorder: '#A7F3D0',
   error: '#EF4444',
+  errorLight: '#FEF2F2',
+  errorBorder: '#FECACA',
+  warning: '#F59E0B',
+  gray: '#6B7280',
+  grayLight: '#F9FAFB',
+  border: '#E5E7EB',
+  white: '#FFFFFF',
 };
 
 interface BulkActionBarProps {
@@ -51,38 +60,106 @@ function ConfirmModal({
 }: ConfirmModalProps) {
   return (
     <Modal visible={isOpen} transparent animationType="fade" onRequestClose={onClose}>
-      <YStack flex={1} backgroundColor="rgba(0,0,0,0.5)" justifyContent="center" alignItems="center">
+      <YStack flex={1} backgroundColor="rgba(0,0,0,0.4)" justifyContent="center" alignItems="center">
         <YStack
-          backgroundColor="$cardBackground"
-          borderRadius="$4"
-          padding="$5"
-          width={400}
+          backgroundColor={COLORS.white}
+          borderRadius={16}
+          width={420}
           maxWidth="90%"
-          gap="$4"
+          overflow="hidden"
+          shadowColor="#000"
+          shadowOffset={{ width: 0, height: 8 }}
+          shadowOpacity={0.15}
+          shadowRadius={24}
+          elevation={12}
         >
-          <XStack alignItems="center" gap="$2">
-            {variant === 'danger' && <AlertTriangle size={24} color={COLORS.error} />}
-            <Text fontSize="$5" fontWeight="bold" color="$color">{title}</Text>
+          {/* Header */}
+          <XStack
+            paddingHorizontal={24}
+            paddingVertical={20}
+            borderBottomWidth={1}
+            borderBottomColor={COLORS.border}
+            alignItems="center"
+            justifyContent="space-between"
+            backgroundColor={variant === 'danger' ? COLORS.errorLight : COLORS.white}
+          >
+            <XStack alignItems="center" gap={12}>
+              {variant === 'danger' && (
+                <YStack
+                  width={40}
+                  height={40}
+                  borderRadius={20}
+                  backgroundColor={COLORS.errorLight}
+                  borderWidth={2}
+                  borderColor={COLORS.errorBorder}
+                  alignItems="center"
+                  justifyContent="center"
+                >
+                  <AlertTriangle size={20} color={COLORS.error} />
+                </YStack>
+              )}
+              <Text fontSize={18} fontWeight="700" color="#111827">{title}</Text>
+            </XStack>
+            <YStack
+              padding={8}
+              borderRadius={8}
+              backgroundColor={COLORS.grayLight}
+              cursor="pointer"
+              hoverStyle={{ backgroundColor: COLORS.border }}
+              onPress={onClose}
+            >
+              <X size={18} color={COLORS.gray} />
+            </YStack>
           </XStack>
 
-          <Text fontSize="$3" color="$colorSecondary">{message}</Text>
+          {/* Content */}
+          <YStack padding={24}>
+            <Text fontSize={15} color={COLORS.gray} lineHeight={22}>
+              {message}
+            </Text>
+          </YStack>
 
-          <XStack gap="$3" justifyContent="flex-end">
-            <Button variant="secondary" onPress={onClose} disabled={isLoading}>
-              <Text>Cancel</Text>
-            </Button>
-            <YStack
+          {/* Footer */}
+          <XStack
+            paddingHorizontal={24}
+            paddingVertical={16}
+            gap={12}
+            justifyContent="flex-end"
+            borderTopWidth={1}
+            borderTopColor={COLORS.border}
+            backgroundColor={COLORS.grayLight}
+          >
+            <XStack
+              paddingHorizontal={20}
+              paddingVertical={10}
+              borderRadius={8}
+              backgroundColor={COLORS.white}
+              borderWidth={1}
+              borderColor={COLORS.border}
+              cursor="pointer"
+              hoverStyle={{ backgroundColor: COLORS.grayLight }}
+              onPress={onClose}
+              opacity={isLoading ? 0.5 : 1}
+            >
+              <Text fontSize={14} fontWeight="600" color={COLORS.gray}>Cancel</Text>
+            </XStack>
+            <XStack
+              paddingHorizontal={20}
+              paddingVertical={10}
+              borderRadius={8}
               backgroundColor={variant === 'danger' ? COLORS.error : COLORS.primary}
-              borderRadius="$3"
-              paddingHorizontal="$4"
-              paddingVertical="$2"
               cursor="pointer"
               opacity={isLoading ? 0.7 : 1}
               hoverStyle={{ opacity: 0.9 }}
               onPress={onConfirm}
+              alignItems="center"
+              gap={8}
             >
-              <Text color="white" fontWeight="600">{isLoading ? 'Processing...' : confirmLabel}</Text>
-            </YStack>
+              {variant === 'danger' && <Trash2 size={16} color="white" />}
+              <Text fontSize={14} fontWeight="600" color="white">
+                {isLoading ? 'Processing...' : confirmLabel}
+              </Text>
+            </XStack>
           </XStack>
         </YStack>
       </YStack>
@@ -244,63 +321,159 @@ export function BulkActionBar({
 
       {/* Category Update Modal */}
       <Modal visible={showCategoryModal} transparent animationType="fade" onRequestClose={() => setShowCategoryModal(false)}>
-        <YStack flex={1} backgroundColor="rgba(0,0,0,0.5)" justifyContent="center" alignItems="center">
+        <YStack flex={1} backgroundColor="rgba(0,0,0,0.4)" justifyContent="center" alignItems="center">
           <YStack
-            backgroundColor="$cardBackground"
-            borderRadius="$4"
-            padding="$5"
-            width={400}
+            backgroundColor={COLORS.white}
+            borderRadius={16}
+            width={440}
             maxWidth="90%"
-            gap="$4"
+            overflow="hidden"
+            shadowColor="#000"
+            shadowOffset={{ width: 0, height: 8 }}
+            shadowOpacity={0.15}
+            shadowRadius={24}
+            elevation={12}
           >
-            <Text fontSize="$5" fontWeight="bold" color="$color">Update Category</Text>
-            <Text fontSize="$3" color="$colorSecondary">
-              Select a category to apply to {selectedCount} product{selectedCount !== 1 ? 's' : ''}:
-            </Text>
-
-            <YStack gap="$2">
-              {(Array.isArray(categories) ? categories : []).map((cat) => (
-                <XStack
-                  key={cat.id}
-                  backgroundColor={selectedCategory === cat.id ? '$backgroundHover' : 'transparent'}
-                  borderWidth={1}
-                  borderColor={selectedCategory === cat.id ? COLORS.primary : '$borderColor'}
-                  borderRadius="$2"
-                  padding="$3"
+            {/* Header */}
+            <XStack
+              paddingHorizontal={24}
+              paddingVertical={20}
+              borderBottomWidth={1}
+              borderBottomColor={COLORS.border}
+              alignItems="center"
+              justifyContent="space-between"
+            >
+              <XStack alignItems="center" gap={12}>
+                <YStack
+                  width={40}
+                  height={40}
+                  borderRadius={20}
+                  backgroundColor={COLORS.primaryLight}
+                  borderWidth={2}
+                  borderColor={COLORS.primaryBorder}
                   alignItems="center"
-                  gap="$2"
-                  cursor="pointer"
-                  onPress={() => setSelectedCategory(cat.id)}
+                  justifyContent="center"
                 >
-                  <YStack
-                    width={16}
-                    height={16}
-                    borderRadius={8}
-                    backgroundColor={cat.color || '#6B7280'}
-                  />
-                  <Text fontSize="$3" color="$color" flex={1}>{cat.name}</Text>
-                  {selectedCategory === cat.id && <Check size={16} color={COLORS.primary} />}
-                </XStack>
-              ))}
+                  <Layers size={20} color={COLORS.primary} />
+                </YStack>
+                <YStack>
+                  <Text fontSize={18} fontWeight="700" color="#111827">Update Category</Text>
+                  <Text fontSize={13} color={COLORS.gray}>
+                    {selectedCount} product{selectedCount !== 1 ? 's' : ''} selected
+                  </Text>
+                </YStack>
+              </XStack>
+              <YStack
+                padding={8}
+                borderRadius={8}
+                backgroundColor={COLORS.grayLight}
+                cursor="pointer"
+                hoverStyle={{ backgroundColor: COLORS.border }}
+                onPress={() => setShowCategoryModal(false)}
+              >
+                <X size={18} color={COLORS.gray} />
+              </YStack>
+            </XStack>
+
+            {/* Content */}
+            <YStack padding={24} gap={16}>
+              <Text fontSize={14} fontWeight="600" color="#374151">
+                Select a category
+              </Text>
+
+              <ScrollView maxHeight={280}>
+                <YStack gap={8}>
+                  {(Array.isArray(categories) ? categories : []).map((cat) => {
+                    const isSelected = selectedCategory === cat.id;
+                    return (
+                      <XStack
+                        key={cat.id}
+                        backgroundColor={isSelected ? COLORS.primaryLight : COLORS.white}
+                        borderWidth={2}
+                        borderColor={isSelected ? COLORS.primary : COLORS.border}
+                        borderRadius={12}
+                        padding={14}
+                        alignItems="center"
+                        gap={12}
+                        cursor="pointer"
+                        hoverStyle={{
+                          backgroundColor: isSelected ? COLORS.primaryLight : COLORS.grayLight,
+                          borderColor: isSelected ? COLORS.primary : '#D1D5DB'
+                        }}
+                        onPress={() => setSelectedCategory(cat.id)}
+                      >
+                        <YStack
+                          width={36}
+                          height={36}
+                          borderRadius={10}
+                          backgroundColor={cat.color || '#6B7280'}
+                          alignItems="center"
+                          justifyContent="center"
+                        >
+                          <Tag size={18} color="white" />
+                        </YStack>
+                        <Text fontSize={15} fontWeight="500" color="#111827" flex={1}>
+                          {cat.name}
+                        </Text>
+                        <YStack
+                          width={24}
+                          height={24}
+                          borderRadius={12}
+                          backgroundColor={isSelected ? COLORS.primary : COLORS.grayLight}
+                          borderWidth={isSelected ? 0 : 2}
+                          borderColor={COLORS.border}
+                          alignItems="center"
+                          justifyContent="center"
+                        >
+                          {isSelected && <Check size={14} color="white" />}
+                        </YStack>
+                      </XStack>
+                    );
+                  })}
+                </YStack>
+              </ScrollView>
             </YStack>
 
-            <XStack gap="$3" justifyContent="flex-end">
-              <Button variant="secondary" onPress={() => setShowCategoryModal(false)}>
-                <Text>Cancel</Text>
-              </Button>
-              <YStack
-                backgroundColor={selectedCategory ? COLORS.primary : '$borderColor'}
-                borderRadius="$3"
-                paddingHorizontal="$4"
-                paddingVertical="$2"
+            {/* Footer */}
+            <XStack
+              paddingHorizontal={24}
+              paddingVertical={16}
+              gap={12}
+              justifyContent="flex-end"
+              borderTopWidth={1}
+              borderTopColor={COLORS.border}
+              backgroundColor={COLORS.grayLight}
+            >
+              <XStack
+                paddingHorizontal={20}
+                paddingVertical={10}
+                borderRadius={8}
+                backgroundColor={COLORS.white}
+                borderWidth={1}
+                borderColor={COLORS.border}
+                cursor="pointer"
+                hoverStyle={{ backgroundColor: COLORS.grayLight }}
+                onPress={() => setShowCategoryModal(false)}
+              >
+                <Text fontSize={14} fontWeight="600" color={COLORS.gray}>Cancel</Text>
+              </XStack>
+              <XStack
+                paddingHorizontal={20}
+                paddingVertical={10}
+                borderRadius={8}
+                backgroundColor={selectedCategory ? COLORS.primary : COLORS.border}
                 cursor={selectedCategory ? 'pointer' : 'not-allowed'}
                 opacity={isProcessing ? 0.7 : 1}
+                hoverStyle={selectedCategory ? { opacity: 0.9 } : {}}
                 onPress={selectedCategory ? handleCategoryUpdate : undefined}
+                alignItems="center"
+                gap={8}
               >
-                <Text color="white" fontWeight="600">
-                  {isProcessing ? 'Updating...' : 'Apply'}
+                <Check size={16} color="white" />
+                <Text fontSize={14} fontWeight="600" color="white">
+                  {isProcessing ? 'Applying...' : 'Apply Category'}
                 </Text>
-              </YStack>
+              </XStack>
             </XStack>
           </YStack>
         </YStack>
@@ -308,116 +481,288 @@ export function BulkActionBar({
 
       {/* Price Adjustment Modal */}
       <Modal visible={showPriceModal} transparent animationType="fade" onRequestClose={() => setShowPriceModal(false)}>
-        <YStack flex={1} backgroundColor="rgba(0,0,0,0.5)" justifyContent="center" alignItems="center">
+        <YStack flex={1} backgroundColor="rgba(0,0,0,0.4)" justifyContent="center" alignItems="center">
           <YStack
-            backgroundColor="$cardBackground"
-            borderRadius="$4"
-            padding="$5"
-            width={400}
+            backgroundColor={COLORS.white}
+            borderRadius={16}
+            width={460}
             maxWidth="90%"
-            gap="$4"
+            overflow="hidden"
+            shadowColor="#000"
+            shadowOffset={{ width: 0, height: 8 }}
+            shadowOpacity={0.15}
+            shadowRadius={24}
+            elevation={12}
           >
-            <Text fontSize="$5" fontWeight="bold" color="$color">Adjust Price</Text>
-            <Text fontSize="$3" color="$colorSecondary">
-              Adjust prices for {selectedCount} product{selectedCount !== 1 ? 's' : ''}:
-            </Text>
-
-            {/* Type Toggle */}
-            <XStack gap="$2">
-              <YStack
-                flex={1}
-                backgroundColor={priceAdjustment.type === 'increase' ? COLORS.success : '$backgroundHover'}
-                borderRadius="$2"
-                padding="$3"
-                alignItems="center"
-                cursor="pointer"
-                onPress={() => setPriceAdjustment({ ...priceAdjustment, type: 'increase' })}
-              >
-                <Text
-                  fontSize="$3"
-                  fontWeight="600"
-                  color={priceAdjustment.type === 'increase' ? 'white' : '$color'}
-                >
-                  Increase
-                </Text>
-              </YStack>
-              <YStack
-                flex={1}
-                backgroundColor={priceAdjustment.type === 'decrease' ? COLORS.error : '$backgroundHover'}
-                borderRadius="$2"
-                padding="$3"
-                alignItems="center"
-                cursor="pointer"
-                onPress={() => setPriceAdjustment({ ...priceAdjustment, type: 'decrease' })}
-              >
-                <Text
-                  fontSize="$3"
-                  fontWeight="600"
-                  color={priceAdjustment.type === 'decrease' ? 'white' : '$color'}
-                >
-                  Decrease
-                </Text>
-              </YStack>
-            </XStack>
-
-            {/* Percentage Input */}
-            <YStack gap="$2">
-              <Text fontSize={12} color="$colorSecondary">Percentage</Text>
-              <XStack alignItems="center" gap="$2">
-                <Input
-                  flex={1}
-                  value={priceAdjustment.percentage.toString()}
-                  onChangeText={(text) => setPriceAdjustment({ ...priceAdjustment, percentage: parseInt(text) || 0 })}
-                  keyboardType="number-pad"
-                  borderWidth={1}
-                  borderColor="$borderColor"
-                  borderRadius="$2"
-                  size="$4"
-                />
-                <Text fontSize="$4" color="$colorSecondary">%</Text>
-              </XStack>
-            </YStack>
-
-            {/* Quick Percentage Buttons */}
-            <XStack gap="$2" flexWrap="wrap">
-              {[5, 10, 15, 20, 25].map((pct) => (
+            {/* Header */}
+            <XStack
+              paddingHorizontal={24}
+              paddingVertical={20}
+              borderBottomWidth={1}
+              borderBottomColor={COLORS.border}
+              alignItems="center"
+              justifyContent="space-between"
+            >
+              <XStack alignItems="center" gap={12}>
                 <YStack
-                  key={pct}
-                  paddingHorizontal="$3"
-                  paddingVertical="$2"
-                  borderRadius="$2"
-                  backgroundColor={priceAdjustment.percentage === pct ? COLORS.primary : '$backgroundHover'}
-                  cursor="pointer"
-                  onPress={() => setPriceAdjustment({ ...priceAdjustment, percentage: pct })}
+                  width={40}
+                  height={40}
+                  borderRadius={20}
+                  backgroundColor={COLORS.primaryLight}
+                  borderWidth={2}
+                  borderColor={COLORS.primaryBorder}
+                  alignItems="center"
+                  justifyContent="center"
                 >
-                  <Text
-                    fontSize={12}
-                    color={priceAdjustment.percentage === pct ? 'white' : '$color'}
-                    fontWeight="500"
-                  >
-                    {pct}%
+                  <Percent size={20} color={COLORS.primary} />
+                </YStack>
+                <YStack>
+                  <Text fontSize={18} fontWeight="700" color="#111827">Adjust Prices</Text>
+                  <Text fontSize={13} color={COLORS.gray}>
+                    {selectedCount} product{selectedCount !== 1 ? 's' : ''} selected
                   </Text>
                 </YStack>
-              ))}
+              </XStack>
+              <YStack
+                padding={8}
+                borderRadius={8}
+                backgroundColor={COLORS.grayLight}
+                cursor="pointer"
+                hoverStyle={{ backgroundColor: COLORS.border }}
+                onPress={() => setShowPriceModal(false)}
+              >
+                <X size={18} color={COLORS.gray} />
+              </YStack>
             </XStack>
 
-            <XStack gap="$3" justifyContent="flex-end">
-              <Button variant="secondary" onPress={() => setShowPriceModal(false)}>
-                <Text>Cancel</Text>
-              </Button>
+            {/* Content */}
+            <YStack padding={24} gap={24}>
+              {/* Adjustment Type Toggle */}
+              <YStack gap={10}>
+                <Text fontSize={14} fontWeight="600" color="#374151">
+                  Adjustment Type
+                </Text>
+                <XStack gap={12}>
+                  <XStack
+                    flex={1}
+                    backgroundColor={priceAdjustment.type === 'increase' ? COLORS.successLight : COLORS.white}
+                    borderWidth={2}
+                    borderColor={priceAdjustment.type === 'increase' ? COLORS.success : COLORS.border}
+                    borderRadius={12}
+                    padding={16}
+                    alignItems="center"
+                    justifyContent="center"
+                    gap={10}
+                    cursor="pointer"
+                    hoverStyle={{
+                      backgroundColor: priceAdjustment.type === 'increase' ? COLORS.successLight : COLORS.grayLight,
+                    }}
+                    onPress={() => setPriceAdjustment({ ...priceAdjustment, type: 'increase' })}
+                  >
+                    <YStack
+                      width={36}
+                      height={36}
+                      borderRadius={18}
+                      backgroundColor={priceAdjustment.type === 'increase' ? COLORS.success : COLORS.grayLight}
+                      alignItems="center"
+                      justifyContent="center"
+                    >
+                      <TrendingUp size={20} color={priceAdjustment.type === 'increase' ? 'white' : COLORS.gray} />
+                    </YStack>
+                    <YStack>
+                      <Text
+                        fontSize={15}
+                        fontWeight="600"
+                        color={priceAdjustment.type === 'increase' ? COLORS.success : '#374151'}
+                      >
+                        Increase
+                      </Text>
+                      <Text fontSize={12} color={COLORS.gray}>
+                        Raise prices
+                      </Text>
+                    </YStack>
+                  </XStack>
+
+                  <XStack
+                    flex={1}
+                    backgroundColor={priceAdjustment.type === 'decrease' ? COLORS.errorLight : COLORS.white}
+                    borderWidth={2}
+                    borderColor={priceAdjustment.type === 'decrease' ? COLORS.error : COLORS.border}
+                    borderRadius={12}
+                    padding={16}
+                    alignItems="center"
+                    justifyContent="center"
+                    gap={10}
+                    cursor="pointer"
+                    hoverStyle={{
+                      backgroundColor: priceAdjustment.type === 'decrease' ? COLORS.errorLight : COLORS.grayLight,
+                    }}
+                    onPress={() => setPriceAdjustment({ ...priceAdjustment, type: 'decrease' })}
+                  >
+                    <YStack
+                      width={36}
+                      height={36}
+                      borderRadius={18}
+                      backgroundColor={priceAdjustment.type === 'decrease' ? COLORS.error : COLORS.grayLight}
+                      alignItems="center"
+                      justifyContent="center"
+                    >
+                      <TrendingDown size={20} color={priceAdjustment.type === 'decrease' ? 'white' : COLORS.gray} />
+                    </YStack>
+                    <YStack>
+                      <Text
+                        fontSize={15}
+                        fontWeight="600"
+                        color={priceAdjustment.type === 'decrease' ? COLORS.error : '#374151'}
+                      >
+                        Decrease
+                      </Text>
+                      <Text fontSize={12} color={COLORS.gray}>
+                        Lower prices
+                      </Text>
+                    </YStack>
+                  </XStack>
+                </XStack>
+              </YStack>
+
+              {/* Percentage Input */}
+              <YStack gap={10}>
+                <Text fontSize={14} fontWeight="600" color="#374151">
+                  Percentage Amount
+                </Text>
+                <XStack
+                  backgroundColor={COLORS.grayLight}
+                  borderRadius={12}
+                  borderWidth={2}
+                  borderColor={COLORS.border}
+                  padding={4}
+                  alignItems="center"
+                >
+                  <YStack
+                    width={48}
+                    height={48}
+                    backgroundColor={COLORS.white}
+                    borderRadius={8}
+                    alignItems="center"
+                    justifyContent="center"
+                    marginRight={4}
+                  >
+                    <Text fontSize={18} fontWeight="700" color={COLORS.primary}>%</Text>
+                  </YStack>
+                  <Input
+                    flex={1}
+                    value={priceAdjustment.percentage.toString()}
+                    onChangeText={(text) => setPriceAdjustment({ ...priceAdjustment, percentage: parseInt(text) || 0 })}
+                    keyboardType="number-pad"
+                    backgroundColor="transparent"
+                    borderWidth={0}
+                    fontSize={24}
+                    fontWeight="700"
+                    color="#111827"
+                    textAlign="center"
+                    paddingHorizontal={16}
+                  />
+                </XStack>
+              </YStack>
+
+              {/* Quick Percentage Buttons */}
+              <YStack gap={10}>
+                <Text fontSize={14} fontWeight="600" color="#374151">
+                  Quick Select
+                </Text>
+                <XStack gap={10} flexWrap="wrap">
+                  {[5, 10, 15, 20, 25, 30, 50].map((pct) => {
+                    const isActive = priceAdjustment.percentage === pct;
+                    return (
+                      <YStack
+                        key={pct}
+                        paddingHorizontal={20}
+                        paddingVertical={12}
+                        borderRadius={10}
+                        backgroundColor={isActive ? COLORS.primary : COLORS.white}
+                        borderWidth={2}
+                        borderColor={isActive ? COLORS.primary : COLORS.border}
+                        cursor="pointer"
+                        hoverStyle={{
+                          backgroundColor: isActive ? COLORS.primary : COLORS.grayLight,
+                          borderColor: isActive ? COLORS.primary : '#D1D5DB',
+                        }}
+                        onPress={() => setPriceAdjustment({ ...priceAdjustment, percentage: pct })}
+                      >
+                        <Text
+                          fontSize={15}
+                          fontWeight="600"
+                          color={isActive ? 'white' : '#374151'}
+                        >
+                          {pct}%
+                        </Text>
+                      </YStack>
+                    );
+                  })}
+                </XStack>
+              </YStack>
+
+              {/* Preview */}
               <YStack
-                backgroundColor={priceAdjustment.type === 'increase' ? COLORS.success : COLORS.error}
-                borderRadius="$3"
-                paddingHorizontal="$4"
-                paddingVertical="$2"
-                cursor="pointer"
-                opacity={isProcessing ? 0.7 : 1}
-                onPress={handlePriceAdjust}
+                backgroundColor={priceAdjustment.type === 'increase' ? COLORS.successLight : COLORS.errorLight}
+                borderRadius={12}
+                padding={16}
+                borderLeftWidth={4}
+                borderLeftColor={priceAdjustment.type === 'increase' ? COLORS.success : COLORS.error}
               >
-                <Text color="white" fontWeight="600">
-                  {isProcessing ? 'Applying...' : `${priceAdjustment.type === 'increase' ? 'Increase' : 'Decrease'} by ${priceAdjustment.percentage}%`}
+                <Text fontSize={13} color={COLORS.gray} marginBottom={4}>
+                  Preview
+                </Text>
+                <Text fontSize={16} fontWeight="600" color={priceAdjustment.type === 'increase' ? COLORS.success : COLORS.error}>
+                  {priceAdjustment.type === 'increase' ? '↑' : '↓'} {priceAdjustment.percentage}% {priceAdjustment.type} on all selected products
                 </Text>
               </YStack>
+            </YStack>
+
+            {/* Footer */}
+            <XStack
+              paddingHorizontal={24}
+              paddingVertical={16}
+              gap={12}
+              justifyContent="flex-end"
+              borderTopWidth={1}
+              borderTopColor={COLORS.border}
+              backgroundColor={COLORS.grayLight}
+            >
+              <XStack
+                paddingHorizontal={20}
+                paddingVertical={12}
+                borderRadius={10}
+                backgroundColor={COLORS.white}
+                borderWidth={1}
+                borderColor={COLORS.border}
+                cursor="pointer"
+                hoverStyle={{ backgroundColor: COLORS.grayLight }}
+                onPress={() => setShowPriceModal(false)}
+              >
+                <Text fontSize={14} fontWeight="600" color={COLORS.gray}>Cancel</Text>
+              </XStack>
+              <XStack
+                paddingHorizontal={24}
+                paddingVertical={12}
+                borderRadius={10}
+                backgroundColor={priceAdjustment.type === 'increase' ? COLORS.success : COLORS.error}
+                cursor="pointer"
+                opacity={isProcessing ? 0.7 : 1}
+                hoverStyle={{ opacity: 0.9 }}
+                onPress={handlePriceAdjust}
+                alignItems="center"
+                gap={8}
+              >
+                {priceAdjustment.type === 'increase' ? (
+                  <TrendingUp size={18} color="white" />
+                ) : (
+                  <TrendingDown size={18} color="white" />
+                )}
+                <Text fontSize={14} fontWeight="600" color="white">
+                  {isProcessing ? 'Applying...' : `Apply ${priceAdjustment.percentage}% ${priceAdjustment.type === 'increase' ? 'Increase' : 'Decrease'}`}
+                </Text>
+              </XStack>
             </XStack>
           </YStack>
         </YStack>

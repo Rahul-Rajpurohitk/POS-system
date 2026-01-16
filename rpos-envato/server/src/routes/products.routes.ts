@@ -26,6 +26,121 @@ router.get('/sync', staff, readLimiter, catchAsync(productsController.syncProduc
 
 /**
  * @swagger
+ * /products/brands:
+ *   get:
+ *     summary: Get unique brands for filter dropdown
+ *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of unique brands
+ */
+router.get('/brands', staff, readLimiter, catchAsync(productsController.getBrands));
+
+/**
+ * @swagger
+ * /products/tags:
+ *   get:
+ *     summary: Get unique tags for filter dropdown
+ *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of unique tags
+ */
+router.get('/tags', staff, readLimiter, catchAsync(productsController.getTags));
+
+/**
+ * @swagger
+ * /products/partners/summary:
+ *   get:
+ *     summary: Get partner availability summary
+ *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Partner availability counts
+ */
+router.get('/partners/summary', staff, readLimiter, catchAsync(productsController.getPartnerSummary));
+
+/**
+ * @swagger
+ * /products/partners/bulk-update:
+ *   post:
+ *     summary: Bulk update partner availability for products
+ *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               productIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               partner:
+ *                 type: string
+ *               available:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Products updated
+ */
+router.post('/partners/bulk-update', manager, createLimiter, catchAsync(productsController.bulkUpdatePartnerAvailability));
+
+/**
+ * @swagger
+ * /products/export/{partner}:
+ *   get:
+ *     summary: Export products available for a specific partner
+ *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: partner
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Partner name (doordash, ubereats, grubhub, etc.)
+ *     responses:
+ *       200:
+ *         description: Partner export data
+ */
+router.get('/export/:partner', manager, readLimiter, catchAsync(productsController.exportForPartner));
+
+/**
+ * @swagger
+ * /products/barcode/{barcode}:
+ *   get:
+ *     summary: Get product by barcode
+ *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: barcode
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Product barcode/UPC
+ *     responses:
+ *       200:
+ *         description: Product found
+ *       404:
+ *         description: Product not found
+ */
+router.get('/barcode/:barcode', staff, readLimiter, catchAsync(productsController.getProductByBarcode));
+
+/**
+ * @swagger
  * /products/count:
  *   get:
  *     summary: Get total product count
@@ -54,7 +169,7 @@ router.get('/count', staff, readLimiter, catchAsync(productsController.getProduc
  * @swagger
  * /products:
  *   get:
- *     summary: Get all products
+ *     summary: Get all products with advanced filtering
  *     tags: [Products]
  *     security:
  *       - bearerAuth: []
@@ -75,13 +190,50 @@ router.get('/count', staff, readLimiter, catchAsync(productsController.getProduc
  *         name: search
  *         schema:
  *           type: string
- *         description: Search by name, SKU, or description
+ *         description: Search by name, SKU, description, brand, or barcode
  *       - in: query
- *         name: categoryId
+ *         name: category
  *         schema:
  *           type: string
  *           format: uuid
- *         description: Filter by category
+ *         description: Filter by category ID
+ *       - in: query
+ *         name: supplier
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter by default supplier ID
+ *       - in: query
+ *         name: brand
+ *         schema:
+ *           type: string
+ *         description: Filter by brand name
+ *       - in: query
+ *         name: hasBarcode
+ *         schema:
+ *           type: string
+ *           enum: ['true', 'false']
+ *         description: Filter by barcode presence
+ *       - in: query
+ *         name: partner
+ *         schema:
+ *           type: string
+ *         description: Filter by partner availability (doordash, ubereats, etc.)
+ *       - in: query
+ *         name: tags
+ *         schema:
+ *           type: string
+ *         description: Filter by tags (comma-separated)
+ *       - in: query
+ *         name: minMargin
+ *         schema:
+ *           type: number
+ *         description: Minimum profit margin percentage
+ *       - in: query
+ *         name: maxMargin
+ *         schema:
+ *           type: number
+ *         description: Maximum profit margin percentage
  *     responses:
  *       200:
  *         description: List of products

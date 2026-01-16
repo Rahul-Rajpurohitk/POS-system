@@ -4,11 +4,14 @@ import { YStack, XStack, Text, Image } from 'tamagui';
 import {
   Package, TrendingUp, TrendingDown, AlertTriangle, DollarSign,
   BarChart3, ShoppingCart, Clock, Pencil, RefreshCw, Trash2,
-  Target, Box,
+  Target, Box, Store, Tag, Barcode, Truck, Eye, ExternalLink,
+  ChevronRight, Maximize2,
 } from '@tamagui/lucide-icons';
 import { formatCurrency } from '@/utils';
 import { useSettingsStore } from '@/store';
 import { useInventoryIntelligence, useProductPerformance } from '@/features/analytics/hooks';
+import { PartnerStatus } from './PartnerToggle';
+import { StockHistory } from './StockHistory';
 import type { Product } from '@/types';
 import type { ABCCategory } from '@/features/analytics/types';
 
@@ -21,6 +24,7 @@ const COLORS = {
   info: '#0EA5E9',
   purple: '#8B5CF6',
   teal: '#14B8A6',
+  gray: '#6B7280',
 };
 
 const ABC_COLORS = {
@@ -124,6 +128,7 @@ interface ProductAnalyticsPanelProps {
   onEdit: () => void;
   onAdjustStock: () => void;
   onDelete: () => void;
+  onViewFullDetails?: () => void;
 }
 
 export function ProductAnalyticsPanel({
@@ -131,6 +136,7 @@ export function ProductAnalyticsPanel({
   onEdit,
   onAdjustStock,
   onDelete,
+  onViewFullDetails,
 }: ProductAnalyticsPanelProps) {
   const { settings } = useSettingsStore();
 
@@ -279,6 +285,172 @@ export function ProductAnalyticsPanel({
           </YStack>
         </YStack>
 
+        {/* View Full Details Button */}
+        {onViewFullDetails && (
+          <XStack
+            backgroundColor={COLORS.primary}
+            padding="$3"
+            borderRadius="$3"
+            alignItems="center"
+            justifyContent="center"
+            gap="$2"
+            cursor="pointer"
+            hoverStyle={{ backgroundColor: '#2563EB' }}
+            pressStyle={{ transform: [{ scale: 0.98 }] }}
+            onPress={onViewFullDetails}
+          >
+            <Maximize2 size={16} color="white" />
+            <Text fontSize={13} fontWeight="600" color="white">
+              View Full Details
+            </Text>
+            <ChevronRight size={16} color="white" />
+          </XStack>
+        )}
+
+        {/* Product Identifiers */}
+        <YStack
+          backgroundColor="$cardBackground"
+          borderRadius="$3"
+          padding="$3"
+          borderWidth={1}
+          borderColor="$borderColor"
+          gap="$3"
+        >
+          <XStack alignItems="center" gap="$2">
+            <Tag size={16} color={COLORS.primary} />
+            <Text fontSize={13} fontWeight="600" color="$color">
+              Product Details
+            </Text>
+          </XStack>
+
+          <YStack gap="$2">
+            {/* Brand */}
+            <XStack justifyContent="space-between" alignItems="center">
+              <XStack alignItems="center" gap="$2">
+                <Store size={14} color={COLORS.gray} />
+                <Text fontSize={12} color="$colorSecondary">Brand</Text>
+              </XStack>
+              <Text fontSize={12} fontWeight="600" color="$color">
+                {product.brand || '—'}
+              </Text>
+            </XStack>
+
+            {/* Barcode */}
+            <XStack justifyContent="space-between" alignItems="center">
+              <XStack alignItems="center" gap="$2">
+                <Barcode size={14} color={COLORS.gray} />
+                <Text fontSize={12} color="$colorSecondary">Barcode</Text>
+              </XStack>
+              {product.primaryBarcode ? (
+                <XStack
+                  backgroundColor="$backgroundHover"
+                  paddingHorizontal="$2"
+                  paddingVertical={2}
+                  borderRadius={4}
+                >
+                  <Text fontSize={11} color="$color" letterSpacing={0.5}>
+                    {product.primaryBarcode}
+                  </Text>
+                </XStack>
+              ) : (
+                <Text fontSize={12} color="$colorSecondary">—</Text>
+              )}
+            </XStack>
+
+            {/* Default Supplier */}
+            <XStack justifyContent="space-between" alignItems="center">
+              <XStack alignItems="center" gap="$2">
+                <Truck size={14} color={COLORS.gray} />
+                <Text fontSize={12} color="$colorSecondary">Supplier</Text>
+              </XStack>
+              {product.defaultSupplier ? (
+                <XStack alignItems="center" gap="$1">
+                  <XStack
+                    backgroundColor="#EFF6FF"
+                    paddingHorizontal={6}
+                    paddingVertical={2}
+                    borderRadius={4}
+                  >
+                    <Text fontSize={10} color={COLORS.primary} fontWeight="600">
+                      {product.defaultSupplier.code}
+                    </Text>
+                  </XStack>
+                  <Text fontSize={12} fontWeight="500" color="$color">
+                    {product.defaultSupplier.name}
+                  </Text>
+                </XStack>
+              ) : (
+                <Text fontSize={12} color="$colorSecondary">—</Text>
+              )}
+            </XStack>
+
+            {/* Unit of Measure */}
+            <XStack justifyContent="space-between" alignItems="center">
+              <XStack alignItems="center" gap="$2">
+                <Package size={14} color={COLORS.gray} />
+                <Text fontSize={12} color="$colorSecondary">Unit</Text>
+              </XStack>
+              <Text fontSize={12} fontWeight="500" color="$color">
+                {product.unitOfMeasure || 'each'}
+              </Text>
+            </XStack>
+          </YStack>
+        </YStack>
+
+        {/* Partner Availability */}
+        {product.partnerAvailability && Object.keys(product.partnerAvailability).length > 0 && (
+          <YStack
+            backgroundColor="$cardBackground"
+            borderRadius="$3"
+            padding="$3"
+            borderWidth={1}
+            borderColor="$borderColor"
+            gap="$3"
+          >
+            <XStack alignItems="center" gap="$2">
+              <Store size={16} color={COLORS.purple} />
+              <Text fontSize={13} fontWeight="600" color="$color">
+                Partner Availability
+              </Text>
+            </XStack>
+            <PartnerStatus availability={product.partnerAvailability} showInactive />
+          </YStack>
+        )}
+
+        {/* Tags */}
+        {product.tags && product.tags.length > 0 && (
+          <YStack
+            backgroundColor="$cardBackground"
+            borderRadius="$3"
+            padding="$3"
+            borderWidth={1}
+            borderColor="$borderColor"
+            gap="$3"
+          >
+            <XStack alignItems="center" gap="$2">
+              <Tag size={16} color={COLORS.teal} />
+              <Text fontSize={13} fontWeight="600" color="$color">
+                Tags
+              </Text>
+            </XStack>
+            <XStack flexWrap="wrap" gap="$1">
+              {product.tags.map((tag, index) => (
+                <XStack
+                  key={index}
+                  backgroundColor="#F0FDF4"
+                  paddingHorizontal={8}
+                  paddingVertical={4}
+                  borderRadius={6}
+                >
+                  <Text fontSize={11} color="#15803D" fontWeight="500">
+                    {tag}
+                  </Text>
+                </XStack>
+              ))}
+            </XStack>
+          </YStack>
+        )}
+
         {/* Key Metrics */}
         <XStack gap="$2">
           <MetricCard
@@ -408,6 +580,9 @@ export function ProductAnalyticsPanel({
               </Text>
             </XStack>
           ) : null}
+
+          {/* Compact Stock History */}
+          <StockHistory product={product} compact />
         </YStack>
 
         {/* Profit Analysis */}

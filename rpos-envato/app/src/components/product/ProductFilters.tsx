@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { YStack, XStack, Text, Input } from 'tamagui';
 import {
   Search, Filter, X, ChevronDown, Check, Package, AlertTriangle,
-  DollarSign, RotateCcw,
+  DollarSign, RotateCcw, Truck, Barcode, Tag, TrendingUp, Store,
 } from '@tamagui/lucide-icons';
-import type { Category } from '@/types';
+import type { Category, Supplier, PARTNER_COLORS, PARTNER_NAMES } from '@/types';
 
 // Professional blue theme instead of bright purple
 const COLORS = {
@@ -12,10 +12,17 @@ const COLORS = {
   success: '#10B981',
   warning: '#F59E0B',
   error: '#EF4444',
+  doordash: '#FF3008',
+  ubereats: '#5FB709',
+  grubhub: '#F63440',
+  postmates: '#000000',
+  instacart: '#43B02A',
 };
 
 export type StockStatus = 'all' | 'in_stock' | 'low_stock' | 'out_of_stock';
 export type PriceRange = 'all' | 'under_10' | '10_50' | '50_100' | 'over_100' | 'custom';
+export type MarginRange = 'all' | 'under_20' | '20_40' | '40_60' | 'over_60';
+export type BarcodeFilter = 'all' | 'has_barcode' | 'no_barcode';
 
 export interface ProductFiltersState {
   search: string;
@@ -24,6 +31,12 @@ export interface ProductFiltersState {
   priceRange: PriceRange;
   minPrice?: number;
   maxPrice?: number;
+  // Advanced filters
+  supplier: string | null;
+  brand: string | null;
+  hasBarcode: BarcodeFilter;
+  partnerAvailable: string | null;
+  marginRange: MarginRange;
 }
 
 interface DropdownOption {
@@ -152,6 +165,9 @@ interface ProductFiltersProps {
   onRefresh?: () => void;
   isRefreshing?: boolean;
   resultCount?: number;
+  // Advanced filter data
+  suppliers?: Supplier[];
+  brands?: string[];
 }
 
 export function ProductFilters({
@@ -161,12 +177,19 @@ export function ProductFilters({
   onRefresh,
   isRefreshing,
   resultCount,
+  suppliers = [],
+  brands = [],
 }: ProductFiltersProps) {
   const hasActiveFilters =
     filters.search !== '' ||
     filters.category !== null ||
     filters.stockStatus !== 'all' ||
-    filters.priceRange !== 'all';
+    filters.priceRange !== 'all' ||
+    filters.supplier !== null ||
+    filters.brand !== null ||
+    filters.hasBarcode !== 'all' ||
+    filters.partnerAvailable !== null ||
+    filters.marginRange !== 'all';
 
   const handleReset = () => {
     onFiltersChange({
@@ -176,6 +199,11 @@ export function ProductFilters({
       priceRange: 'all',
       minPrice: undefined,
       maxPrice: undefined,
+      supplier: null,
+      brand: null,
+      hasBarcode: 'all',
+      partnerAvailable: null,
+      marginRange: 'all',
     });
   };
 
@@ -204,6 +232,50 @@ export function ProductFilters({
     { value: '10_50', label: '$10 - $50' },
     { value: '50_100', label: '$50 - $100' },
     { value: 'over_100', label: 'Over $100' },
+  ];
+
+  // Supplier options
+  const supplierOptions: DropdownOption[] = [
+    { value: '', label: 'All Suppliers' },
+    ...(Array.isArray(suppliers) ? suppliers : []).map(s => ({
+      value: s.id,
+      label: s.name,
+    })),
+  ];
+
+  // Brand options
+  const brandOptions: DropdownOption[] = [
+    { value: '', label: 'All Brands' },
+    ...(Array.isArray(brands) ? brands : []).map(b => ({
+      value: b,
+      label: b,
+    })),
+  ];
+
+  // Barcode options
+  const barcodeOptions: DropdownOption[] = [
+    { value: 'all', label: 'Any Barcode', icon: <Barcode size={14} color="$colorSecondary" /> },
+    { value: 'has_barcode', label: 'Has Barcode', icon: <Barcode size={14} color={COLORS.success} /> },
+    { value: 'no_barcode', label: 'No Barcode', icon: <Barcode size={14} color={COLORS.warning} /> },
+  ];
+
+  // Partner options
+  const partnerOptions: DropdownOption[] = [
+    { value: '', label: 'All Partners' },
+    { value: 'doordash', label: 'DoorDash', color: COLORS.doordash },
+    { value: 'ubereats', label: 'Uber Eats', color: COLORS.ubereats },
+    { value: 'grubhub', label: 'Grubhub', color: COLORS.grubhub },
+    { value: 'postmates', label: 'Postmates', color: COLORS.postmates },
+    { value: 'instacart', label: 'Instacart', color: COLORS.instacart },
+  ];
+
+  // Margin options
+  const marginOptions: DropdownOption[] = [
+    { value: 'all', label: 'Any Margin' },
+    { value: 'under_20', label: 'Under 20%' },
+    { value: '20_40', label: '20% - 40%' },
+    { value: '40_60', label: '40% - 60%' },
+    { value: 'over_60', label: 'Over 60%' },
   ];
 
   return (
@@ -275,6 +347,51 @@ export function ProductFilters({
           options={priceOptions}
           value={filters.priceRange}
           onChange={(value) => onFiltersChange({ ...filters, priceRange: value as PriceRange })}
+        />
+
+        {/* Advanced Filters */}
+        {suppliers.length > 0 && (
+          <FilterDropdown
+            label="Supplier"
+            icon={<Truck size={14} color={filters.supplier ? COLORS.primary : '$colorSecondary'} />}
+            options={supplierOptions}
+            value={filters.supplier || ''}
+            onChange={(value) => onFiltersChange({ ...filters, supplier: value || null })}
+          />
+        )}
+
+        {brands.length > 0 && (
+          <FilterDropdown
+            label="Brand"
+            icon={<Tag size={14} color={filters.brand ? COLORS.primary : '$colorSecondary'} />}
+            options={brandOptions}
+            value={filters.brand || ''}
+            onChange={(value) => onFiltersChange({ ...filters, brand: value || null })}
+          />
+        )}
+
+        <FilterDropdown
+          label="Barcode"
+          icon={<Barcode size={14} color={filters.hasBarcode !== 'all' ? COLORS.primary : '$colorSecondary'} />}
+          options={barcodeOptions}
+          value={filters.hasBarcode}
+          onChange={(value) => onFiltersChange({ ...filters, hasBarcode: value as BarcodeFilter })}
+        />
+
+        <FilterDropdown
+          label="Partner"
+          icon={<Store size={14} color={filters.partnerAvailable ? COLORS.primary : '$colorSecondary'} />}
+          options={partnerOptions}
+          value={filters.partnerAvailable || ''}
+          onChange={(value) => onFiltersChange({ ...filters, partnerAvailable: value || null })}
+        />
+
+        <FilterDropdown
+          label="Margin"
+          icon={<TrendingUp size={14} color={filters.marginRange !== 'all' ? COLORS.primary : '$colorSecondary'} />}
+          options={marginOptions}
+          value={filters.marginRange}
+          onChange={(value) => onFiltersChange({ ...filters, marginRange: value as MarginRange })}
         />
 
         {/* Reset & Refresh */}
@@ -404,6 +521,111 @@ export function ProductFilters({
                     size={10}
                     color="$colorSecondary"
                     onPress={() => onFiltersChange({ ...filters, priceRange: 'all' })}
+                  />
+                </XStack>
+              )}
+              {filters.supplier && (
+                <XStack
+                  backgroundColor="$backgroundHover"
+                  paddingHorizontal="$2"
+                  paddingVertical="$1"
+                  borderRadius="$1"
+                  alignItems="center"
+                  gap="$1"
+                >
+                  <Truck size={10} color="$colorSecondary" />
+                  <Text fontSize={11} color="$colorSecondary">
+                    {suppliers.find(s => s.id === filters.supplier)?.name || 'Supplier'}
+                  </Text>
+                  <X
+                    size={10}
+                    color="$colorSecondary"
+                    onPress={() => onFiltersChange({ ...filters, supplier: null })}
+                  />
+                </XStack>
+              )}
+              {filters.brand && (
+                <XStack
+                  backgroundColor="$backgroundHover"
+                  paddingHorizontal="$2"
+                  paddingVertical="$1"
+                  borderRadius="$1"
+                  alignItems="center"
+                  gap="$1"
+                >
+                  <Tag size={10} color="$colorSecondary" />
+                  <Text fontSize={11} color="$colorSecondary">
+                    {filters.brand}
+                  </Text>
+                  <X
+                    size={10}
+                    color="$colorSecondary"
+                    onPress={() => onFiltersChange({ ...filters, brand: null })}
+                  />
+                </XStack>
+              )}
+              {filters.hasBarcode !== 'all' && (
+                <XStack
+                  backgroundColor="$backgroundHover"
+                  paddingHorizontal="$2"
+                  paddingVertical="$1"
+                  borderRadius="$1"
+                  alignItems="center"
+                  gap="$1"
+                >
+                  <Barcode size={10} color="$colorSecondary" />
+                  <Text fontSize={11} color="$colorSecondary">
+                    {barcodeOptions.find(o => o.value === filters.hasBarcode)?.label}
+                  </Text>
+                  <X
+                    size={10}
+                    color="$colorSecondary"
+                    onPress={() => onFiltersChange({ ...filters, hasBarcode: 'all' })}
+                  />
+                </XStack>
+              )}
+              {filters.partnerAvailable && (
+                <XStack
+                  backgroundColor="$backgroundHover"
+                  paddingHorizontal="$2"
+                  paddingVertical="$1"
+                  borderRadius="$1"
+                  alignItems="center"
+                  gap="$1"
+                >
+                  <YStack
+                    width={8}
+                    height={8}
+                    borderRadius={4}
+                    backgroundColor={partnerOptions.find(p => p.value === filters.partnerAvailable)?.color || '$colorSecondary'}
+                  />
+                  <Text fontSize={11} color="$colorSecondary">
+                    {partnerOptions.find(p => p.value === filters.partnerAvailable)?.label}
+                  </Text>
+                  <X
+                    size={10}
+                    color="$colorSecondary"
+                    onPress={() => onFiltersChange({ ...filters, partnerAvailable: null })}
+                  />
+                </XStack>
+              )}
+              {filters.marginRange !== 'all' && (
+                <XStack
+                  backgroundColor="$backgroundHover"
+                  paddingHorizontal="$2"
+                  paddingVertical="$1"
+                  borderRadius="$1"
+                  alignItems="center"
+                  gap="$1"
+                >
+                  <TrendingUp size={10} color="$colorSecondary" />
+                  <Text fontSize={11} color="$colorSecondary">
+                    {marginOptions.find(o => o.value === filters.marginRange)?.label}
+                  </Text>
+                  <X
+                    size={10}
+                    color="$colorSecondary"
+                    onPress={() => onFiltersChange({ ...filters, marginRange: 'all' })}
                   />
                 </XStack>
               )}

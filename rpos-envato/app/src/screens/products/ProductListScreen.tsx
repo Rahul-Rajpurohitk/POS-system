@@ -15,6 +15,7 @@ import {
   ProductFilters,
   StockAdjustment,
   BulkActionBar,
+  ProductDetailModal,
 } from '@/components/product';
 import type { ProductFiltersState, StockStatus, PriceRange } from '@/components/product';
 import { formatCurrency } from '@/utils';
@@ -67,7 +68,7 @@ const COL_WIDTHS = {
   image: 44,
   name: 'flex' as const, // flexible
   sku: 90,
-  category: 90,
+  category: 130, // Increased from 90 to show full category names
   stock: 60,
   cost: 80,
   price: 80,
@@ -334,8 +335,8 @@ function TableRow({
           maxWidth="100%"
         >
           <YStack width={5} height={5} borderRadius={3} backgroundColor={categoryColor} flexShrink={0} />
-          <Text fontSize={10} color={categoryColor} fontWeight="500" numberOfLines={1}>
-            {categoryName.length > 7 ? categoryName.substring(0, 7) + '…' : categoryName}
+          <Text fontSize={10} color={categoryColor} fontWeight="500" numberOfLines={1} ellipsizeMode="tail">
+            {categoryName}
           </Text>
         </XStack>
       </YStack>
@@ -408,6 +409,7 @@ export default function ProductListScreen({ navigation }: ProductScreenProps<'Pr
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showEditDrawer, setShowEditDrawer] = useState(false);
   const [showStockAdjustment, setShowStockAdjustment] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: 'name', direction: 'asc' });
   const [filters, setFilters] = useState<ProductFiltersState>({
     search: '',
@@ -910,6 +912,7 @@ export default function ProductListScreen({ navigation }: ProductScreenProps<'Pr
                 onEdit={() => setShowEditDrawer(true)}
                 onAdjustStock={() => setShowStockAdjustment(true)}
                 onDelete={handleDeleteProduct}
+                onViewFullDetails={() => setShowDetailModal(true)}
               />
             )}
           </YStack>
@@ -922,6 +925,17 @@ export default function ProductListScreen({ navigation }: ProductScreenProps<'Pr
         isOpen={showEditDrawer}
         onClose={() => setShowEditDrawer(false)}
         onSuccess={() => refetch()}
+      />
+
+      {/* Full-Screen Product Detail Modal */}
+      <ProductDetailModal
+        product={selectedProduct}
+        isOpen={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        onSuccess={() => {
+          refetch();
+          setShowDetailModal(false);
+        }}
       />
     </YStack>
   );
