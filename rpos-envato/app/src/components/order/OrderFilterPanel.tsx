@@ -98,9 +98,9 @@ function FilterChip({ label, selected, onPress, color }: FilterChipProps) {
       paddingHorizontal="$3"
       paddingVertical="$2"
       borderRadius="$2"
-      backgroundColor={selected ? (color ? `${color}20` : '#8B5CF620') : '$backgroundHover'}
+      backgroundColor={selected ? (color ? `${color}20` : '#3B82F620') : '$backgroundHover'}
       borderWidth={1}
-      borderColor={selected ? (color || '#8B5CF6') : '$borderColor'}
+      borderColor={selected ? (color || '#3B82F6') : '$borderColor'}
       cursor="pointer"
       hoverStyle={{ opacity: 0.8 }}
       pressStyle={{ transform: [{ scale: 0.95 }] }}
@@ -108,11 +108,11 @@ function FilterChip({ label, selected, onPress, color }: FilterChipProps) {
       alignItems="center"
       gap="$1"
     >
-      {selected && <Check size={12} color={color || '#8B5CF6'} />}
+      {selected && <Check size={12} color={color || '#3B82F6'} />}
       <Text
         fontSize={12}
         fontWeight={selected ? '600' : '400'}
-        color={selected ? (color || '#8B5CF6') : '$color'}
+        color={selected ? (color || '#3B82F6') : '$color'}
       >
         {label}
       </Text>
@@ -222,14 +222,14 @@ export function OrderFilterPanel({
         onPress={onToggleExpand}
       >
         <XStack alignItems="center" gap="$2">
-          <Filter size={18} color="#8B5CF6" />
+          <Filter size={18} color="#3B82F6" />
           <Text fontSize={14} fontWeight="600">Filters</Text>
           {activeFilterCount > 0 && (
             <XStack
               paddingHorizontal="$2"
               paddingVertical="$1"
               borderRadius={999}
-              backgroundColor="#8B5CF6"
+              backgroundColor="#3B82F6"
             >
               <Text fontSize={11} fontWeight="600" color="white">{activeFilterCount}</Text>
             </XStack>
@@ -239,7 +239,7 @@ export function OrderFilterPanel({
           {activeFilterCount > 0 && (
             <Text
               fontSize={12}
-              color="#8B5CF6"
+              color="#3B82F6"
               cursor="pointer"
               onPress={onClearAll}
             >
@@ -264,16 +264,16 @@ export function OrderFilterPanel({
                 paddingHorizontal="$2"
                 paddingVertical="$1"
                 borderRadius="$2"
-                backgroundColor="#8B5CF620"
+                backgroundColor="#3B82F620"
                 borderWidth={1}
-                borderColor="#8B5CF6"
+                borderColor="#3B82F6"
                 alignItems="center"
                 gap="$1"
               >
-                <Text fontSize={11} color="#8B5CF6">{filter.label}</Text>
+                <Text fontSize={11} color="#3B82F6">{filter.label}</Text>
                 <X
                   size={12}
-                  color="#8B5CF6"
+                  color="#3B82F6"
                   cursor="pointer"
                   onPress={filter.onRemove}
                 />
@@ -394,10 +394,10 @@ export function OrderFilterPanel({
               borderTopWidth={1}
               borderTopColor="$borderColor"
             >
-              <Save size={14} color="#8B5CF6" />
+              <Save size={14} color="#3B82F6" />
               <Text
                 fontSize={12}
-                color="#8B5CF6"
+                color="#3B82F6"
                 cursor="pointer"
                 onPress={() => setShowSaveDialog(true)}
               >

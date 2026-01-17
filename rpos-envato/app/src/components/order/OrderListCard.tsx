@@ -93,7 +93,7 @@ export function OrderListCard({
         backgroundColor="$backgroundHover"
       >
         <XStack alignItems="center" gap="$2">
-          <Text fontSize="$4" fontWeight="700" color="#8B5CF6">{orderNumber}</Text>
+          <Text fontSize="$4" fontWeight="700" color="#3B82F6">{orderNumber}</Text>
         </XStack>
         <XStack alignItems="center" gap="$3">
           <XStack alignItems="center" gap="$1">
@@ -119,11 +119,11 @@ export function OrderListCard({
             width={40}
             height={40}
             borderRadius={20}
-            backgroundColor="#8B5CF620"
+            backgroundColor="#3B82F620"
             alignItems="center"
             justifyContent="center"
           >
-            <User size={20} color="#8B5CF6" />
+            <User size={20} color="#3B82F6" />
           </YStack>
           <YStack flex={1}>
             <Text fontSize="$3" fontWeight="600" numberOfLines={1}>{customerName}</Text>
@@ -190,8 +190,8 @@ export function OrderListCard({
             onPress={onView}
           >
             <XStack alignItems="center" gap="$2">
-              <Eye size={16} color="#8B5CF6" />
-              <Text fontSize={12} fontWeight="500" color="#8B5CF6">View</Text>
+              <Eye size={16} color="#3B82F6" />
+              <Text fontSize={12} fontWeight="500" color="#3B82F6">View</Text>
             </XStack>
           </YStack>
 

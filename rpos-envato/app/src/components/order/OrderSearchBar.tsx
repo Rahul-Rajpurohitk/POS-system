@@ -103,10 +103,10 @@ export function OrderSearchBar({
         paddingVertical="$2.5"
         alignItems="center"
         borderWidth={isFocused ? 2 : 1}
-        borderColor={isFocused ? '#8B5CF6' : '$borderColor'}
+        borderColor={isFocused ? '#3B82F6' : '$borderColor'}
         gap="$2"
       >
-        <Search size={18} color={isFocused ? '#8B5CF6' : '$colorSecondary'} />
+        <Search size={18} color={isFocused ? '#3B82F6' : '$colorSecondary'} />
         <Input
           ref={inputRef}
           flex={1}
@@ -179,7 +179,7 @@ export function OrderSearchBar({
             {onClearRecent && (
               <Text
                 fontSize={11}
-                color="#8B5CF6"
+                color="#3B82F6"
                 cursor="pointer"
                 onPress={onClearRecent}
               >

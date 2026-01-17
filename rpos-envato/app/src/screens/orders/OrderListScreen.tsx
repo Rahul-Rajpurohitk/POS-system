@@ -118,7 +118,7 @@ function TableRow({
       pressStyle={{ backgroundColor: '$backgroundPress' }}
       onPress={onView}
     >
-      <Text width={100} fontSize="$3" fontWeight="500" color="#8B5CF6">
+      <Text width={100} fontSize="$3" fontWeight="500" color="#3B82F6">
         {orderNumber}
       </Text>
       <YStack flex={1}>
@@ -151,17 +151,17 @@ function TableRow({
           borderRadius="$2"
           backgroundColor="$backgroundHover"
           cursor="pointer"
-          hoverStyle={{ backgroundColor: '#8B5CF620' }}
+          hoverStyle={{ backgroundColor: '#3B82F620' }}
           onPress={(e: any) => { e.stopPropagation(); onView(); }}
         >
-          <Eye size={16} color="#8B5CF6" />
+          <Eye size={16} color="#3B82F6" />
         </YStack>
         <YStack
           padding="$1.5"
           borderRadius="$2"
           backgroundColor="$backgroundHover"
           cursor="pointer"
-          hoverStyle={{ backgroundColor: '#8B5CF620' }}
+          hoverStyle={{ backgroundColor: '#3B82F620' }}
           onPress={(e: any) => { e.stopPropagation(); onEdit(); }}
         >
           <Pencil size={16} color="$colorSecondary" />
@@ -377,7 +377,7 @@ export default function OrderListScreen({ navigation }: OrderScreenProps<'OrderL
   if (isLoading) {
     return (
       <YStack flex={1} justifyContent="center" alignItems="center" backgroundColor="$background">
-        <ActivityIndicator size="large" color="#8B5CF6" />
+        <ActivityIndicator size="large" color="#3B82F6" />
         <Text color="$colorSecondary" marginTop="$2">Loading orders...</Text>
       </YStack>
     );
@@ -409,7 +409,7 @@ export default function OrderListScreen({ navigation }: OrderScreenProps<'OrderL
               width={48}
               height={48}
               borderRadius={24}
-              backgroundColor="#8B5CF6"
+              backgroundColor="#3B82F6"
               alignItems="center"
               justifyContent="center"
             >
@@ -433,19 +433,19 @@ export default function OrderListScreen({ navigation }: OrderScreenProps<'OrderL
               >
                 <YStack
                   padding="$2"
-                  backgroundColor={viewMode === 'table' ? '#8B5CF620' : 'transparent'}
+                  backgroundColor={viewMode === 'table' ? '#3B82F620' : 'transparent'}
                   cursor="pointer"
                   onPress={() => setViewMode('table')}
                 >
-                  <List size={18} color={viewMode === 'table' ? '#8B5CF6' : '$colorSecondary'} />
+                  <List size={18} color={viewMode === 'table' ? '#3B82F6' : '$colorSecondary'} />
                 </YStack>
                 <YStack
                   padding="$2"
-                  backgroundColor={viewMode === 'card' ? '#8B5CF620' : 'transparent'}
+                  backgroundColor={viewMode === 'card' ? '#3B82F620' : 'transparent'}
                   cursor="pointer"
                   onPress={() => setViewMode('card')}
                 >
-                  <LayoutGrid size={18} color={viewMode === 'card' ? '#8B5CF6' : '$colorSecondary'} />
+                  <LayoutGrid size={18} color={viewMode === 'card' ? '#3B82F6' : '$colorSecondary'} />
                 </YStack>
               </XStack>
             )}
@@ -454,11 +454,11 @@ export default function OrderListScreen({ navigation }: OrderScreenProps<'OrderL
               borderRadius="$2"
               backgroundColor="$backgroundHover"
               cursor="pointer"
-              hoverStyle={{ backgroundColor: '#8B5CF620' }}
+              hoverStyle={{ backgroundColor: '#3B82F620' }}
               pressStyle={{ transform: [{ scale: 0.95 }] }}
               onPress={() => refetch()}
             >
-              <RefreshCw size={20} color={isRefetching ? '#8B5CF6' : '$colorSecondary'} />
+              <RefreshCw size={20} color={isRefetching ? '#3B82F6' : '$colorSecondary'} />
             </YStack>
           </XStack>
         </XStack>
@@ -505,7 +505,7 @@ export default function OrderListScreen({ navigation }: OrderScreenProps<'OrderL
           keyExtractor={(item) => item.id}
           contentContainerStyle={useCardView ? { padding: 16 } : undefined}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} colors={['#8B5CF6']} />
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} colors={['#3B82F6']} />
           }
           renderItem={({ item }) =>
             useCardView ? (

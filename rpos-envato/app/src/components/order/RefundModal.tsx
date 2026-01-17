@@ -70,19 +70,19 @@ function RefundItemRow({ item, onToggle, onQuantityChange, currency }: RefundIte
     <XStack
       paddingVertical="$3"
       paddingHorizontal="$3"
-      backgroundColor={item.selected ? '#8B5CF610' : 'transparent'}
+      backgroundColor={item.selected ? '#3B82F610' : 'transparent'}
       borderRadius="$2"
       marginBottom="$2"
       borderWidth={1}
-      borderColor={item.selected ? '#8B5CF6' : '$borderColor'}
+      borderColor={item.selected ? '#3B82F6' : '$borderColor'}
     >
       <XStack
         width={24}
         height={24}
         borderRadius={4}
         borderWidth={2}
-        borderColor={item.selected ? '#8B5CF6' : '$borderColor'}
-        backgroundColor={item.selected ? '#8B5CF6' : 'transparent'}
+        borderColor={item.selected ? '#3B82F6' : '$borderColor'}
+        backgroundColor={item.selected ? '#3B82F6' : 'transparent'}
         alignItems="center"
         justifyContent="center"
         cursor="pointer"
@@ -297,7 +297,7 @@ export function RefundModal({
             borderBottomColor="$borderColor"
           >
             <XStack alignItems="center" gap="$2">
-              <RefreshCw size={20} color="#8B5CF6" />
+              <RefreshCw size={20} color="#3B82F6" />
               <Text fontSize="$5" fontWeight="bold">Process Refund</Text>
             </XStack>
             <YStack
@@ -338,8 +338,8 @@ export function RefundModal({
                       paddingHorizontal="$3"
                       borderRadius="$2"
                       borderWidth={2}
-                      borderColor={refundType === type ? '#8B5CF6' : '$borderColor'}
-                      backgroundColor={refundType === type ? '#8B5CF610' : 'transparent'}
+                      borderColor={refundType === type ? '#3B82F6' : '$borderColor'}
+                      backgroundColor={refundType === type ? '#3B82F610' : 'transparent'}
                       cursor="pointer"
                       alignItems="center"
                       onPress={() => setRefundType(type)}
@@ -347,7 +347,7 @@ export function RefundModal({
                       <Text
                         fontSize={13}
                         fontWeight={refundType === type ? '600' : '400'}
-                        color={refundType === type ? '#8B5CF6' : '$color'}
+                        color={refundType === type ? '#3B82F6' : '$color'}
                         textTransform="capitalize"
                       >
                         {type} Refund
@@ -376,12 +376,12 @@ export function RefundModal({
               {/* Refund amount display */}
               <YStack
                 padding="$4"
-                backgroundColor="#8B5CF610"
+                backgroundColor="#3B82F610"
                 borderRadius="$3"
                 alignItems="center"
               >
                 <Text fontSize={12} color="$colorSecondary" marginBottom="$1">Refund Amount</Text>
-                <Text fontSize="$7" fontWeight="bold" color="#8B5CF6">
+                <Text fontSize="$7" fontWeight="bold" color="#3B82F6">
                   {formatCurrency(refundAmount, currency)}
                 </Text>
               </YStack>
@@ -397,15 +397,15 @@ export function RefundModal({
                       paddingHorizontal="$3"
                       borderRadius="$2"
                       borderWidth={1}
-                      borderColor={reason === r.value ? '#8B5CF6' : '$borderColor'}
-                      backgroundColor={reason === r.value ? '#8B5CF610' : 'transparent'}
+                      borderColor={reason === r.value ? '#3B82F6' : '$borderColor'}
+                      backgroundColor={reason === r.value ? '#3B82F610' : 'transparent'}
                       cursor="pointer"
                       onPress={() => setReason(r.value)}
                     >
                       <Text
                         fontSize={12}
                         fontWeight={reason === r.value ? '600' : '400'}
-                        color={reason === r.value ? '#8B5CF6' : '$color'}
+                        color={reason === r.value ? '#3B82F6' : '$color'}
                       >
                         {r.label}
                       </Text>
@@ -427,18 +427,18 @@ export function RefundModal({
                         paddingVertical="$3"
                         borderRadius="$2"
                         borderWidth={1}
-                        borderColor={destination === d.value ? '#8B5CF6' : '$borderColor'}
-                        backgroundColor={destination === d.value ? '#8B5CF610' : 'transparent'}
+                        borderColor={destination === d.value ? '#3B82F6' : '$borderColor'}
+                        backgroundColor={destination === d.value ? '#3B82F610' : 'transparent'}
                         cursor="pointer"
                         alignItems="center"
                         gap="$1"
                         onPress={() => setDestination(d.value)}
                       >
-                        <Icon size={18} color={destination === d.value ? '#8B5CF6' : '$colorSecondary'} />
+                        <Icon size={18} color={destination === d.value ? '#3B82F6' : '$colorSecondary'} />
                         <Text
                           fontSize={11}
                           fontWeight={destination === d.value ? '600' : '400'}
-                          color={destination === d.value ? '#8B5CF6' : '$color'}
+                          color={destination === d.value ? '#3B82F6' : '$color'}
                           textAlign="center"
                         >
                           {d.label}

@@ -1,5 +1,6 @@
 /**
  * OrderDetailDrawer - Comprehensive order detail view with actions
+ * Updated for UI consistency with Products page
  */
 
 import React, { useState } from 'react';
@@ -7,13 +8,22 @@ import { ScrollView, Modal, Dimensions } from 'react-native';
 import { XStack, YStack, Text, TextArea } from 'tamagui';
 import {
   X, User, CreditCard, Banknote, Smartphone, Clock, CheckCircle, Package,
-  MessageSquare, History, Printer, Mail, MessageCircle, RefreshCw, Pencil,
-  Phone, MapPin, Award,
+  MessageSquare, History, Printer, Mail, RefreshCw, Phone, Award,
 } from '@tamagui/lucide-icons';
 import { OrderStatusBadge, OrderStatus } from './OrderStatusBadge';
 import { Button } from '@/components/ui';
 import { formatCurrency, formatDate } from '@/utils';
 import type { Order, Currency } from '@/types';
+
+// Consistent color scheme matching Products page
+const COLORS = {
+  primary: '#3B82F6',
+  success: '#10B981',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  info: '#0EA5E9',
+  gray: '#6B7280',
+};
 
 export interface OrderDetailDrawerProps {
   order: Order | null;
@@ -35,11 +45,18 @@ const PAYMENT_ICONS: Record<string, any> = {
 
 const STATUS_STEPS: OrderStatus[] = ['pending', 'processing', 'completed'];
 
-function StatusTimeline({ currentStatus, history }: { currentStatus: string; history?: any[] }) {
+function StatusTimeline({ currentStatus }: { currentStatus: string }) {
   const currentIndex = STATUS_STEPS.indexOf(currentStatus as OrderStatus);
 
   return (
-    <YStack gap="$2" padding="$4" backgroundColor="$backgroundHover" borderRadius="$3">
+    <YStack
+      gap="$2"
+      padding="$4"
+      backgroundColor="$cardBackground"
+      borderRadius="$3"
+      borderWidth={1}
+      borderColor="$borderColor"
+    >
       <Text fontSize={12} fontWeight="600" color="$colorSecondary" marginBottom="$2">
         ORDER STATUS
       </Text>
@@ -55,18 +72,18 @@ function StatusTimeline({ currentStatus, history }: { currentStatus: string; his
                   width={32}
                   height={32}
                   borderRadius={16}
-                  backgroundColor={isCompleted ? '#8B5CF6' : '$borderColor'}
+                  backgroundColor={isCompleted ? COLORS.primary : '$borderColor'}
                   alignItems="center"
                   justifyContent="center"
                   borderWidth={isCurrent ? 3 : 0}
-                  borderColor={isCurrent ? '#8B5CF640' : 'transparent'}
+                  borderColor={isCurrent ? `${COLORS.primary}40` : 'transparent'}
                 >
                   <CheckCircle size={16} color={isCompleted ? 'white' : '$colorSecondary'} />
                 </YStack>
                 <Text
                   fontSize={10}
                   fontWeight={isCurrent ? '700' : '500'}
-                  color={isCompleted ? '#8B5CF6' : '$colorSecondary'}
+                  color={isCompleted ? COLORS.primary : '$colorSecondary'}
                   textTransform="capitalize"
                 >
                   {step}
@@ -76,7 +93,7 @@ function StatusTimeline({ currentStatus, history }: { currentStatus: string; his
                 <YStack
                   flex={1}
                   height={2}
-                  backgroundColor={index < currentIndex ? '#8B5CF6' : '$borderColor'}
+                  backgroundColor={index < currentIndex ? COLORS.primary : '$borderColor'}
                   marginHorizontal="$2"
                 />
               )}
@@ -104,7 +121,7 @@ function InfoCard({ title, icon: Icon, children }: { title: string; icon: any; c
         alignItems="center"
         gap="$2"
       >
-        <Icon size={14} color="#8B5CF6" />
+        <Icon size={14} color={COLORS.primary} />
         <Text fontSize={12} fontWeight="600" color="$colorSecondary" textTransform="uppercase">
           {title}
         </Text>
@@ -158,7 +175,7 @@ export function OrderDetailDrawer({
         <YStack
           width={drawerWidth}
           flex={1}
-          backgroundColor="$background"
+          backgroundColor="white"
           shadowColor="rgba(0,0,0,0.2)"
           shadowOffset={{ width: -4, height: 0 }}
           shadowOpacity={1}
@@ -171,12 +188,12 @@ export function OrderDetailDrawer({
             justifyContent="space-between"
             alignItems="center"
             borderBottomWidth={1}
-            borderBottomColor="$borderColor"
-            backgroundColor="$cardBackground"
+            borderBottomColor="#E5E7EB"
+            backgroundColor="#F9FAFB"
           >
             <YStack>
-              <Text fontSize="$5" fontWeight="bold">Order {orderNumber}</Text>
-              <Text fontSize={12} color="$colorSecondary">
+              <Text fontSize="$5" fontWeight="bold" color="#111827">Order {orderNumber}</Text>
+              <Text fontSize={12} color="#6B7280">
                 {formatDate(order.createdAt, 'MMM d, yyyy h:mm a')}
               </Text>
             </YStack>
@@ -185,18 +202,21 @@ export function OrderDetailDrawer({
               <YStack
                 padding="$2"
                 borderRadius="$2"
-                backgroundColor="$backgroundHover"
+                backgroundColor="#F3F4F6"
                 cursor="pointer"
-                hoverStyle={{ backgroundColor: '$borderColor' }}
+                hoverStyle={{ backgroundColor: '#E5E7EB' }}
                 onPress={onClose}
               >
-                <X size={20} color="$colorSecondary" />
+                <X size={20} color="#6B7280" />
               </YStack>
             </XStack>
           </XStack>
 
           {/* Scrollable content */}
-          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={{ flex: 1, backgroundColor: '#F9FAFB' }}
+            showsVerticalScrollIndicator={false}
+          >
             <YStack padding="$4" gap="$4">
               {/* Status Timeline */}
               <StatusTimeline currentStatus={status} />
@@ -206,23 +226,23 @@ export function OrderDetailDrawer({
                 {/* Customer Info */}
                 <YStack flex={1}>
                   <InfoCard title="Customer" icon={User}>
-                    <Text fontSize="$3" fontWeight="600" marginBottom="$1">{customerName}</Text>
+                    <Text fontSize="$3" fontWeight="600" color="#111827" marginBottom="$1">{customerName}</Text>
                     {customerEmail && (
                       <XStack alignItems="center" gap="$2" marginTop="$1">
-                        <Mail size={12} color="$colorSecondary" />
-                        <Text fontSize={12} color="$colorSecondary">{customerEmail}</Text>
+                        <Mail size={12} color="#6B7280" />
+                        <Text fontSize={12} color="#6B7280">{customerEmail}</Text>
                       </XStack>
                     )}
                     {customerPhone && (
                       <XStack alignItems="center" gap="$2" marginTop="$1">
-                        <Phone size={12} color="$colorSecondary" />
-                        <Text fontSize={12} color="$colorSecondary">{customerPhone}</Text>
+                        <Phone size={12} color="#6B7280" />
+                        <Text fontSize={12} color="#6B7280">{customerPhone}</Text>
                       </XStack>
                     )}
                     {order.customer && (
-                      <XStack alignItems="center" gap="$2" marginTop="$2" paddingTop="$2" borderTopWidth={1} borderTopColor="$borderColor">
-                        <Award size={14} color="#8B5CF6" />
-                        <Text fontSize={11} color="#8B5CF6" fontWeight="500">Loyalty Member</Text>
+                      <XStack alignItems="center" gap="$2" marginTop="$2" paddingTop="$2" borderTopWidth={1} borderTopColor="#E5E7EB">
+                        <Award size={14} color={COLORS.primary} />
+                        <Text fontSize={11} color={COLORS.primary} fontWeight="500">Loyalty Member</Text>
                       </XStack>
                     )}
                   </InfoCard>
@@ -232,16 +252,16 @@ export function OrderDetailDrawer({
                 <YStack flex={1}>
                   <InfoCard title="Payment" icon={CreditCard}>
                     <XStack alignItems="center" gap="$2" marginBottom="$2">
-                      <PaymentIcon size={18} color="#8B5CF6" />
-                      <Text fontSize="$3" fontWeight="600" textTransform="capitalize">{paymentMethod}</Text>
+                      <PaymentIcon size={18} color={COLORS.primary} />
+                      <Text fontSize="$3" fontWeight="600" color="#111827" textTransform="capitalize">{paymentMethod}</Text>
                     </XStack>
-                    <Text fontSize={11} color="$colorSecondary">
-                      Status: <Text color="#10B981" fontWeight="500">Paid</Text>
+                    <Text fontSize={11} color="#6B7280">
+                      Status: <Text color={COLORS.success} fontWeight="500">Paid</Text>
                     </Text>
                     {onRefund && status === 'completed' && (
                       <Text
                         fontSize={11}
-                        color="#8B5CF6"
+                        color={COLORS.primary}
                         marginTop="$2"
                         cursor="pointer"
                         onPress={onRefund}
@@ -262,17 +282,17 @@ export function OrderDetailDrawer({
                     alignItems="center"
                     paddingVertical="$2"
                     borderBottomWidth={index < items.length - 1 ? 1 : 0}
-                    borderBottomColor="$borderColor"
+                    borderBottomColor="#E5E7EB"
                   >
                     <YStack flex={1}>
-                      <Text fontSize="$3" fontWeight="500" numberOfLines={1}>
+                      <Text fontSize="$3" fontWeight="500" color="#111827" numberOfLines={1}>
                         {item.product?.name || item.name || 'Product'}
                       </Text>
-                      <Text fontSize={11} color="$colorSecondary">
+                      <Text fontSize={11} color="#6B7280">
                         {formatCurrency(item.price || item.unitPrice || 0, currency)} × {item.quantity}
                       </Text>
                     </YStack>
-                    <Text fontSize="$3" fontWeight="600">
+                    <Text fontSize="$3" fontWeight="600" color="#111827">
                       {formatCurrency((item.price || item.unitPrice || 0) * (item.quantity || 1), currency)}
                     </Text>
                   </XStack>
@@ -281,31 +301,31 @@ export function OrderDetailDrawer({
 
               {/* Payment Summary */}
               <YStack
-                backgroundColor="$cardBackground"
+                backgroundColor="white"
                 borderRadius="$3"
                 borderWidth={1}
-                borderColor="$borderColor"
+                borderColor="#E5E7EB"
                 padding="$4"
                 gap="$2"
               >
                 <XStack justifyContent="space-between">
-                  <Text fontSize={13} color="$colorSecondary">Subtotal</Text>
-                  <Text fontSize={13}>{formatCurrency(payment.subTotal, currency)}</Text>
+                  <Text fontSize={13} color="#6B7280">Subtotal</Text>
+                  <Text fontSize={13} color="#111827">{formatCurrency(payment.subTotal, currency)}</Text>
                 </XStack>
                 {payment.discount > 0 && (
                   <XStack justifyContent="space-between">
-                    <Text fontSize={13} color="#10B981">Discount</Text>
-                    <Text fontSize={13} color="#10B981">-{formatCurrency(payment.discount, currency)}</Text>
+                    <Text fontSize={13} color={COLORS.success}>Discount</Text>
+                    <Text fontSize={13} color={COLORS.success}>-{formatCurrency(payment.discount, currency)}</Text>
                   </XStack>
                 )}
                 <XStack justifyContent="space-between">
-                  <Text fontSize={13} color="$colorSecondary">Tax</Text>
-                  <Text fontSize={13}>{formatCurrency(payment.vat || 0, currency)}</Text>
+                  <Text fontSize={13} color="#6B7280">Tax</Text>
+                  <Text fontSize={13} color="#111827">{formatCurrency(payment.vat || 0, currency)}</Text>
                 </XStack>
-                <YStack height={1} backgroundColor="$borderColor" marginVertical="$2" />
+                <YStack height={1} backgroundColor="#E5E7EB" marginVertical="$2" />
                 <XStack justifyContent="space-between">
-                  <Text fontSize="$4" fontWeight="bold">Total</Text>
-                  <Text fontSize="$4" fontWeight="bold" color="#8B5CF6">
+                  <Text fontSize="$4" fontWeight="bold" color="#111827">Total</Text>
+                  <Text fontSize="$4" fontWeight="bold" color={COLORS.primary}>
                     {formatCurrency(payment.total, currency)}
                   </Text>
                 </XStack>
@@ -314,12 +334,12 @@ export function OrderDetailDrawer({
               {/* Notes Section */}
               <InfoCard title="Notes" icon={MessageSquare}>
                 {notes.length === 0 && !showNoteInput && (
-                  <Text fontSize={12} color="$colorSecondary" fontStyle="italic">No notes yet</Text>
+                  <Text fontSize={12} color="#9CA3AF" fontStyle="italic">No notes yet</Text>
                 )}
                 {notes.map((note: any, index: number) => (
                   <YStack key={index} marginBottom="$2">
-                    <Text fontSize={13}>{note.text}</Text>
-                    <Text fontSize={10} color="$colorSecondary" marginTop="$1">
+                    <Text fontSize={13} color="#111827">{note.text}</Text>
+                    <Text fontSize={10} color="#9CA3AF" marginTop="$1">
                       {note.author} • {formatDate(note.createdAt, 'MMM d, h:mm a')}
                     </Text>
                   </YStack>
@@ -331,7 +351,8 @@ export function OrderDetailDrawer({
                       onChangeText={setNewNote}
                       placeholder="Add a note..."
                       minHeight={80}
-                      borderColor="$borderColor"
+                      borderColor="#D1D5DB"
+                      backgroundColor="white"
                     />
                     <XStack gap="$2">
                       <Button size="sm" variant="secondary" onPress={() => setShowNoteInput(false)}>
@@ -345,7 +366,7 @@ export function OrderDetailDrawer({
                 ) : (
                   <Text
                     fontSize={12}
-                    color="#8B5CF6"
+                    color={COLORS.primary}
                     marginTop="$2"
                     cursor="pointer"
                     onPress={() => setShowNoteInput(true)}
@@ -359,10 +380,10 @@ export function OrderDetailDrawer({
               <InfoCard title="Activity" icon={History}>
                 <YStack gap="$2">
                   <XStack alignItems="flex-start" gap="$2">
-                    <YStack width={6} height={6} borderRadius={3} backgroundColor="#8B5CF6" marginTop={6} />
+                    <YStack width={6} height={6} borderRadius={3} backgroundColor={COLORS.primary} marginTop={6} />
                     <YStack flex={1}>
-                      <Text fontSize={12}>Order created</Text>
-                      <Text fontSize={10} color="$colorSecondary">
+                      <Text fontSize={12} color="#111827">Order created</Text>
+                      <Text fontSize={10} color="#9CA3AF">
                         {formatDate(order.createdAt, 'MMM d, h:mm a')} • System
                       </Text>
                     </YStack>
@@ -377,8 +398,8 @@ export function OrderDetailDrawer({
             padding="$4"
             gap="$3"
             borderTopWidth={1}
-            borderTopColor="$borderColor"
-            backgroundColor="$cardBackground"
+            borderTopColor="#E5E7EB"
+            backgroundColor="white"
           >
             <Button
               flex={1}

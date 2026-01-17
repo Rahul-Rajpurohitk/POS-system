@@ -1,16 +1,26 @@
 /**
- * OrderStatsCards - Enhanced stats dashboard with animations and trends
+ * OrderStatsCards - Stats dashboard matching Products page design
+ * Uses the same MetricCard pattern for UI consistency
  */
 
 import React, { useEffect, useState } from 'react';
 import { XStack, YStack, Text } from 'tamagui';
 import {
-  Calendar, DollarSign, CheckCircle, Clock, TrendingUp, TrendingDown, Zap,
+  ShoppingCart, DollarSign, CheckCircle, Clock, TrendingUp, TrendingDown,
 } from '@tamagui/lucide-icons';
 import { formatCurrency } from '@/utils';
 import type { Currency } from '@/types';
 
-export type StatType = 'today' | 'revenue' | 'completed' | 'pending' | 'active';
+// Consistent color scheme matching Products page
+const COLORS = {
+  primary: '#3B82F6',  // Blue-500 - professional
+  success: '#10B981',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  info: '#0EA5E9',
+};
+
+export type StatType = 'today' | 'revenue' | 'completed' | 'pending';
 export type TimePeriod = 'today' | 'week' | 'month';
 
 interface StatData {
@@ -25,7 +35,6 @@ export interface OrderStatsCardsProps {
     revenue: StatData;
     completed: StatData;
     pending: StatData;
-    active?: StatData;
   };
   currency: Currency;
   period?: TimePeriod;
@@ -34,28 +43,26 @@ export interface OrderStatsCardsProps {
   compact?: boolean;
 }
 
-interface StatCardProps {
-  id: StatType;
-  icon: any;
+interface MetricCardProps {
+  icon: React.ReactNode;
   label: string;
-  value: number | string;
-  previousValue?: number;
+  value: number;
+  subValue?: string;
   color: string;
-  bgColor: string;
-  borderColor: string;
-  subtext?: string;
+  trend?: 'up' | 'down' | 'neutral';
+  trendValue?: number;
   onClick?: () => void;
-  pulse?: boolean;
   isCurrency?: boolean;
   currency?: Currency;
+  pulse?: boolean;
 }
 
 function AnimatedNumber({ value, isCurrency, currency }: { value: number; isCurrency?: boolean; currency?: Currency }) {
   const [displayValue, setDisplayValue] = useState(0);
 
   useEffect(() => {
-    const duration = 800;
-    const steps = 20;
+    const duration = 600;
+    const steps = 15;
     const stepValue = value / steps;
     const stepDuration = duration / steps;
     let current = 0;
@@ -79,106 +86,95 @@ function AnimatedNumber({ value, isCurrency, currency }: { value: number; isCurr
   return <>{displayValue.toLocaleString()}</>;
 }
 
-function TrendIndicator({ current, previous }: { current: number; previous?: number }) {
-  if (previous === undefined || previous === 0) return null;
-
-  const change = ((current - previous) / previous) * 100;
-  const isPositive = change >= 0;
-  const Icon = isPositive ? TrendingUp : TrendingDown;
-
-  return (
-    <XStack alignItems="center" gap="$1" marginTop="$1">
-      <Icon size={12} color={isPositive ? '#10B981' : '#EF4444'} />
-      <Text fontSize={10} color={isPositive ? '#10B981' : '#EF4444'} fontWeight="500">
-        {isPositive ? '+' : ''}{change.toFixed(1)}%
-      </Text>
-    </XStack>
-  );
-}
-
-function StatCard({
-  id,
-  icon: Icon,
+function MetricCard({
+  icon,
   label,
   value,
-  previousValue,
+  subValue,
   color,
-  bgColor,
-  borderColor,
-  subtext,
+  trend,
+  trendValue,
   onClick,
-  pulse,
   isCurrency,
   currency,
-}: StatCardProps) {
-  const numericValue = typeof value === 'string' ? parseFloat(value.replace(/[^0-9.-]/g, '')) : value;
-
+  pulse,
+}: MetricCardProps) {
   return (
     <YStack
       flex={1}
-      padding="$3"
+      backgroundColor="$cardBackground"
       borderRadius="$3"
-      backgroundColor={bgColor}
+      padding="$3"
       borderWidth={1}
-      borderColor={borderColor}
+      borderColor="$borderColor"
+      gap="$1"
       cursor={onClick ? 'pointer' : 'default'}
-      hoverStyle={onClick ? { opacity: 0.9, transform: [{ scale: 1.02 }] } : undefined}
-      pressStyle={onClick ? { transform: [{ scale: 0.98 }] } : undefined}
+      hoverStyle={onClick ? { borderColor: color } : undefined}
+      pressStyle={onClick ? { opacity: 0.9 } : undefined}
       onPress={onClick}
       position="relative"
-      overflow="hidden"
     >
-      {pulse && (
+      {/* Pulse indicator for pending */}
+      {pulse && value > 0 && (
         <YStack
           position="absolute"
-          top={8}
-          right={8}
+          top={10}
+          right={10}
           width={8}
           height={8}
           borderRadius={4}
           backgroundColor={color}
         />
       )}
+
       <XStack alignItems="center" gap="$2">
         <YStack
-          width={36}
-          height={36}
-          borderRadius={18}
-          backgroundColor="white"
+          width={32}
+          height={32}
+          borderRadius={16}
+          backgroundColor={`${color}20`}
           alignItems="center"
           justifyContent="center"
-          shadowColor="rgba(0,0,0,0.1)"
-          shadowOffset={{ width: 0, height: 1 }}
-          shadowOpacity={1}
-          shadowRadius={2}
         >
-          <Icon size={18} color={color} />
+          {icon}
         </YStack>
-        <YStack flex={1}>
-          <Text
-            fontSize={10}
-            color={color}
-            textTransform="uppercase"
-            fontWeight="700"
-            letterSpacing={0.5}
-          >
-            {label}
-          </Text>
-          <Text fontSize="$5" fontWeight="bold" color={color}>
-            <AnimatedNumber value={numericValue} isCurrency={isCurrency} currency={currency} />
-          </Text>
-          {previousValue !== undefined && (
-            <TrendIndicator current={numericValue} previous={previousValue} />
-          )}
-          {subtext && (
-            <Text fontSize={10} color={color} opacity={0.7} marginTop="$1">
-              {subtext}
+        {trend && trend !== 'neutral' && trendValue !== undefined && (
+          <XStack marginLeft="auto" alignItems="center" gap="$1">
+            {trend === 'up' ? (
+              <TrendingUp size={12} color={COLORS.success} />
+            ) : (
+              <TrendingDown size={12} color={COLORS.error} />
+            )}
+            <Text fontSize={10} color={trend === 'up' ? COLORS.success : COLORS.error} fontWeight="500">
+              {trend === 'up' ? '+' : ''}{trendValue.toFixed(1)}%
             </Text>
-          )}
-        </YStack>
+          </XStack>
+        )}
       </XStack>
+      <Text fontSize={11} color="$colorSecondary" textTransform="uppercase" marginTop="$1">
+        {label}
+      </Text>
+      <Text fontSize="$5" fontWeight="bold" color="$color">
+        <AnimatedNumber value={value} isCurrency={isCurrency} currency={currency} />
+      </Text>
+      {subValue && (
+        <Text fontSize={11} color="$colorSecondary">
+          {subValue}
+        </Text>
+      )}
     </YStack>
   );
+}
+
+function getTrend(current: number, previous?: number): { trend: 'up' | 'down' | 'neutral'; value: number } {
+  if (previous === undefined || previous === 0) {
+    return { trend: 'neutral', value: 0 };
+  }
+  const change = ((current - previous) / previous) * 100;
+  return {
+    trend: change > 0 ? 'up' : change < 0 ? 'down' : 'neutral',
+    value: Math.abs(change),
+  };
 }
 
 export function OrderStatsCards({
@@ -189,86 +185,49 @@ export function OrderStatsCards({
   onPeriodChange,
   compact = false,
 }: OrderStatsCardsProps) {
-  const STAT_CARDS: Omit<StatCardProps, 'onClick'>[] = [
-    {
-      id: 'today',
-      icon: Calendar,
-      label: period === 'today' ? "Today's Orders" : period === 'week' ? 'This Week' : 'This Month',
-      value: stats.today.value,
-      previousValue: stats.today.previousValue,
-      color: '#4F46E5',
-      bgColor: '#EEF2FF',
-      borderColor: '#C7D2FE',
-    },
-    {
-      id: 'revenue',
-      icon: DollarSign,
-      label: 'Revenue',
-      value: stats.revenue.value,
-      previousValue: stats.revenue.previousValue,
-      color: '#059669',
-      bgColor: '#ECFDF5',
-      borderColor: '#A7F3D0',
-      isCurrency: true,
-      currency,
-    },
-    {
-      id: 'completed',
-      icon: CheckCircle,
-      label: 'Completed',
-      value: stats.completed.value,
-      previousValue: stats.completed.previousValue,
-      color: '#16A34A',
-      bgColor: '#F0FDF4',
-      borderColor: '#BBF7D0',
-      subtext: stats.today.value > 0
-        ? `${Math.round((stats.completed.value / stats.today.value) * 100)}% rate`
-        : undefined,
-    },
-    {
-      id: 'pending',
-      icon: Clock,
-      label: 'Pending',
-      value: stats.pending.value,
-      color: '#D97706',
-      bgColor: '#FEF3C7',
-      borderColor: '#FCD34D',
-      pulse: stats.pending.value > 0,
-    },
-  ];
+  const todayTrend = getTrend(stats.today.value, stats.today.previousValue);
+  const revenueTrend = getTrend(stats.revenue.value, stats.revenue.previousValue);
+  const completedTrend = getTrend(stats.completed.value, stats.completed.previousValue);
 
-  // Add active orders stat if provided
-  if (stats.active) {
-    STAT_CARDS.push({
-      id: 'active',
-      icon: Zap,
-      label: 'Active Now',
-      value: stats.active.value,
-      color: '#8B5CF6',
-      bgColor: '#F5F3FF',
-      borderColor: '#DDD6FE',
-      pulse: stats.active.value > 0,
-    });
-  }
+  const completionRate = stats.today.value > 0
+    ? Math.round((stats.completed.value / stats.today.value) * 100)
+    : 0;
+
+  const periodLabel = period === 'today' ? "Today's Orders" : period === 'week' ? 'This Week' : 'This Month';
 
   if (compact) {
     return (
       <XStack gap="$2" flexWrap="wrap">
-        {STAT_CARDS.slice(0, 4).map((card) => (
-          <YStack
-            key={card.id}
-            paddingHorizontal="$3"
-            paddingVertical="$2"
-            borderRadius="$2"
-            backgroundColor={card.bgColor}
-            borderWidth={1}
-            borderColor={card.borderColor}
-          >
-            <Text fontSize={10} color={card.color} fontWeight="600">
-              {card.label}: {card.isCurrency ? formatCurrency(card.value as number, currency) : card.value}
+        <YStack
+          paddingHorizontal="$3"
+          paddingVertical="$2"
+          borderRadius="$2"
+          backgroundColor="$cardBackground"
+          borderWidth={1}
+          borderColor="$borderColor"
+        >
+          <XStack alignItems="center" gap="$2">
+            <ShoppingCart size={14} color={COLORS.primary} />
+            <Text fontSize={12} color="$color" fontWeight="600">
+              {stats.today.value} orders
             </Text>
-          </YStack>
-        ))}
+          </XStack>
+        </YStack>
+        <YStack
+          paddingHorizontal="$3"
+          paddingVertical="$2"
+          borderRadius="$2"
+          backgroundColor="$cardBackground"
+          borderWidth={1}
+          borderColor="$borderColor"
+        >
+          <XStack alignItems="center" gap="$2">
+            <DollarSign size={14} color={COLORS.success} />
+            <Text fontSize={12} color="$color" fontWeight="600">
+              {formatCurrency(stats.revenue.value, currency)}
+            </Text>
+          </XStack>
+        </YStack>
       </XStack>
     );
   }
@@ -281,15 +240,15 @@ export function OrderStatsCards({
           {(['today', 'week', 'month'] as TimePeriod[]).map((p) => (
             <Text
               key={p}
-              fontSize={11}
-              fontWeight={period === p ? '700' : '500'}
-              color={period === p ? '#8B5CF6' : '$colorSecondary'}
+              fontSize={12}
+              fontWeight={period === p ? '600' : '400'}
+              color={period === p ? COLORS.primary : '$colorSecondary'}
               textTransform="capitalize"
               cursor="pointer"
               paddingHorizontal="$2"
               paddingVertical="$1"
               borderRadius="$2"
-              backgroundColor={period === p ? '#F5F3FF' : 'transparent'}
+              backgroundColor={period === p ? `${COLORS.primary}15` : 'transparent'}
               onPress={() => onPeriodChange(p)}
             >
               {p}
@@ -298,15 +257,46 @@ export function OrderStatsCards({
         </XStack>
       )}
 
-      {/* Stats grid */}
-      <XStack gap="$3" flexWrap="wrap">
-        {STAT_CARDS.map((card) => (
-          <StatCard
-            key={card.id}
-            {...card}
-            onClick={onStatClick ? () => onStatClick(card.id) : undefined}
-          />
-        ))}
+      {/* Stats grid - matching Products MetricCard design */}
+      <XStack gap="$2">
+        <MetricCard
+          icon={<ShoppingCart size={16} color={COLORS.primary} />}
+          label={periodLabel}
+          value={stats.today.value}
+          color={COLORS.primary}
+          trend={todayTrend.trend}
+          trendValue={todayTrend.value}
+          onClick={onStatClick ? () => onStatClick('today') : undefined}
+        />
+        <MetricCard
+          icon={<DollarSign size={16} color={COLORS.success} />}
+          label="Revenue"
+          value={stats.revenue.value}
+          color={COLORS.success}
+          trend={revenueTrend.trend}
+          trendValue={revenueTrend.value}
+          isCurrency
+          currency={currency}
+          onClick={onStatClick ? () => onStatClick('revenue') : undefined}
+        />
+        <MetricCard
+          icon={<CheckCircle size={16} color="#16A34A" />}
+          label="Completed"
+          value={stats.completed.value}
+          subValue={completionRate > 0 ? `${completionRate}% rate` : undefined}
+          color="#16A34A"
+          trend={completedTrend.trend}
+          trendValue={completedTrend.value}
+          onClick={onStatClick ? () => onStatClick('completed') : undefined}
+        />
+        <MetricCard
+          icon={<Clock size={16} color={COLORS.warning} />}
+          label="Pending"
+          value={stats.pending.value}
+          color={COLORS.warning}
+          pulse
+          onClick={onStatClick ? () => onStatClick('pending') : undefined}
+        />
       </XStack>
     </YStack>
   );
