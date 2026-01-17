@@ -154,8 +154,8 @@ export function useRefundOrder() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, amount }: { id: string; amount: number }) =>
-      ordersApi.refund(id, amount),
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
+      ordersApi.refund(id, data.amount || 0),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: orderKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: orderKeys.lists() });
