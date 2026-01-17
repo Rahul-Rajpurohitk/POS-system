@@ -87,24 +87,27 @@ export function useCreateOrder() {
           orderNumber: `ORD-${Date.now()}`,
           items: data.items.map(item => ({
             id: generateLocalId(),
-            productId: item.productId,
-            productName: 'Product', // Will be resolved on sync
+            product: {
+              id: item.productId,
+              name: 'Product', // Will be resolved on sync
+              sku: '',
+              sellingPrice: item.price,
+              purchasePrice: 0,
+              quantity: 0,
+              isActive: true,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            } as any,
             quantity: item.quantity,
-            price: item.price,
-            total: item.price * item.quantity,
           })),
-          customerId: data.customerId,
-          couponId: data.couponId,
           subTotal: data.subTotal,
           discount: data.discount,
           tax: data.tax,
           total: data.total,
-          paymentMethod: data.paymentMethod,
-          status: 'pending',
-          note: data.note,
+          status: 'pending' as const,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-        };
+        } as Order;
         addToQueue({
           type: 'create',
           entity: 'order',
