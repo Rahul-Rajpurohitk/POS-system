@@ -60,32 +60,55 @@ const getStatusBadgeVariant = (status?: string): BadgeVariant => {
   }
 };
 
-// Table header component
+// Compact date formatter - e.g., "Jan 22, 2:30p"
+function formatCompactDate(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = months[d.getMonth()];
+  const day = d.getDate();
+  let hours = d.getHours();
+  const mins = d.getMinutes().toString().padStart(2, '0');
+  const ampm = hours >= 12 ? 'p' : 'a';
+  hours = hours % 12 || 12;
+  return `${month} ${day}, ${hours}:${mins}${ampm}`;
+}
+
+// Format order number to industry standard - ORD-XXXXX
+function formatOrderNumber(order: Order): string {
+  if (order.number?.startsWith('ORD-')) return order.number;
+  if (order.orderNumber?.startsWith('ORD-')) return order.orderNumber;
+  // Use last 5 chars of ID, padded
+  const idPart = order.id.replace(/[^a-zA-Z0-9]/g, '').slice(-5).toUpperCase().padStart(5, '0');
+  return `ORD-${idPart}`;
+}
+
+// Table header component - Properly aligned columns
 function TableHeader({ isDesktop }: { isDesktop: boolean }) {
   return (
     <XStack
-      backgroundColor="$backgroundHover"
-      paddingVertical="$2"
-      paddingHorizontal="$3"
+      backgroundColor="#F9FAFB"
+      paddingVertical="$2.5"
+      paddingHorizontal="$4"
       borderBottomWidth={1}
-      borderBottomColor="$borderColor"
+      borderBottomColor="#E5E7EB"
     >
-      <Text width={100} fontSize="$2" fontWeight="600" color="$colorSecondary">Order #</Text>
-      <Text flex={1} fontSize="$2" fontWeight="600" color="$colorSecondary">Customer</Text>
+      <Text width={110} fontSize={12} fontWeight="600" color="#6B7280">Order ID</Text>
+      <Text width={100} fontSize={12} fontWeight="600" color="#6B7280">Date</Text>
+      <Text flex={1} minWidth={120} fontSize={12} fontWeight="600" color="#6B7280">Customer</Text>
       {isDesktop && (
-        <Text width={80} fontSize="$2" fontWeight="600" color="$colorSecondary" textAlign="center">Items</Text>
+        <Text width={60} fontSize={12} fontWeight="600" color="#6B7280" textAlign="center">Items</Text>
       )}
-      <Text width={100} fontSize="$2" fontWeight="600" color="$colorSecondary" textAlign="right">Total</Text>
-      <Text width={110} fontSize="$2" fontWeight="600" color="$colorSecondary" textAlign="center">Status</Text>
+      <Text width={90} fontSize={12} fontWeight="600" color="#6B7280" textAlign="right">Total</Text>
       {isDesktop && (
-        <Text width={150} fontSize="$2" fontWeight="600" color="$colorSecondary">Date</Text>
+        <Text width={100} fontSize={12} fontWeight="600" color="#6B7280">Handled By</Text>
       )}
-      <Text width={80} fontSize="$2" fontWeight="600" color="$colorSecondary" textAlign="center">Actions</Text>
+      <Text width={100} fontSize={12} fontWeight="600" color="#6B7280" textAlign="center">Status</Text>
+      <Text width={70} fontSize={12} fontWeight="600" color="#6B7280" textAlign="center">Actions</Text>
     </XStack>
   );
 }
 
-// Table row component
+// Table row component - Properly aligned with staff info
 function TableRow({
   order,
   isDesktop,
@@ -99,72 +122,92 @@ function TableRow({
   onEdit: () => void;
   currency: Currency;
 }) {
-  const orderNumber = order.number || order.orderNumber || `#${order.id.slice(0, 6)}`;
+  const orderNumber = formatOrderNumber(order);
   const payment = order.payment || { subTotal: order.subTotal || 0, discount: order.discount || 0, total: order.total || 0 };
   const customerName = order.customer?.name || order.guestName || 'Walk-in';
   const itemCount = order.items?.reduce((sum: number, i: any) => sum + (i.quantity || 1), 0) || 0;
   const status = (order.status || 'completed') as OrderStatus;
+  // Get staff name from order - fallback to 'Staff' if not available
+  const handledBy = (order as any).handledBy?.name || (order as any).staffName || (order as any).createdBy?.name || 'Staff';
 
   return (
     <XStack
       paddingVertical="$3"
-      paddingHorizontal="$3"
+      paddingHorizontal="$4"
       borderBottomWidth={1}
-      borderBottomColor="$borderColor"
-      backgroundColor="$cardBackground"
+      borderBottomColor="#E5E7EB"
+      backgroundColor="white"
       alignItems="center"
       cursor="pointer"
-      hoverStyle={{ backgroundColor: '$backgroundHover' }}
-      pressStyle={{ backgroundColor: '$backgroundPress' }}
+      hoverStyle={{ backgroundColor: '#F9FAFB' }}
+      pressStyle={{ backgroundColor: '#F3F4F6' }}
       onPress={onView}
     >
-      <Text width={100} fontSize="$3" fontWeight="500" color="#3B82F6">
+      {/* Order ID - Blue, clickable look */}
+      <Text width={110} fontSize={13} fontWeight="600" color="#3B82F6">
         {orderNumber}
       </Text>
-      <YStack flex={1}>
-        <Text fontSize="$3" numberOfLines={1}>{customerName}</Text>
+
+      {/* Date - Compact format */}
+      <Text width={100} fontSize={12} color="#6B7280">
+        {formatCompactDate(order.createdAt)}
+      </Text>
+
+      {/* Customer */}
+      <YStack flex={1} minWidth={120}>
+        <Text fontSize={13} color="#111827" numberOfLines={1}>{customerName}</Text>
         {!isDesktop && (
-          <Text fontSize="$2" color="$colorSecondary">
-            {itemCount} {itemCount === 1 ? 'item' : 'items'} • {formatDate(order.createdAt, 'MMM d, h:mm a')}
+          <Text fontSize={11} color="#9CA3AF">
+            {itemCount} {itemCount === 1 ? 'item' : 'items'}
           </Text>
         )}
       </YStack>
+
+      {/* Items count */}
       {isDesktop && (
-        <Text width={80} fontSize="$3" textAlign="center" color="$colorSecondary">
+        <Text width={60} fontSize={13} textAlign="center" color="#6B7280">
           {itemCount}
         </Text>
       )}
-      <Text width={100} fontSize="$3" fontWeight="600" textAlign="right">
+
+      {/* Total */}
+      <Text width={90} fontSize={13} fontWeight="600" color="#111827" textAlign="right">
         {formatCurrency(payment.total, currency)}
       </Text>
-      <XStack width={110} justifyContent="center">
-        <OrderStatusBadge status={status} size="sm" pulse={status === 'pending'} />
-      </XStack>
+
+      {/* Handled By - Staff name */}
       {isDesktop && (
-        <Text width={150} fontSize="$2" color="$colorSecondary">
-          {formatDate(order.createdAt, 'MMM d, yyyy h:mm a')}
+        <Text width={100} fontSize={12} color="#6B7280" numberOfLines={1}>
+          {handledBy}
         </Text>
       )}
-      <XStack width={80} justifyContent="center" gap="$2">
+
+      {/* Status Badge */}
+      <XStack width={100} justifyContent="center">
+        <OrderStatusBadge status={status} size="sm" pulse={status === 'pending'} />
+      </XStack>
+
+      {/* Actions */}
+      <XStack width={70} justifyContent="center" gap="$1.5">
         <YStack
           padding="$1.5"
-          borderRadius="$2"
-          backgroundColor="$backgroundHover"
+          borderRadius={6}
+          backgroundColor="#F3F4F6"
           cursor="pointer"
-          hoverStyle={{ backgroundColor: '#3B82F620' }}
+          hoverStyle={{ backgroundColor: '#DBEAFE' }}
           onPress={(e: any) => { e.stopPropagation(); onView(); }}
         >
-          <Eye size={16} color="#3B82F6" />
+          <Eye size={14} color="#3B82F6" />
         </YStack>
         <YStack
           padding="$1.5"
-          borderRadius="$2"
-          backgroundColor="$backgroundHover"
+          borderRadius={6}
+          backgroundColor="#F3F4F6"
           cursor="pointer"
-          hoverStyle={{ backgroundColor: '#3B82F620' }}
+          hoverStyle={{ backgroundColor: '#E5E7EB' }}
           onPress={(e: any) => { e.stopPropagation(); onEdit(); }}
         >
-          <Pencil size={16} color="$colorSecondary" />
+          <Pencil size={14} color="#6B7280" />
         </YStack>
       </XStack>
     </XStack>
