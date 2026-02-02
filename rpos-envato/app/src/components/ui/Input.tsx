@@ -44,33 +44,33 @@ const StyledInput = styled(TamaguiInput, {
         },
       },
     },
-    size: {
+    inputSize: {
       sm: {
         height: 36,
         paddingVertical: '$2',
         paddingHorizontal: '$2',
-        fontSize: '$3',
+        fontSize: 14,
         borderRadius: '$2',
       },
       md: {
         height: 46,
         paddingVertical: '$3',
         paddingHorizontal: '$3',
-        fontSize: '$4',
+        fontSize: 16,
         borderRadius: '$3',
       },
       lg: {
         height: 54,
         paddingVertical: '$4',
         paddingHorizontal: '$4',
-        fontSize: '$5',
+        fontSize: 18,
         borderRadius: '$3',
       },
     },
   } as const,
 
   defaultVariants: {
-    size: 'md',
+    inputSize: 'md',
   },
 });
 
@@ -98,6 +98,7 @@ export const Input = forwardRef<typeof TamaguiInput, InputProps>(
       leftIcon,
       rightIcon,
       required,
+      size = 'md',
       ...props
     },
     ref
@@ -106,11 +107,11 @@ export const Input = forwardRef<typeof TamaguiInput, InputProps>(
       <YStack gap="$1.5" width="100%">
         {label && (
           <XStack gap="$1">
-            <Text fontSize="$3" color="$color" fontWeight="500">
+            <Text fontSize={14} color="$color" fontWeight="500">
               {label}
             </Text>
             {required && (
-              <Text color="$error" fontSize="$3">
+              <Text color="$error" fontSize={14}>
                 *
               </Text>
             )}
@@ -132,6 +133,7 @@ export const Input = forwardRef<typeof TamaguiInput, InputProps>(
           <StyledInput
             ref={ref as any}
             error={!!error}
+            inputSize={size}
             paddingLeft={leftIcon ? '$10' : '$3'}
             paddingRight={rightIcon ? '$10' : '$3'}
             flex={1}

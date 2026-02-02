@@ -102,6 +102,26 @@ export {
   ImportSummary,
 } from './ProductImportJob.entity';
 
+// Delivery Management System
+export {
+  DriverProfile,
+  WorkingHoursConfig,
+} from './DriverProfile.entity';
+
+export {
+  Delivery,
+  LocationPoint,
+} from './Delivery.entity';
+
+export {
+  DeliveryZone,
+  PolygonPoint,
+} from './DeliveryZone.entity';
+
+export {
+  OnlineOrderQueue,
+} from './OnlineOrderQueue.entity';
+
 // Array of all entities for TypeORM configuration
 export const entities = [
   'Business',
@@ -155,4 +175,9 @@ export const entities = [
   'PriceHistory',
   // Product Import Jobs
   'ProductImportJob',
+  // Delivery Management
+  'DriverProfile',
+  'Delivery',
+  'DeliveryZone',
+  'OnlineOrderQueue',
 ];

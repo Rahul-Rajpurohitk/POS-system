@@ -11,6 +11,9 @@ const BadgeContainer = styled(XStack, {
 
   variants: {
     variant: {
+      primary: {
+        backgroundColor: '$primaryBackground',
+      },
       success: {
         backgroundColor: '$successBackground',
       },
@@ -27,7 +30,7 @@ const BadgeContainer = styled(XStack, {
         backgroundColor: '$backgroundPress',
       },
     },
-    size: {
+    badgeSize: {
       sm: {
         paddingHorizontal: '$1',
         paddingVertical: 2,
@@ -41,7 +44,7 @@ const BadgeContainer = styled(XStack, {
 
   defaultVariants: {
     variant: 'default',
-    size: 'md',
+    badgeSize: 'md',
   },
 });
 
@@ -51,6 +54,9 @@ const BadgeText = styled(Text, {
 
   variants: {
     variant: {
+      primary: {
+        color: '$primary',
+      },
       success: {
         color: '$success',
       },
@@ -67,7 +73,7 @@ const BadgeText = styled(Text, {
         color: '$colorSecondary',
       },
     },
-    size: {
+    badgeSize: {
       sm: {
         fontSize: 10,
       },
@@ -79,11 +85,11 @@ const BadgeText = styled(Text, {
 
   defaultVariants: {
     variant: 'default',
-    size: 'md',
+    badgeSize: 'md',
   },
 });
 
-export type BadgeVariant = 'success' | 'warning' | 'error' | 'info' | 'default';
+export type BadgeVariant = 'primary' | 'success' | 'warning' | 'error' | 'info' | 'default';
 
 export interface BadgeProps extends Omit<GetProps<typeof BadgeContainer>, 'variant' | 'size'> {
   children: React.ReactNode;
@@ -93,8 +99,8 @@ export interface BadgeProps extends Omit<GetProps<typeof BadgeContainer>, 'varia
 
 export function Badge({ children, variant = 'default', size = 'md', ...props }: BadgeProps) {
   return (
-    <BadgeContainer variant={variant} size={size} {...props}>
-      <BadgeText variant={variant} size={size}>
+    <BadgeContainer variant={variant} badgeSize={size} {...props}>
+      <BadgeText variant={variant} badgeSize={size}>
         {children}
       </BadgeText>
     </BadgeContainer>

@@ -590,6 +590,21 @@ export class SQSProvider implements IQueueProvider {
     return this.jobCounts.get(queueName) || this.getDefaultJobCounts();
   }
 
+  async removeJob(queueName: string, jobId: string): Promise<boolean> {
+    // SQS doesn't support removing specific messages by custom ID
+    // This would require storing message receipt handles in a separate store
+    // For now, this is a no-op - jobs will naturally expire or be processed
+    console.warn(`removeJob not fully supported in SQS. Job ${jobId} will be processed normally.`);
+    return false;
+  }
+
+  async getJob<T extends JobData>(queueName: string, jobId: string): Promise<Job<T> | null> {
+    // SQS doesn't support fetching specific messages by ID
+    // This would require a separate job tracking store (e.g., DynamoDB)
+    console.warn(`getJob not fully supported in SQS. Cannot retrieve job ${jobId}.`);
+    return null;
+  }
+
   async close(): Promise<void> {
     // Stop all workers
     for (const [queueName] of this.workers) {

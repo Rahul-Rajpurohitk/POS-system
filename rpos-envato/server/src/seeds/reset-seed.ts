@@ -21,6 +21,16 @@ async function resetAndSeed() {
 
     // Tables to truncate (in order to handle foreign key constraints)
     const tablesToTruncate = [
+      // Delivery system tables
+      'deliveries',
+      'delivery_zones',
+      'online_order_queue',
+      'driver_profiles',
+      // Stock and inventory
+      'stock_adjustments',
+      'product_activity',
+      'price_history',
+      'product_import_jobs',
       // Delete child tables first
       'payments',
       'order_items',
@@ -38,7 +48,7 @@ async function resetAndSeed() {
       'refunds',
       'stock_transfer_items',
       'stock_transfers',
-      'location_inventories',
+      'location_inventory',
       'locations',
       'supplier_payments',
       'purchase_order_receiving_items',

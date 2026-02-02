@@ -1141,7 +1141,7 @@ class AdvancedAnalyticsService {
       ])
       .innerJoin('payment.order', 'order')
       .where('order.businessId = :businessId', { businessId })
-      .andWhere('payment.status = :status', { status: PaymentStatus.COMPLETED })
+      .andWhere('payment.status = :status', { status: PaymentStatus.CAPTURED })
       .andWhere('order.createdAt BETWEEN :start AND :end', {
         start: todayStart,
         end: todayEnd,

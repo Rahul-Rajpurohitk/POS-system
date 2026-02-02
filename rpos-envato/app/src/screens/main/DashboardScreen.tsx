@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { YStack, XStack, Text, ScrollView, Spinner } from 'tamagui';
 import { useQuery } from '@tanstack/react-query';
+import { Vibration } from 'react-native';
 import {
   ShoppingCart,
   Package,
@@ -15,13 +16,19 @@ import {
   ChevronRight,
   Activity,
   Zap,
+  Truck,
+  Bell,
+  BellRing,
 } from '@tamagui/lucide-icons';
 import { Card, CardHeader, Button, Badge } from '@/components/ui';
+import { OnlineOrdersPanel, ActiveDeliveriesPanel, OrderAcceptanceModal } from '@/components/delivery';
 import { useSettingsStore, useAuthStore } from '@/store';
 import { formatCurrency, formatDate } from '@/utils';
 import { usePlatform } from '@/hooks';
 import { get } from '@/services/api/client';
+import { usePendingOrders, useQueueStats } from '@/features/delivery/hooks';
 import type { MainTabScreenProps } from '@/navigation/types';
+import type { OnlineOrderQueueItem } from '@/features/delivery/api';
 
 // Period options for analytics
 type PeriodOption = 'today' | 'this_week' | 'this_month' | 'all_time';
@@ -207,8 +214,49 @@ export default function DashboardScreen({ navigation }: MainTabScreenProps<'Dash
   const { user } = useAuthStore();
   const { isTablet } = usePlatform();
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodOption>('this_week');
+  const [selectedOrder, setSelectedOrder] = useState<OnlineOrderQueueItem | null>(null);
+  const [notificationPulse, setNotificationPulse] = useState(false);
+  const previousOrderCountRef = useRef<number>(0);
 
   const currentPeriodConfig = PERIOD_OPTIONS.find(p => p.value === selectedPeriod) || PERIOD_OPTIONS[1];
+
+  // Fetch pending online orders for notification badge
+  const { data: pendingOrders, refetch: refetchOrders } = usePendingOrders({ enableSound: false });
+  const { data: queueStats } = useQueueStats();
+
+  const pendingCount = pendingOrders?.length || 0;
+  const expiringSoonCount = queueStats?.expiringSoon || 0;
+
+  // Auto-show acceptance modal for new orders and play notification
+  useEffect(() => {
+    if (pendingOrders && pendingOrders.length > 0) {
+      const currentCount = pendingOrders.length;
+
+      // New order arrived
+      if (currentCount > previousOrderCountRef.current && previousOrderCountRef.current >= 0) {
+        // Play notification sound (vibration pattern)
+        Vibration.vibrate([0, 500, 200, 500, 200, 500]);
+
+        // Trigger pulse animation
+        setNotificationPulse(true);
+        setTimeout(() => setNotificationPulse(false), 3000);
+
+        // Auto-show the newest order (first in queue, usually most urgent)
+        const urgentOrder = pendingOrders.find(o => {
+          const expiresAt = new Date(o.expiresAt).getTime();
+          const now = Date.now();
+          const minutesLeft = (expiresAt - now) / 60000;
+          return minutesLeft <= 5; // Show if expiring in 5 minutes or less
+        });
+
+        if (urgentOrder && !selectedOrder) {
+          setSelectedOrder(urgentOrder);
+        }
+      }
+
+      previousOrderCountRef.current = currentCount;
+    }
+  }, [pendingOrders, selectedOrder]);
 
   // Fetch dashboard analytics based on selected period
   const { data: dashboardData, isLoading: dashboardLoading, refetch: refetchDashboard } = useQuery({
@@ -307,7 +355,7 @@ export default function DashboardScreen({ navigation }: MainTabScreenProps<'Dash
                 />
               </XStack>
               <Text fontSize="$8" fontWeight="800" color="$color">
-                {user?.firstName || 'User'} {user?.lastName?.charAt(0) || ''}.
+                {user?.firstName || 'User'}{user?.lastName?.charAt(0) ? ` ${user.lastName.charAt(0)}.` : ''}
               </Text>
               <Text fontSize="$2" color="$colorSecondary">
                 {new Date().toLocaleDateString('en-US', {
@@ -318,22 +366,96 @@ export default function DashboardScreen({ navigation }: MainTabScreenProps<'Dash
                 })}
               </Text>
             </YStack>
-            <YStack
-              backgroundColor="$backgroundPress"
-              padding="$2"
-              borderRadius="$3"
-              pressStyle={{ scale: 0.95 }}
-              onPress={() => refetchDashboard()}
-              disabled={isLoading}
-              cursor="pointer"
-            >
-              {isLoading ? (
-                <Spinner size="small" color="$primary" />
-              ) : (
-                <RefreshCw size={22} color="$primary" />
-              )}
-            </YStack>
+            <XStack gap="$3" alignItems="center">
+              {/* Notification Bell with Badge */}
+              <YStack
+                backgroundColor={pendingCount > 0 ? (notificationPulse ? '$error' : '$warningBackground') : '$backgroundPress'}
+                padding="$2"
+                borderRadius="$3"
+                pressStyle={{ scale: 0.95 }}
+                onPress={() => {
+                  if (pendingOrders && pendingOrders.length > 0) {
+                    setSelectedOrder(pendingOrders[0]);
+                  }
+                }}
+                cursor="pointer"
+                position="relative"
+                animation={notificationPulse ? 'bouncy' : undefined}
+              >
+                {pendingCount > 0 ? (
+                  <BellRing size={22} color={notificationPulse ? 'white' : '$warning'} />
+                ) : (
+                  <Bell size={22} color="$colorSecondary" />
+                )}
+                {pendingCount > 0 && (
+                  <YStack
+                    position="absolute"
+                    top={-6}
+                    right={-6}
+                    backgroundColor="$error"
+                    minWidth={20}
+                    height={20}
+                    borderRadius={10}
+                    alignItems="center"
+                    justifyContent="center"
+                    borderWidth={2}
+                    borderColor="$cardBackground"
+                  >
+                    <Text fontSize={10} fontWeight="bold" color="white">
+                      {pendingCount > 9 ? '9+' : pendingCount}
+                    </Text>
+                  </YStack>
+                )}
+              </YStack>
+              {/* Refresh Button */}
+              <YStack
+                backgroundColor="$backgroundPress"
+                padding="$2"
+                borderRadius="$3"
+                pressStyle={{ scale: 0.95 }}
+                onPress={() => {
+                  refetchDashboard();
+                  refetchOrders();
+                }}
+                disabled={isLoading}
+                cursor="pointer"
+              >
+                {isLoading ? (
+                  <Spinner size="small" color="$primary" />
+                ) : (
+                  <RefreshCw size={22} color="$primary" />
+                )}
+              </YStack>
+            </XStack>
           </XStack>
+
+          {/* Urgent Orders Alert Banner */}
+          {expiringSoonCount > 0 && (
+            <YStack
+              backgroundColor="$errorBackground"
+              padding="$3"
+              borderRadius="$3"
+              marginTop="$3"
+              flexDirection="row"
+              alignItems="center"
+              gap="$2"
+              pressStyle={{ opacity: 0.9 }}
+              onPress={() => {
+                const urgentOrder = pendingOrders?.find(o => {
+                  const expiresAt = new Date(o.expiresAt).getTime();
+                  const minutesLeft = (expiresAt - Date.now()) / 60000;
+                  return minutesLeft <= 5;
+                });
+                if (urgentOrder) setSelectedOrder(urgentOrder);
+              }}
+            >
+              <BellRing size={20} color="$error" />
+              <Text flex={1} color="$error" fontWeight="600">
+                {expiringSoonCount} order{expiringSoonCount > 1 ? 's' : ''} expiring soon! Tap to review.
+              </Text>
+              <ChevronRight size={18} color="$error" />
+            </YStack>
+          )}
 
           {/* Period Selector - Pill Style */}
           <XStack
@@ -383,6 +505,23 @@ export default function DashboardScreen({ navigation }: MainTabScreenProps<'Dash
               <StatCard key={index} {...stat} colorIndex={stat.colorIndex} />
             ))}
           </XStack>
+        </YStack>
+
+        {/* Online Orders Section */}
+        <YStack gap="$4">
+          <OnlineOrdersPanel
+            maxItems={3}
+            onViewAll={() => navigation.navigate('Orders', { screen: 'OrderList' })}
+          />
+        </YStack>
+
+        {/* Active Deliveries Section */}
+        <YStack gap="$4">
+          <XStack gap="$2" alignItems="center">
+            <Truck size={20} color="$primary" />
+            <Text fontSize="$5" fontWeight="700" color="$color">Active Deliveries</Text>
+          </XStack>
+          <ActiveDeliveriesPanel />
         </YStack>
 
         {/* Quick Actions */}
@@ -530,6 +669,17 @@ export default function DashboardScreen({ navigation }: MainTabScreenProps<'Dash
           </YStack>
         </YStack>
       </YStack>
+
+      {/* Order Acceptance Modal */}
+      <OrderAcceptanceModal
+        open={!!selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        order={selectedOrder}
+        onAccepted={() => {
+          setSelectedOrder(null);
+          refetchOrders();
+        }}
+      />
     </ScrollView>
   );
 }

@@ -54,7 +54,7 @@ const StyledCard = styled(YStack, {
         },
       },
     },
-    size: {
+    cardSize: {
       sm: {
         padding: '$3',
         borderRadius: '$2',
@@ -86,7 +86,7 @@ export interface CardProps {
 }
 
 export function Card({ children, variant = 'default', size = 'md', ...props }: CardProps) {
-  return <StyledCard variant={variant as any} size={size as any} {...(props as any)}>{children}</StyledCard>;
+  return <StyledCard variant={variant as any} cardSize={size as any} {...(props as any)}>{children}</StyledCard>;
 }
 
 // Card Header

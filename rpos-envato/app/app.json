@@ -20,7 +20,9 @@
       "buildNumber": "1",
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "This app uses Bluetooth to connect to receipt printers.",
-        "NSBluetoothPeripheralUsageDescription": "This app uses Bluetooth to connect to receipt printers."
+        "NSBluetoothPeripheralUsageDescription": "This app uses Bluetooth to connect to receipt printers.",
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to show delivery tracking on maps.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app uses your location for driver tracking during deliveries."
       }
     },
     "android": {
@@ -35,7 +37,11 @@
         "android.permission.BLUETOOTH_ADMIN",
         "android.permission.BLUETOOTH_CONNECT",
         "android.permission.BLUETOOTH_SCAN",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.INTERNET"
       ]
     },
     "web": {
@@ -54,7 +60,8 @@
             "deploymentTarget": "15.1"
           }
         }
-      ]
+      ],
+      "expo-location"
     ],
     "scheme": "pos-universal"
   }

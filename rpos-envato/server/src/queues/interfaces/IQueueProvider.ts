@@ -11,6 +11,7 @@ export interface JobOptions {
   priority?: number;
   removeOnComplete?: boolean | number;
   removeOnFail?: boolean | number;
+  jobId?: string; // Unique job ID for deduplication and cancellation
 }
 
 export interface JobData {
@@ -63,6 +64,10 @@ export interface IQueueProvider {
   pause(queueName: string): Promise<void>;
   resume(queueName: string): Promise<void>;
   getJobCounts(queueName: string): Promise<JobCounts>;
+
+  // Job Management
+  removeJob(queueName: string, jobId: string): Promise<boolean>;
+  getJob<T extends JobData>(queueName: string, jobId: string): Promise<Job<T> | null>;
 
   // Cleanup
   close(): Promise<void>;

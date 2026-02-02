@@ -168,6 +168,13 @@ const tokens = createTokens({
     10: 40,
     11: 44,
     12: 48,
+    // Named sizes for font compatibility
+    xs: 12,
+    sm: 14,
+    md: 16,
+    lg: 20,
+    xl: 24,
+    xxl: 32,
   },
   radius: {
     ...defaultTokens.radius,
@@ -232,6 +239,7 @@ const config = createTamagui({
       cardBackground: tokens.color.containerBgLight,
 
       // Badge backgrounds (light, semi-transparent)
+      primaryBackground: 'rgba(51, 185, 247, 0.15)',
       successBackground: 'rgba(76, 175, 80, 0.15)',
       warningBackground: 'rgba(255, 152, 0, 0.15)',
       errorBackground: 'rgba(244, 67, 54, 0.15)',
@@ -276,6 +284,7 @@ const config = createTamagui({
       cardBackground: tokens.color.containerBgDark,
 
       // Badge backgrounds (darker, semi-transparent)
+      primaryBackground: 'rgba(51, 185, 247, 0.25)',
       successBackground: 'rgba(76, 175, 80, 0.25)',
       warningBackground: 'rgba(255, 152, 0, 0.25)',
       errorBackground: 'rgba(244, 67, 54, 0.25)',
@@ -305,6 +314,4 @@ export default config;
 
 export type AppConfig = typeof config;
 
-declare module 'tamagui' {
-  interface TamaguiCustomConfig extends AppConfig {}
-}
+// Module augmentation moved to types/tamagui.d.ts to avoid babel parse errors

@@ -43,7 +43,7 @@ const ProductCard = styled(YStack, {
   },
 
   variants: {
-    size: {
+    productSize: {
       xs: {
         width: 100,
         borderRadius: '$2',
@@ -88,7 +88,7 @@ const ProductCard = styled(YStack, {
   } as const,
 
   defaultVariants: {
-    size: 'md',
+    productSize: 'md',
   },
 });
 
@@ -101,7 +101,7 @@ const ImageContainer = styled(YStack, {
   position: 'relative',
 
   variants: {
-    size: {
+    imageSize: {
       xs: {
         height: 60,
       },
@@ -127,7 +127,7 @@ const ImageContainer = styled(YStack, {
   } as const,
 
   defaultVariants: {
-    size: 'md',
+    imageSize: 'md',
   },
 });
 
@@ -224,7 +224,7 @@ export function ProductItem({
 
     return (
       <ProductCard
-        size={size}
+        productSize={size}
         selected={selected}
         outOfStock={isOutOfStock}
         onPress={() => !isOutOfStock && onPress(product)}
@@ -293,14 +293,14 @@ export function ProductItem({
   if (isCompact) {
     return (
       <ProductCard
-        size={size}
+        productSize={size}
         selected={selected}
         outOfStock={isOutOfStock}
         onPress={() => !isOutOfStock && onPress(product)}
         disabled={isOutOfStock}
       >
         {/* Image Section - Square on left */}
-        <ImageContainer size={size}>
+        <ImageContainer imageSize={size}>
           {imageUrl ? (
             <ProductImage source={{ uri: imageUrl }} />
           ) : (
@@ -385,14 +385,14 @@ export function ProductItem({
 
   return (
     <ProductCard
-      size={size}
+      productSize={size}
       selected={selected}
       outOfStock={isOutOfStock}
       onPress={() => !isOutOfStock && onPress(product)}
       disabled={isOutOfStock}
     >
       {/* Image Section */}
-      <ImageContainer size={size}>
+      <ImageContainer imageSize={size}>
         {imageUrl ? (
           <ProductImage source={{ uri: imageUrl }} />
         ) : (

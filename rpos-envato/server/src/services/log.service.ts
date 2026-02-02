@@ -136,6 +136,60 @@ export class LogService {
       .limit(limit)
       .exec();
   }
+
+  /**
+   * Create log for order cancellation/void
+   */
+  async logOrderCancelled(order: Order, user: User): Promise<ILog> {
+    const content = `<p><b>${user.firstName}</b> voided order <b>${this.zeroPad(order.number)}</b>.</p>`;
+
+    const log = new Log({
+      type: LogType.ORDER_CANCELLED,
+      userId: user.id,
+      userName: user.fullName,
+      payload: { orderId: order.id, orderNumber: order.number },
+      businessId: user.businessId,
+      content,
+    });
+
+    return log.save();
+  }
+
+  /**
+   * Create log for order refund
+   */
+  async logOrderRefunded(order: Order, user: User, amount: number): Promise<ILog> {
+    const content = `<p><b>${user.firstName}</b> refunded <b>$${amount.toFixed(2)}</b> for order <b>${this.zeroPad(order.number)}</b>.</p>`;
+
+    const log = new Log({
+      type: LogType.ORDER_REFUNDED,
+      userId: user.id,
+      userName: user.fullName,
+      payload: { orderId: order.id, orderNumber: order.number, amount },
+      businessId: user.businessId,
+      content,
+    });
+
+    return log.save();
+  }
+
+  /**
+   * Create log for order payment
+   */
+  async logOrderPaid(order: Order, user: User, amount: number): Promise<ILog> {
+    const content = `<p><b>${user.firstName}</b> completed payment of <b>$${amount.toFixed(2)}</b> for order <b>${this.zeroPad(order.number)}</b>.</p>`;
+
+    const log = new Log({
+      type: LogType.ORDER_PAID,
+      userId: user.id,
+      userName: user.fullName,
+      payload: { orderId: order.id, orderNumber: order.number, amount },
+      businessId: user.businessId,
+      content,
+    });
+
+    return log.save();
+  }
 }
 
 export default new LogService();

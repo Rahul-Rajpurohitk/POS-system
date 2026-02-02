@@ -115,21 +115,27 @@ export default function ReportsScreen({ navigation }: MoreScreenProps<'Reports'>
       <ScrollView flex={1} padding="$4">
         <YStack gap="$4">
           {/* Period Selector */}
-          <XStack gap="$2">
-            {(['today', 'week', 'month'] as const).map((p) => (
-              <Button
-                key={p}
-                flex={1}
-                variant={period === p ? 'primary' : 'secondary'}
-                size="sm"
-                onPress={() => setPeriod(p)}
-              >
-                <Text color={period === p ? 'white' : '$color'} textTransform="capitalize">
-                  {p}
-                </Text>
-              </Button>
-            ))}
-          </XStack>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <XStack gap="$2">
+              {([
+                { value: 'today', label: 'Today' },
+                { value: 'week', label: 'This Week' },
+                { value: 'month', label: 'This Month' },
+                { value: 'all', label: 'All Dates' },
+              ] as const).map((p) => (
+                <Button
+                  key={p.value}
+                  variant={period === p.value ? 'primary' : 'secondary'}
+                  size="sm"
+                  onPress={() => setPeriod(p.value)}
+                >
+                  <Text color={period === p.value ? 'white' : '$color'}>
+                    {p.label}
+                  </Text>
+                </Button>
+              ))}
+            </XStack>
+          </ScrollView>
 
           {/* Error State */}
           {isError && (

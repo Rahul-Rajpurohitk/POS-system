@@ -52,7 +52,7 @@ export interface AppSettings {
 // User & Authentication
 // ============================================
 
-export type UserRole = 'admin' | 'manager' | 'staff';
+export type UserRole = 'admin' | 'manager' | 'staff' | 'driver';
 
 export interface User {
   id: ID;
@@ -223,6 +223,8 @@ export interface Product extends BaseEntity {
 
 export interface Customer extends BaseEntity {
   name: string;
+  firstName?: string;
+  lastName?: string;
   email?: string;
   phone?: string;
   address?: string;
@@ -253,16 +255,54 @@ export interface OrderItem {
   id: ID;
   product: Product;
   quantity: number;
+  notes?: string;
 }
 
 export interface OrderPayment {
   subTotal: number;
+  subtotal?: number; // Alias
   discount: number;
   vat: number;
+  tax?: number; // Alias for vat
   total: number;
 }
 
-export type OrderStatus = 'pending' | 'completed' | 'cancelled' | 'refunded';
+export type OrderStatus =
+  | 'draft'
+  | 'open'              // Order saved, awaiting payment (light orange)
+  | 'pending'
+  | 'processing'
+  | 'completed'
+  | 'cancelled'
+  | 'refunded'
+  | 'partially_refunded'
+  | 'on_hold'
+  | 'out_for_delivery'
+  | 'delivered';
+
+export type PaymentMethodType =
+  | 'cash'
+  | 'credit_card'
+  | 'debit_card'
+  | 'mobile_payment'
+  | 'qr_code'
+  | 'gift_card'
+  | 'store_credit'
+  | 'check'
+  | 'bank_transfer'
+  | 'split';
+
+export type OrderTypeValue =
+  | 'walk_in'
+  | 'phone'
+  | 'online'
+  | 'doordash'
+  | 'uber_eats'
+  | 'grubhub'
+  | 'postmates'
+  | 'skip_the_dishes'
+  | 'deliveroo'
+  | 'other_partner';
 
 export interface Order extends BaseEntity {
   number: string;
@@ -279,6 +319,20 @@ export interface Order extends BaseEntity {
   tax?: number;
   total?: number;
   guestName?: string;
+  // Payment and order type
+  paymentMethod?: PaymentMethodType;
+  orderType?: OrderTypeValue;
+  // Delivery fields
+  isDelivery?: boolean;
+  deliveryAddress?: string;
+  deliveryLatitude?: number;
+  deliveryLongitude?: number;
+  deliveryFee?: number;
+  scheduledDeliveryTime?: string;
+  notes?: string;
+  // Driver assignment (for delivery tracking)
+  driverId?: ID;
+  delivery?: Delivery;
 }
 
 // ============================================
@@ -433,3 +487,192 @@ export type DeepPartial<T> = {
 export type Nullable<T> = T | null;
 
 export type WithOptionalId<T extends { id: ID }> = Omit<T, 'id'> & { id?: ID };
+
+// ============================================
+// Driver & Delivery Types
+// ============================================
+
+export type DriverStatus = 'offline' | 'available' | 'busy' | 'on_break';
+
+export type VehicleType = 'walking' | 'bicycle' | 'e_scooter' | 'motorcycle' | 'car';
+
+export type DeliveryStatus =
+  | 'pending'
+  | 'accepted'
+  | 'assigned'
+  | 'picking_up'
+  | 'picked_up'
+  | 'on_the_way'
+  | 'nearby'
+  | 'delivered'
+  | 'cancelled'
+  | 'failed';
+
+export interface WorkingHours {
+  start: string; // "09:00"
+  end: string;   // "17:00"
+}
+
+export interface WorkingHoursConfig {
+  monday?: WorkingHours;
+  tuesday?: WorkingHours;
+  wednesday?: WorkingHours;
+  thursday?: WorkingHours;
+  friday?: WorkingHours;
+  saturday?: WorkingHours;
+  sunday?: WorkingHours;
+}
+
+export interface DriverProfile extends BaseEntity {
+  userId: ID;
+  user?: User;
+  businessId: ID;
+  status: DriverStatus;
+  vehicleType: VehicleType;
+  currentLatitude?: number;
+  currentLongitude?: number;
+  lastLocationUpdate?: string;
+  activeDeliveryId?: ID;
+  deliveriesToday: number;
+  totalDeliveries: number;
+  averageRating: number;
+  totalRatings: number;
+  workingHours?: WorkingHoursConfig;
+  maxConcurrentDeliveries: number;
+  enabled: boolean;
+}
+
+export interface Delivery extends BaseEntity {
+  orderId: ID;
+  order?: Order;
+  businessId: ID;
+  driverId?: ID;
+  driver?: DriverProfile;
+  status: DeliveryStatus;
+
+  // Pickup (Store)
+  pickupAddress: string;
+  pickupLatitude: number;
+  pickupLongitude: number;
+
+  // Delivery (Customer)
+  deliveryAddress: string;
+  deliveryLatitude?: number;
+  deliveryLongitude?: number;
+  deliveryInstructions?: string;
+
+  // Customer
+  customerName: string;
+  customerPhone: string;
+
+  // Tracking
+  trackingToken: string;
+
+  // Distance & Time
+  distanceMeters?: number;
+  estimatedDurationSeconds?: number;
+  estimatedArrival?: string;
+
+  // Fees
+  deliveryFee: number;
+  driverTip: number;
+
+  // Timestamps
+  acceptedAt?: string;
+  assignedAt?: string;
+  pickedUpAt?: string;
+  deliveredAt?: string;
+
+  // Proof
+  deliveryPhoto?: string;
+
+  // Rating
+  customerRating?: number;
+  customerFeedback?: string;
+
+  // Route
+  routePolyline?: string;
+  locationHistory?: Array<{ lat: number; lng: number; timestamp: number }>;
+}
+
+export interface LocationUpdate {
+  latitude: number;
+  longitude: number;
+  heading?: number;
+  speed?: number;
+  accuracy?: number;
+  timestamp: number;
+}
+
+export interface DeliveryRoute {
+  distanceMeters: number;
+  durationSeconds: number;
+  polyline: string;
+  steps?: Array<{
+    instruction: string;
+    distanceMeters: number;
+    durationSeconds: number;
+  }>;
+}
+
+export interface DeliveryETA {
+  estimatedArrival: Date;
+  durationSeconds: number;
+  distanceMeters: number;
+  trafficCondition?: 'light' | 'moderate' | 'heavy';
+}
+
+// Driver Stats
+export interface DriverStats {
+  totalDeliveries: number;
+  deliveriesToday: number;
+  averageRating: number;
+  totalRatings: number;
+  earningsToday?: number;
+  earningsWeek?: number;
+  completionRate?: number;
+  averageDeliveryTime?: number;
+}
+
+// Delivery status display helpers
+export const DELIVERY_STATUS_TEXT: Record<DeliveryStatus, string> = {
+  pending: 'Order received',
+  accepted: 'Preparing',
+  assigned: 'Driver assigned',
+  picking_up: 'Driver at store',
+  picked_up: 'Picked up',
+  on_the_way: 'On the way',
+  nearby: 'Almost there',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
+  failed: 'Failed',
+};
+
+export const DELIVERY_STATUS_COLORS: Record<DeliveryStatus, string> = {
+  pending: '#FFA500',
+  accepted: '#4169E1',
+  assigned: '#9370DB',
+  picking_up: '#20B2AA',
+  picked_up: '#32CD32',
+  on_the_way: '#1E90FF',
+  nearby: '#00CED1',
+  delivered: '#228B22',
+  cancelled: '#DC143C',
+  failed: '#8B0000',
+};
+
+export const VEHICLE_TYPE_ICONS: Record<VehicleType, string> = {
+  walking: 'footprints',
+  bicycle: 'bike',
+  e_scooter: 'zap',
+  motorcycle: 'bike',
+  car: 'car',
+};
+
+export const VEHICLE_TYPE_NAMES: Record<VehicleType, string> = {
+  walking: 'Walking',
+  bicycle: 'Bicycle',
+  e_scooter: 'E-Scooter',
+  motorcycle: 'Motorcycle',
+  car: 'Car',
+};

@@ -5,22 +5,46 @@ export * from './id';
 import { format, formatDistanceToNow, isValid, parseISO } from 'date-fns';
 
 /**
- * Format date for display
+ * Parse a date string ensuring it's treated as UTC if no timezone specified
+ * Then convert to local timezone for display
+ */
+function parseToLocalDate(date: string | Date): Date {
+  if (date instanceof Date) return date;
+
+  // Check if the string already has timezone info
+  // UTC: ends with 'Z'
+  // Offset: has +HH:MM or -HH:MM at the end (after the time part)
+  const hasTimezoneInfo =
+    date.endsWith('Z') ||
+    /[+-]\d{2}:\d{2}$/.test(date) ||
+    /[+-]\d{4}$/.test(date);
+
+  // If no timezone info, assume UTC and append 'Z'
+  const dateStr = hasTimezoneInfo ? date : date + 'Z';
+
+  return parseISO(dateStr);
+}
+
+/**
+ * Format date for display (converts UTC to local timezone)
  */
 export function formatDate(
   date: string | Date,
   formatString: string = 'PPp'
 ): string {
-  const dateObj = typeof date === 'string' ? parseISO(date) : date;
+  if (!date) return '';
+  const dateObj = parseToLocalDate(date);
   if (!isValid(dateObj)) return '';
   return format(dateObj, formatString);
 }
 
 /**
  * Format date as relative time (e.g., "2 hours ago")
+ * Converts UTC to local timezone
  */
 export function formatRelativeTime(date: string | Date): string {
-  const dateObj = typeof date === 'string' ? parseISO(date) : date;
+  if (!date) return '';
+  const dateObj = parseToLocalDate(date);
   if (!isValid(dateObj)) return '';
   return formatDistanceToNow(dateObj, { addSuffix: true });
 }

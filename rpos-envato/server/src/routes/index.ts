@@ -37,6 +37,15 @@ import loyaltyRoutes from './loyalty.routes';
 import syncRoutes from './sync.routes';
 import analyticsAdvancedRoutes from './analytics-advanced.routes';
 
+// PDF routes
+import pdfRoutes from './pdf.routes';
+
+// Delivery routes
+import deliveryRoutes from './delivery.routes';
+import driverRoutes from './driver.routes';
+import driverAppRoutes from './driver-app.routes';
+import trackingRoutes from './tracking.routes';
+
 const router = Router();
 
 // ============ HEALTH CHECK ENDPOINTS ============
@@ -261,7 +270,18 @@ router.use('/giftcards', giftcardsRoutes);
 router.use('/loyalty', loyaltyRoutes);
 router.use('/sync', syncRoutes);
 
+// PDF generation routes
+router.use('/pdf', pdfRoutes);
+
 // Auth routes (alternative path)
 router.use('/auth', authRoutes);
+
+// Delivery management routes
+router.use('/delivery', deliveryRoutes);
+router.use('/drivers', driverRoutes);
+router.use('/driver', driverAppRoutes);
+
+// Public tracking routes (no auth required)
+router.use('/track', trackingRoutes);
 
 export default router;

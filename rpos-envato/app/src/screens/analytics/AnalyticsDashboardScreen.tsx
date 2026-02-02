@@ -32,6 +32,7 @@ const PERIOD_OPTIONS: { label: string; value: ReportPeriod }[] = [
   { label: 'Today', value: 'today' },
   { label: 'This Week', value: 'this_week' },
   { label: 'This Month', value: 'this_month' },
+  { label: 'All Time', value: 'this_year' },
 ];
 
 // KPI Card component
@@ -280,19 +281,21 @@ export default function AnalyticsDashboardScreen({
       <YStack padding="$4" gap="$4">
         {/* Period Selector with Connection Status */}
         <XStack justifyContent="space-between" alignItems="center">
-          <XStack gap="$2">
-            {PERIOD_OPTIONS.map((option) => (
-              <Button
-                key={option.value}
-                size="$3"
-                backgroundColor={period === option.value ? '$primary' : '$backgroundPress'}
-                color={period === option.value ? 'white' : '$color'}
-                onPress={() => setPeriod(option.value)}
-              >
-                {option.label}
-              </Button>
-            ))}
-          </XStack>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} flex={1}>
+            <XStack gap="$2" paddingRight="$2">
+              {PERIOD_OPTIONS.map((option) => (
+                <Button
+                  key={option.value}
+                  size="$3"
+                  backgroundColor={period === option.value ? '$primary' : '$backgroundPress'}
+                  color={period === option.value ? 'white' : '$color'}
+                  onPress={() => setPeriod(option.value)}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </XStack>
+          </ScrollView>
           {/* Real-time connection indicator */}
           {period === 'today' && (
             <XStack alignItems="center" gap="$1">

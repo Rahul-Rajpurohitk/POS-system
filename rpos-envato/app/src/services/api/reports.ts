@@ -55,7 +55,7 @@ interface DailyReportResponse {
   recentOrders: RecentOrder[];
 }
 
-export type ReportPeriod = 'today' | 'week' | 'month';
+export type ReportPeriod = 'today' | 'week' | 'month' | 'all';
 
 function getDateRange(period: ReportPeriod): { startDate: string; endDate: string } {
   const now = new Date();
@@ -71,6 +71,10 @@ function getDateRange(period: ReportPeriod): { startDate: string; endDate: strin
       break;
     case 'month':
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      break;
+    case 'all':
+      // Return a date far in the past to get all records
+      startDate = new Date(2000, 0, 1);
       break;
   }
 

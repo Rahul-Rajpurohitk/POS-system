@@ -5,6 +5,7 @@ export const QUEUE_NAMES = {
   REPORTS: 'reports',
   NOTIFICATIONS: 'notifications',
   ANALYTICS: 'analytics',
+  DELIVERY: 'delivery',
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
@@ -41,6 +42,14 @@ export const JOB_NAMES = {
   REFRESH_CUSTOMER_COHORTS: 'refresh-customer-cohorts',
   WARM_ANALYTICS_CACHE: 'warm-analytics-cache',
   INVALIDATE_TIME_SENSITIVE: 'invalidate-time-sensitive',
+
+  // Delivery Jobs
+  ONLINE_ORDER_TIMEOUT: 'online-order-timeout',
+  ONLINE_ORDER_REMINDER: 'online-order-reminder',
+  ASSIGN_DRIVER: 'assign-driver',
+  UPDATE_DELIVERY_ETA: 'update-delivery-eta',
+  DELIVERY_COMPLETED: 'delivery-completed',
+  DELIVERY_CANCELLED: 'delivery-cancelled',
 } as const;
 
 export type JobName = (typeof JOB_NAMES)[keyof typeof JOB_NAMES];

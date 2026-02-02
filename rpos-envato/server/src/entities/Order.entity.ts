@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   OneToMany,
+  OneToOne,
   JoinColumn,
   Index,
 } from 'typeorm';
@@ -14,7 +15,7 @@ import { Customer } from './Customer.entity';
 import { Coupon } from './Coupon.entity';
 import { User } from './User.entity';
 import { OrderItem } from './OrderItem.entity';
-import { OrderStatus, TaxType } from '../types/enums';
+import { OrderStatus, TaxType, PaymentMethod, OrderType } from '../types/enums';
 
 @Entity('orders')
 @Index(['businessId', 'number'], { unique: true })
@@ -30,6 +31,14 @@ export class Order {
   // Order Status & Lifecycle
   @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.DRAFT })
   status!: OrderStatus;
+
+  // Payment Method
+  @Column({ name: 'payment_method', type: 'enum', enum: PaymentMethod, default: PaymentMethod.CASH })
+  paymentMethod!: PaymentMethod;
+
+  // Order Type (how the order was placed)
+  @Column({ name: 'order_type', type: 'enum', enum: OrderType, default: OrderType.WALK_IN })
+  orderType!: OrderType;
 
   // Guest information (when no customer account)
   @Column({ name: 'guest_name', type: 'varchar', length: 255, nullable: true })
@@ -77,6 +86,35 @@ export class Order {
   // Tip (optional)
   @Column({ name: 'tip_amount', type: 'decimal', precision: 12, scale: 2, default: 0 })
   tipAmount!: number;
+
+  // ============ DELIVERY FIELDS ============
+
+  // Flag indicating this is a delivery order
+  @Column({ name: 'is_delivery', type: 'boolean', default: false })
+  isDelivery!: boolean;
+
+  // Delivery address (separate from guest_address for clarity)
+  @Column({ name: 'delivery_address', type: 'text', nullable: true })
+  deliveryAddress!: string | null;
+
+  // Delivery coordinates (for routing)
+  @Column({ name: 'delivery_latitude', type: 'decimal', precision: 10, scale: 8, nullable: true })
+  deliveryLatitude!: number | null;
+
+  @Column({ name: 'delivery_longitude', type: 'decimal', precision: 11, scale: 8, nullable: true })
+  deliveryLongitude!: number | null;
+
+  // Delivery fee charged to customer
+  @Column({ name: 'delivery_fee', type: 'decimal', precision: 10, scale: 2, default: 0 })
+  deliveryFee!: number;
+
+  // Scheduled delivery time (for future orders)
+  @Column({ name: 'scheduled_delivery_time', type: 'timestamp with time zone', nullable: true })
+  scheduledDeliveryTime!: Date | null;
+
+  // Delivery instructions (e.g., "Leave at door", "Ring bell twice")
+  @Column({ name: 'delivery_notes', type: 'text', nullable: true })
+  deliveryNotes!: string | null;
 
   // Notes
   @Column({ type: 'text', nullable: true })
@@ -177,5 +215,29 @@ export class Order {
 
   get canBeRefunded(): boolean {
     return this.status === OrderStatus.COMPLETED && this.amountPaid > 0;
+  }
+
+  // Delivery helper methods
+  get isOutForDelivery(): boolean {
+    return this.status === OrderStatus.OUT_FOR_DELIVERY;
+  }
+
+  get isDelivered(): boolean {
+    return this.status === OrderStatus.DELIVERED;
+  }
+
+  get hasDeliveryAddress(): boolean {
+    return !!this.deliveryAddress || !!(this.deliveryLatitude && this.deliveryLongitude);
+  }
+
+  get isScheduledDelivery(): boolean {
+    return !!this.scheduledDeliveryTime && this.scheduledDeliveryTime > new Date();
+  }
+
+  /**
+   * Calculate total including delivery fee
+   */
+  get totalWithDelivery(): number {
+    return Number(this.total) + Number(this.deliveryFee);
   }
 }

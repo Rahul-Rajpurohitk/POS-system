@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import type { Product, Customer, Coupon, CartItem, OrderPayment } from '@/types';
+import type { Product, Customer, Coupon, CartItem, OrderPayment, Order } from '@/types';
 import { useSettingsStore } from './settingsStore';
 
 interface CartStore {
@@ -8,6 +8,7 @@ interface CartStore {
   items: CartItem[];
   customer: Customer | null;
   coupon: Coupon | null;
+  editingOrderId: string | null;  // Track if we're editing an existing OPEN order
 
   // Actions
   addItem: (product: Product, quantity?: number) => void;
@@ -19,6 +20,9 @@ interface CartStore {
   setCoupon: (coupon: Coupon | null) => void;
   clear: () => void;
   clearCart: () => void; // Alias for clear()
+  loadOrder: (order: Order) => void;  // Load an existing order for editing
+  isEditingOrder: () => boolean;  // Check if editing an existing order
+  getEditingOrderId: () => string | null;  // Get the ID of the order being edited
 
   // Computed values (matching original POS logic exactly)
   getSubTotal: () => number;
@@ -35,6 +39,7 @@ export const useCartStore = create<CartStore>()(
     items: [],
     customer: null,
     coupon: null,
+    editingOrderId: null,
 
     // Add item - if exists, increment quantity
     addItem: (product, quantity = 1) =>
@@ -117,6 +122,7 @@ export const useCartStore = create<CartStore>()(
         state.items = [];
         state.customer = null;
         state.coupon = null;
+        state.editingOrderId = null;
       }),
 
     // Alias for clear()
@@ -125,7 +131,55 @@ export const useCartStore = create<CartStore>()(
         state.items = [];
         state.customer = null;
         state.coupon = null;
+        state.editingOrderId = null;
       }),
+
+    // Load an existing order into the cart for editing
+    loadOrder: (order: Order) =>
+      set((state) => {
+        // Clear existing cart first
+        state.items = [];
+        state.customer = null;
+        state.coupon = null;
+
+        // Set the order ID we're editing
+        state.editingOrderId = order.id;
+
+        // Load items from the order
+        if (order.items && Array.isArray(order.items)) {
+          state.items = order.items.map((item: any) => ({
+            product: item.product || {
+              id: item.productId,
+              name: item.name || 'Product',
+              sellingPrice: item.unitPrice || item.price || 0,
+              sku: '',
+              quantity: 0,
+              isActive: true,
+            },
+            quantity: item.quantity || 1,
+          }));
+        }
+
+        // Load customer if present
+        if (order.customer) {
+          state.customer = order.customer;
+        }
+
+        // Load coupon if present
+        if (order.coupon) {
+          state.coupon = order.coupon;
+        }
+      }),
+
+    // Check if we're editing an existing order
+    isEditingOrder: () => {
+      return get().editingOrderId !== null;
+    },
+
+    // Get the ID of the order being edited
+    getEditingOrderId: () => {
+      return get().editingOrderId;
+    },
 
     // ============================================
     // CRITICAL: Order Calculation Logic

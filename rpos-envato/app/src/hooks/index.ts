@@ -11,3 +11,17 @@ export type {
 } from './useWebSocket';
 
 export { useReports } from './useReports';
+
+export {
+  useLocationTracking,
+  calculateDistance,
+  formatDistance,
+  formatDuration,
+} from './useLocationTracking';
+export type {
+  LocationTrackingConfig,
+  UseLocationTrackingResult,
+} from './useLocationTracking';
+
+export { usePdfDownload } from './usePdfDownload';
+export type { PdfType, UsePdfDownloadResult } from './usePdfDownload';

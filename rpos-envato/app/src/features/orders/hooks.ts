@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tansta
 import { useSyncStore, useCartStore } from '@/store';
 import { generateLocalId } from '@/utils';
 import { ordersApi } from './api';
-import type { OrdersQuery, CreateOrderRequest, UpdateOrderRequest } from './api';
+import type { OrdersQuery, CreateOrderRequest, UpdateOrderRequest, ExchangeOrderRequest } from './api';
 import type { Order } from '@/types';
 
 export const orderKeys = {
@@ -21,6 +21,9 @@ export function useOrders(params?: OrdersQuery) {
     queryKey: orderKeys.list(params),
     queryFn: () => ordersApi.getAll(params),
     select: (response) => response.data.data, // Extract data array from { success, data, pagination }
+    staleTime: 5000, // Consider data stale after 5 seconds
+    refetchOnWindowFocus: true, // Refetch when app comes to foreground
+    refetchOnMount: true, // Refetch when component mounts
   });
 }
 
@@ -45,15 +48,20 @@ export function useOrder(id: string) {
     queryKey: orderKeys.detail(id),
     queryFn: () => ordersApi.getById(id),
     select: (response) => response.data.data, // Extract order from { success, data }
-    enabled: !!id && !id.startsWith('local-'),
+    enabled: !!id && id.length > 0 && !id.startsWith('local-'),
+    staleTime: 10000, // Consider data stale after 10 seconds
+    refetchOnWindowFocus: true, // Refetch when app comes to foreground
   });
 }
 
-export function useOrderStats() {
+export function useOrderStats(dateRange?: 'today' | 'yesterday' | 'week' | 'month' | 'all') {
   return useQuery({
-    queryKey: orderKeys.stats(),
-    queryFn: () => ordersApi.getStats(),
+    queryKey: [...orderKeys.stats(), dateRange],
+    queryFn: () => ordersApi.getStats(dateRange),
     select: (response) => response.data.data, // Extract stats from { success, data }
+    staleTime: 30000, // Consider data stale after 30 seconds
+    refetchOnWindowFocus: true, // Refetch when app comes to foreground
+    refetchInterval: 60000, // Auto-refetch every minute for dashboard
   });
 }
 
@@ -71,6 +79,8 @@ export function useRecentOrders(limit?: number) {
     queryKey: orderKeys.recent(limit),
     queryFn: () => ordersApi.getRecent(limit),
     select: (response) => response.data.data, // Extract data array from { success, data }
+    staleTime: 5000, // Consider data stale after 5 seconds
+    refetchOnWindowFocus: true, // Refetch when app comes to foreground
   });
 }
 
@@ -134,8 +144,27 @@ export function useUpdateOrder() {
     mutationFn: ({ id, data }: { id: string; data: UpdateOrderRequest }) =>
       ordersApi.update(id, data),
     onSuccess: (_, { id }) => {
+      // Invalidate all related queries for real-time updates
       queryClient.invalidateQueries({ queryKey: orderKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: orderKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: orderKeys.stats() });
+      queryClient.invalidateQueries({ queryKey: orderKeys.recent() });
+    },
+  });
+}
+
+export function useUpdateOrderStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      ordersApi.updateStatus(id, status),
+    onSuccess: (_, { id }) => {
+      // Invalidate all related queries for real-time updates
+      queryClient.invalidateQueries({ queryKey: orderKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: orderKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: orderKeys.stats() });
+      queryClient.invalidateQueries({ queryKey: orderKeys.recent() });
     },
   });
 }
@@ -173,6 +202,20 @@ export function useDeleteOrder() {
   return useMutation({
     mutationFn: (id: string) => ordersApi.delete(id),
     onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: orderKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: orderKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: orderKeys.stats() });
+    },
+  });
+}
+
+export function useExchangeOrder() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: ExchangeOrderRequest }) =>
+      ordersApi.exchange(id, data),
+    onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: orderKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: orderKeys.lists() });
       queryClient.invalidateQueries({ queryKey: orderKeys.stats() });

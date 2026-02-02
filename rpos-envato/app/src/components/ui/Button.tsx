@@ -89,23 +89,23 @@ const StyledButton = styled(TamaguiButton, {
         },
       },
     },
-    size: {
+    buttonSize: {
       sm: {
         paddingVertical: '$2',
         paddingHorizontal: '$3',
-        fontSize: '$3',
+        fontSize: 14,
         height: 36,
       },
       md: {
         paddingVertical: '$3',
         paddingHorizontal: '$4',
-        fontSize: '$4',
+        fontSize: 16,
         height: 44,
       },
       lg: {
         paddingVertical: '$4',
         paddingHorizontal: '$5',
-        fontSize: '$5',
+        fontSize: 18,
         height: 52,
       },
       icon: {
@@ -163,7 +163,7 @@ export function Button({
   return (
     <StyledButton
       variant={variant as any}
-      size={size as any}
+      buttonSize={size as any}
       disabled={isDisabled}
       {...(props as any)}
     >

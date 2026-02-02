@@ -70,19 +70,19 @@ function RefundItemRow({ item, onToggle, onQuantityChange, currency }: RefundIte
     <XStack
       paddingVertical="$3"
       paddingHorizontal="$3"
-      backgroundColor={item.selected ? '#3B82F610' : 'transparent'}
+      backgroundColor={item.selected ? '#EFF6FF' : 'white'}
       borderRadius="$2"
       marginBottom="$2"
       borderWidth={1}
-      borderColor={item.selected ? '#3B82F6' : '$borderColor'}
+      borderColor={item.selected ? '#3B82F6' : '#E5E7EB'}
     >
       <XStack
         width={24}
         height={24}
         borderRadius={4}
         borderWidth={2}
-        borderColor={item.selected ? '#3B82F6' : '$borderColor'}
-        backgroundColor={item.selected ? '#3B82F6' : 'transparent'}
+        borderColor={item.selected ? '#3B82F6' : '#D1D5DB'}
+        backgroundColor={item.selected ? '#3B82F6' : 'white'}
         alignItems="center"
         justifyContent="center"
         cursor="pointer"
@@ -93,44 +93,47 @@ function RefundItemRow({ item, onToggle, onQuantityChange, currency }: RefundIte
       </XStack>
 
       <YStack flex={1}>
-        <Text fontSize="$3" fontWeight="500">{item.name}</Text>
-        <Text fontSize={11} color="$colorSecondary">
+        <Text fontSize="$3" fontWeight="500" color="#111827">{item.name}</Text>
+        <Text fontSize={11} color="#6B7280">
           {formatCurrency(item.price, currency)} each
         </Text>
       </YStack>
 
       {item.selected && (
         <XStack alignItems="center" gap="$2">
-          <Text fontSize={12} color="$colorSecondary">Qty:</Text>
+          <Text fontSize={12} color="#6B7280">Qty:</Text>
           <XStack
             borderWidth={1}
-            borderColor="$borderColor"
+            borderColor="#E5E7EB"
             borderRadius="$2"
             overflow="hidden"
+            backgroundColor="white"
           >
             <YStack
               paddingHorizontal="$2"
               paddingVertical="$1"
-              backgroundColor="$backgroundHover"
+              backgroundColor="#F3F4F6"
               cursor="pointer"
+              hoverStyle={{ backgroundColor: '#E5E7EB' }}
               onPress={() => item.quantity > 1 && onQuantityChange(item.quantity - 1)}
             >
-              <Text fontSize={14} fontWeight="600">-</Text>
+              <Text fontSize={14} fontWeight="600" color="#374151">-</Text>
             </YStack>
-            <YStack paddingHorizontal="$3" paddingVertical="$1" justifyContent="center">
-              <Text fontSize={13} fontWeight="500">{item.quantity}</Text>
+            <YStack paddingHorizontal="$3" paddingVertical="$1" justifyContent="center" backgroundColor="white">
+              <Text fontSize={13} fontWeight="500" color="#111827">{item.quantity}</Text>
             </YStack>
             <YStack
               paddingHorizontal="$2"
               paddingVertical="$1"
-              backgroundColor="$backgroundHover"
+              backgroundColor="#F3F4F6"
               cursor="pointer"
+              hoverStyle={{ backgroundColor: '#E5E7EB' }}
               onPress={() => item.quantity < item.maxQuantity && onQuantityChange(item.quantity + 1)}
             >
-              <Text fontSize={14} fontWeight="600">+</Text>
+              <Text fontSize={14} fontWeight="600" color="#374151">+</Text>
             </YStack>
           </XStack>
-          <Text fontSize="$3" fontWeight="600" minWidth={60} textAlign="right">
+          <Text fontSize="$3" fontWeight="600" minWidth={60} textAlign="right" color="#111827">
             {formatCurrency(item.price * item.quantity, currency)}
           </Text>
         </XStack>
@@ -279,7 +282,7 @@ export function RefundModal({
           width="90%"
           maxWidth={500}
           maxHeight="90%"
-          backgroundColor="$background"
+          backgroundColor="white"
           borderRadius="$4"
           overflow="hidden"
           shadowColor="rgba(0,0,0,0.2)"
@@ -294,41 +297,44 @@ export function RefundModal({
             justifyContent="space-between"
             alignItems="center"
             borderBottomWidth={1}
-            borderBottomColor="$borderColor"
+            borderBottomColor="#E5E7EB"
+            backgroundColor="white"
           >
             <XStack alignItems="center" gap="$2">
               <RefreshCw size={20} color="#3B82F6" />
-              <Text fontSize="$5" fontWeight="bold">Process Refund</Text>
+              <Text fontSize="$5" fontWeight="bold" color="#111827">Process Refund</Text>
             </XStack>
             <YStack
               padding="$2"
               borderRadius="$2"
               cursor="pointer"
-              hoverStyle={{ backgroundColor: '$backgroundHover' }}
+              hoverStyle={{ backgroundColor: '#F3F4F6' }}
               onPress={onClose}
             >
-              <X size={20} color="$colorSecondary" />
+              <X size={20} color="#6B7280" />
             </YStack>
           </XStack>
 
-          <ScrollView style={{ flex: 1 }}>
-            <YStack padding="$4" gap="$4">
+          <ScrollView style={{ flex: 1, backgroundColor: 'white' }}>
+            <YStack padding="$4" gap="$4" backgroundColor="white">
               {/* Order info */}
               <XStack
                 padding="$3"
-                backgroundColor="$backgroundHover"
+                backgroundColor="#F9FAFB"
                 borderRadius="$2"
                 justifyContent="space-between"
+                borderWidth={1}
+                borderColor="#E5E7EB"
               >
-                <Text fontSize={13} color="$colorSecondary">Order {orderNumber}</Text>
-                <Text fontSize={13} fontWeight="600">
+                <Text fontSize={13} color="#6B7280">Order {orderNumber}</Text>
+                <Text fontSize={13} fontWeight="600" color="#111827">
                   Total: {formatCurrency(fullAmount, currency)}
                 </Text>
               </XStack>
 
               {/* Refund type selection */}
               <YStack gap="$2">
-                <Text fontSize={12} fontWeight="600" color="$colorSecondary">REFUND TYPE</Text>
+                <Text fontSize={12} fontWeight="600" color="#6B7280">REFUND TYPE</Text>
                 <XStack gap="$2">
                   {(['full', 'partial'] as RefundType[]).map((type) => (
                     <YStack
@@ -338,8 +344,8 @@ export function RefundModal({
                       paddingHorizontal="$3"
                       borderRadius="$2"
                       borderWidth={2}
-                      borderColor={refundType === type ? '#3B82F6' : '$borderColor'}
-                      backgroundColor={refundType === type ? '#3B82F610' : 'transparent'}
+                      borderColor={refundType === type ? '#3B82F6' : '#E5E7EB'}
+                      backgroundColor={refundType === type ? '#EFF6FF' : 'white'}
                       cursor="pointer"
                       alignItems="center"
                       onPress={() => setRefundType(type)}
@@ -347,7 +353,7 @@ export function RefundModal({
                       <Text
                         fontSize={13}
                         fontWeight={refundType === type ? '600' : '400'}
-                        color={refundType === type ? '#3B82F6' : '$color'}
+                        color={refundType === type ? '#3B82F6' : '#374151'}
                         textTransform="capitalize"
                       >
                         {type} Refund
@@ -360,7 +366,7 @@ export function RefundModal({
               {/* Partial refund - item selection */}
               {refundType === 'partial' && (
                 <YStack gap="$2">
-                  <Text fontSize={12} fontWeight="600" color="$colorSecondary">SELECT ITEMS</Text>
+                  <Text fontSize={12} fontWeight="600" color="#6B7280">SELECT ITEMS</Text>
                   {refundItems.map((item, index) => (
                     <RefundItemRow
                       key={item.itemId}
@@ -376,11 +382,13 @@ export function RefundModal({
               {/* Refund amount display */}
               <YStack
                 padding="$4"
-                backgroundColor="#3B82F610"
+                backgroundColor="#EFF6FF"
                 borderRadius="$3"
                 alignItems="center"
+                borderWidth={1}
+                borderColor="#BFDBFE"
               >
-                <Text fontSize={12} color="$colorSecondary" marginBottom="$1">Refund Amount</Text>
+                <Text fontSize={12} color="#6B7280" marginBottom="$1">Refund Amount</Text>
                 <Text fontSize="$7" fontWeight="bold" color="#3B82F6">
                   {formatCurrency(refundAmount, currency)}
                 </Text>
@@ -388,7 +396,7 @@ export function RefundModal({
 
               {/* Reason selection */}
               <YStack gap="$2">
-                <Text fontSize={12} fontWeight="600" color="$colorSecondary">REASON *</Text>
+                <Text fontSize={12} fontWeight="600" color="#6B7280">REASON *</Text>
                 <XStack gap="$2" flexWrap="wrap">
                   {REFUND_REASONS.map((r) => (
                     <YStack
@@ -397,15 +405,15 @@ export function RefundModal({
                       paddingHorizontal="$3"
                       borderRadius="$2"
                       borderWidth={1}
-                      borderColor={reason === r.value ? '#3B82F6' : '$borderColor'}
-                      backgroundColor={reason === r.value ? '#3B82F610' : 'transparent'}
+                      borderColor={reason === r.value ? '#3B82F6' : '#E5E7EB'}
+                      backgroundColor={reason === r.value ? '#EFF6FF' : 'white'}
                       cursor="pointer"
                       onPress={() => setReason(r.value)}
                     >
                       <Text
                         fontSize={12}
                         fontWeight={reason === r.value ? '600' : '400'}
-                        color={reason === r.value ? '#3B82F6' : '$color'}
+                        color={reason === r.value ? '#3B82F6' : '#374151'}
                       >
                         {r.label}
                       </Text>
@@ -416,7 +424,7 @@ export function RefundModal({
 
               {/* Refund destination */}
               <YStack gap="$2">
-                <Text fontSize={12} fontWeight="600" color="$colorSecondary">REFUND TO</Text>
+                <Text fontSize={12} fontWeight="600" color="#6B7280">REFUND TO</Text>
                 <XStack gap="$2">
                   {REFUND_DESTINATIONS.map((d) => {
                     const Icon = d.icon;
@@ -427,18 +435,18 @@ export function RefundModal({
                         paddingVertical="$3"
                         borderRadius="$2"
                         borderWidth={1}
-                        borderColor={destination === d.value ? '#3B82F6' : '$borderColor'}
-                        backgroundColor={destination === d.value ? '#3B82F610' : 'transparent'}
+                        borderColor={destination === d.value ? '#3B82F6' : '#E5E7EB'}
+                        backgroundColor={destination === d.value ? '#EFF6FF' : 'white'}
                         cursor="pointer"
                         alignItems="center"
                         gap="$1"
                         onPress={() => setDestination(d.value)}
                       >
-                        <Icon size={18} color={destination === d.value ? '#3B82F6' : '$colorSecondary'} />
+                        <Icon size={18} color={destination === d.value ? '#3B82F6' : '#6B7280'} />
                         <Text
                           fontSize={11}
                           fontWeight={destination === d.value ? '600' : '400'}
-                          color={destination === d.value ? '#3B82F6' : '$color'}
+                          color={destination === d.value ? '#3B82F6' : '#374151'}
                           textAlign="center"
                         >
                           {d.label}
@@ -451,13 +459,16 @@ export function RefundModal({
 
               {/* Notes */}
               <YStack gap="$2">
-                <Text fontSize={12} fontWeight="600" color="$colorSecondary">NOTES (Optional)</Text>
+                <Text fontSize={12} fontWeight="600" color="#6B7280">NOTES (Optional)</Text>
                 <TextArea
                   value={notes}
                   onChangeText={setNotes}
                   placeholder="Add any additional notes..."
+                  placeholderTextColor="#9CA3AF"
                   minHeight={80}
-                  borderColor="$borderColor"
+                  borderColor="#E5E7EB"
+                  backgroundColor="white"
+                  color="#111827"
                 />
               </YStack>
 
@@ -482,19 +493,44 @@ export function RefundModal({
             padding="$4"
             gap="$3"
             borderTopWidth={1}
-            borderTopColor="$borderColor"
+            borderTopColor="#E5E7EB"
+            backgroundColor="white"
           >
-            <Button flex={1} variant="secondary" onPress={onClose} disabled={isLoading}>
-              Cancel
-            </Button>
-            <Button
-              flex={2}
-              onPress={handleSubmit}
-              disabled={isLoading || refundAmount <= 0}
-              icon={<RefreshCw size={16} />}
+            <XStack
+              flex={1}
+              backgroundColor="white"
+              borderWidth={1}
+              borderColor="#D1D5DB"
+              borderRadius="$3"
+              paddingVertical="$3"
+              justifyContent="center"
+              alignItems="center"
+              cursor="pointer"
+              opacity={isLoading ? 0.5 : 1}
+              hoverStyle={{ backgroundColor: '#F9FAFB' }}
+              pressStyle={{ opacity: 0.9 }}
+              onPress={isLoading ? undefined : onClose}
             >
-              {isLoading ? 'Processing...' : `Refund ${formatCurrency(refundAmount, currency)}`}
-            </Button>
+              <Text fontSize={14} fontWeight="600" color="#374151">Cancel</Text>
+            </XStack>
+            <XStack
+              flex={2}
+              backgroundColor={isLoading || refundAmount <= 0 ? '#9CA3AF' : '#3B82F6'}
+              borderRadius="$3"
+              paddingVertical="$3"
+              gap="$2"
+              justifyContent="center"
+              alignItems="center"
+              cursor={isLoading || refundAmount <= 0 ? 'not-allowed' : 'pointer'}
+              hoverStyle={{ backgroundColor: isLoading || refundAmount <= 0 ? '#9CA3AF' : '#2563EB' }}
+              pressStyle={{ opacity: 0.9 }}
+              onPress={isLoading || refundAmount <= 0 ? undefined : handleSubmit}
+            >
+              <RefreshCw size={16} color="white" />
+              <Text fontSize={14} fontWeight="600" color="white">
+                {isLoading ? 'Processing...' : `Refund ${formatCurrency(refundAmount, currency)}`}
+              </Text>
+            </XStack>
           </XStack>
         </YStack>
       </YStack>

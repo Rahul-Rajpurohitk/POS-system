@@ -53,6 +53,29 @@ export enum RealtimeEvent {
   ANALYTICS_UPDATE = 'analytics:update',
   ANALYTICS_DASHBOARD_REFRESH = 'analytics:dashboard:refresh',
   ANALYTICS_METRICS_UPDATE = 'analytics:metrics:update',
+
+  // Delivery events
+  DELIVERY_CREATED = 'delivery:created',
+  DELIVERY_ACCEPTED = 'delivery:accepted',
+  DELIVERY_ASSIGNED = 'delivery:assigned',
+  DELIVERY_STATUS_UPDATED = 'delivery:status:updated',
+  DELIVERY_LOCATION_UPDATED = 'delivery:location:updated',
+  DELIVERY_ETA_UPDATED = 'delivery:eta:updated',
+  DELIVERY_COMPLETED = 'delivery:completed',
+  DELIVERY_CANCELLED = 'delivery:cancelled',
+
+  // Driver events
+  DRIVER_STATUS_CHANGED = 'driver:status:changed',
+  DRIVER_LOCATION_UPDATED = 'driver:location:updated',
+  DRIVER_ASSIGNED = 'driver:assigned',
+
+  // Online Order Queue events
+  ONLINE_ORDER_RECEIVED = 'online_order:received',
+  ONLINE_ORDER_REMINDER = 'online_order:reminder',
+  ONLINE_ORDER_EXPIRING = 'online_order:expiring',
+  ONLINE_ORDER_EXPIRED = 'online_order:expired',
+  ONLINE_ORDER_ACCEPTED = 'online_order:accepted',
+  ONLINE_ORDER_REJECTED = 'online_order:rejected',
 }
 
 // Payload interfaces
@@ -104,7 +127,7 @@ class RealtimeService {
           return next(new Error('Authentication required'));
         }
 
-        const decoded = jwt.verify(token, config.jwt.secret) as any;
+        const decoded = jwt.verify(token, config.jwtSecret) as any;
 
         socket.data.userId = decoded.id;
         socket.data.businessId = decoded.business;
@@ -394,6 +417,277 @@ class RealtimeService {
     }
   ): void {
     this.broadcastToBusiness(businessId, RealtimeEvent.ANALYTICS_METRICS_UPDATE, metrics);
+  }
+
+  // ============ DELIVERY EVENT EMITTERS ============
+
+  /**
+   * Emit delivery created event
+   */
+  emitDeliveryCreated(
+    businessId: string,
+    delivery: {
+      id: string;
+      orderId: string;
+      orderNumber: number;
+      customerName: string;
+      deliveryAddress: string;
+      status: string;
+    }
+  ): void {
+    this.broadcastToBusiness(businessId, RealtimeEvent.DELIVERY_CREATED, delivery);
+  }
+
+  /**
+   * Emit delivery status update
+   */
+  emitDeliveryStatusUpdate(
+    businessId: string,
+    deliveryId: string,
+    trackingToken: string,
+    status: string,
+    additionalData?: Record<string, any>
+  ): void {
+    // Broadcast to business (POS terminals)
+    this.broadcastToBusiness(businessId, RealtimeEvent.DELIVERY_STATUS_UPDATED, {
+      deliveryId,
+      status,
+      ...additionalData,
+    });
+
+    // Broadcast to tracking room (customer)
+    this.broadcastToTrackingRoom(trackingToken, RealtimeEvent.DELIVERY_STATUS_UPDATED, {
+      deliveryId,
+      status,
+      ...additionalData,
+    });
+  }
+
+  /**
+   * Emit delivery location update
+   */
+  emitDeliveryLocationUpdate(
+    businessId: string,
+    deliveryId: string,
+    trackingToken: string,
+    location: {
+      latitude: number;
+      longitude: number;
+      heading?: number;
+      speed?: number;
+    },
+    eta?: Date
+  ): void {
+    const payload = {
+      deliveryId,
+      location,
+      eta: eta?.toISOString(),
+      timestamp: new Date().toISOString(),
+    };
+
+    // Broadcast to business (POS)
+    this.broadcastToBusiness(businessId, RealtimeEvent.DELIVERY_LOCATION_UPDATED, payload);
+
+    // Broadcast to tracking room (customer)
+    this.broadcastToTrackingRoom(trackingToken, RealtimeEvent.DELIVERY_LOCATION_UPDATED, payload);
+  }
+
+  /**
+   * Emit ETA update
+   */
+  emitETAUpdate(
+    businessId: string,
+    deliveryId: string,
+    trackingToken: string,
+    eta: Date,
+    distanceRemaining: number
+  ): void {
+    const payload = {
+      deliveryId,
+      eta: eta.toISOString(),
+      distanceRemaining,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.broadcastToBusiness(businessId, RealtimeEvent.DELIVERY_ETA_UPDATED, payload);
+    this.broadcastToTrackingRoom(trackingToken, RealtimeEvent.DELIVERY_ETA_UPDATED, payload);
+  }
+
+  /**
+   * Emit driver assigned event
+   */
+  emitDriverAssigned(
+    businessId: string,
+    deliveryId: string,
+    trackingToken: string,
+    driver: {
+      id: string;
+      name: string;
+      phone?: string;
+      vehicleType: string;
+      rating?: number;
+    }
+  ): void {
+    const payload = {
+      deliveryId,
+      driver,
+    };
+
+    this.broadcastToBusiness(businessId, RealtimeEvent.DELIVERY_ASSIGNED, payload);
+    this.broadcastToTrackingRoom(trackingToken, RealtimeEvent.DELIVERY_ASSIGNED, payload);
+  }
+
+  /**
+   * Emit driver status change
+   */
+  emitDriverStatusChange(
+    businessId: string,
+    driver: {
+      id: string;
+      name: string;
+      status: string;
+      location?: { latitude: number; longitude: number };
+    }
+  ): void {
+    this.broadcastToBusiness(businessId, RealtimeEvent.DRIVER_STATUS_CHANGED, driver);
+  }
+
+  /**
+   * Emit online order received (for POS notification)
+   */
+  emitOnlineOrderReceived(
+    businessId: string,
+    order: {
+      id: string;
+      orderNumber: number;
+      total: number;
+      itemCount: number;
+      customerName: string;
+      isDelivery: boolean;
+      expiresAt: Date;
+    }
+  ): void {
+    this.broadcastToBusiness(businessId, RealtimeEvent.ONLINE_ORDER_RECEIVED, {
+      ...order,
+      expiresAt: order.expiresAt.toISOString(),
+    });
+  }
+
+  /**
+   * Emit online order reminder
+   */
+  emitOnlineOrderReminder(
+    businessId: string,
+    order: {
+      id: string;
+      orderNumber: number;
+      minutesRemaining: number;
+      isUrgent: boolean;
+    }
+  ): void {
+    const event = order.isUrgent
+      ? RealtimeEvent.ONLINE_ORDER_EXPIRING
+      : RealtimeEvent.ONLINE_ORDER_REMINDER;
+
+    this.broadcastToBusiness(businessId, event, order);
+  }
+
+  /**
+   * Emit online order expired
+   */
+  emitOnlineOrderExpired(
+    businessId: string,
+    order: { id: string; orderNumber: number }
+  ): void {
+    this.broadcastToBusiness(businessId, RealtimeEvent.ONLINE_ORDER_EXPIRED, order);
+  }
+
+  // ============ ROOM MANAGEMENT FOR DELIVERY ============
+
+  /**
+   * Join a tracking room (for customers tracking their delivery)
+   */
+  joinTrackingRoom(socketId: string, trackingToken: string): void {
+    if (!this.io) return;
+
+    const socket = this.io.sockets.sockets.get(socketId);
+    if (socket) {
+      socket.join(`tracking:${trackingToken}`);
+      console.log(`Socket ${socketId} joined tracking room: ${trackingToken}`);
+    }
+  }
+
+  /**
+   * Leave a tracking room
+   */
+  leaveTrackingRoom(socketId: string, trackingToken: string): void {
+    if (!this.io) return;
+
+    const socket = this.io.sockets.sockets.get(socketId);
+    if (socket) {
+      socket.leave(`tracking:${trackingToken}`);
+    }
+  }
+
+  /**
+   * Join a driver room (for driver-specific notifications)
+   */
+  joinDriverRoom(socketId: string, driverId: string): void {
+    if (!this.io) return;
+
+    const socket = this.io.sockets.sockets.get(socketId);
+    if (socket) {
+      socket.join(`driver:${driverId}`);
+      console.log(`Socket ${socketId} joined driver room: ${driverId}`);
+    }
+  }
+
+  /**
+   * Leave a driver room
+   */
+  leaveDriverRoom(socketId: string, driverId: string): void {
+    if (!this.io) return;
+
+    const socket = this.io.sockets.sockets.get(socketId);
+    if (socket) {
+      socket.leave(`driver:${driverId}`);
+    }
+  }
+
+  /**
+   * Broadcast to a tracking room
+   */
+  broadcastToTrackingRoom(trackingToken: string, event: RealtimeEvent, data: any): void {
+    if (!this.io) return;
+
+    this.io.to(`tracking:${trackingToken}`).emit(event, {
+      event,
+      data,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Send to a specific driver
+   */
+  sendToDriver(driverId: string, event: RealtimeEvent, data: any): void {
+    if (!this.io) return;
+
+    this.io.to(`driver:${driverId}`).emit(event, {
+      event,
+      data,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Get count of clients in tracking room
+   */
+  getTrackingRoomSize(trackingToken: string): number {
+    if (!this.io) return 0;
+
+    const room = this.io.sockets.adapter.rooms.get(`tracking:${trackingToken}`);
+    return room?.size || 0;
   }
 
   // ============ UTILITY METHODS ============

@@ -1,10 +1,26 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { useTheme } from 'tamagui';
 import { Home, ShoppingCart, Package, ClipboardList, Menu } from '@tamagui/lucide-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { MainTabParamList, ProductStackParamList, OrderStackParamList, MoreStackParamList } from './types';
+
+// Helper to get tab bar visibility based on current route
+function getTabBarStyle(route: any, theme: any, insets: any) {
+  const routeName = getFocusedRouteNameFromRoute(route) ?? 'OrderList';
+  // Hide tab bar on Payment screen
+  if (routeName === 'Payment') {
+    return { display: 'none' as const };
+  }
+  return {
+    backgroundColor: theme.cardBackground.val,
+    borderTopColor: theme.borderColor.val,
+    paddingBottom: insets.bottom,
+    height: 60 + insets.bottom,
+  };
+}
 
 // Screens
 import DashboardScreen from '@/screens/main/DashboardScreen';
@@ -19,6 +35,7 @@ import AddCategoryScreen from '@/screens/categories/AddCategoryScreen';
 import EditCategoryScreen from '@/screens/categories/EditCategoryScreen';
 import OrderListScreen from '@/screens/orders/OrderListScreen';
 import OrderDetailScreen from '@/screens/orders/OrderDetailScreen';
+import PaymentScreen from '@/screens/orders/PaymentScreen';
 import MoreMenuScreen from '@/screens/more/MoreMenuScreen';
 import CustomersScreen from '@/screens/customers/CustomersScreen';
 import AddCustomerScreen from '@/screens/customers/AddCustomerScreen';
@@ -84,6 +101,7 @@ function OrderNavigator() {
     >
       <OrderStack.Screen name="OrderList" component={OrderListScreen} />
       <OrderStack.Screen name="OrderDetail" component={OrderDetailScreen} />
+      <OrderStack.Screen name="Payment" component={PaymentScreen} />
     </OrderStack.Navigator>
   );
 }
@@ -175,9 +193,10 @@ export function MainNavigator() {
       <Tab.Screen
         name="Orders"
         component={OrderNavigator}
-        options={{
+        options={({ route }) => ({
           tabBarIcon: ({ color, size }) => <ClipboardList size={size} color={color} />,
-        }}
+          tabBarStyle: getTabBarStyle(route, theme, insets),
+        })}
       />
       <Tab.Screen
         name="More"

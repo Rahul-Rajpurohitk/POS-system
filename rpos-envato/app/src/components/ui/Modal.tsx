@@ -33,7 +33,7 @@ const ModalContainer = styled(YStack, {
   elevation: 8,
 
   variants: {
-    size: {
+    modalSize: {
       sm: {
         maxWidth: 400,
       },
@@ -54,7 +54,7 @@ const ModalContainer = styled(YStack, {
   } as const,
 
   defaultVariants: {
-    size: 'md',
+    modalSize: 'md',
   },
 });
 
@@ -116,7 +116,7 @@ export function Modal({
           onPress={closeOnBackdrop ? onClose : undefined}
         />
 
-        <ModalContainer size={size}>
+        <ModalContainer modalSize={size}>
           {(title || showCloseButton) && (
             <ModalHeader>
               <Text fontSize="$6" fontWeight="600" color="$color">

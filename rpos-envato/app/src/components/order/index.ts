@@ -13,6 +13,9 @@ export { OrderSearchBar } from './OrderSearchBar';
 export { OrderFilterPanel } from './OrderFilterPanel';
 export type { OrderFilters, PaymentMethod, DateRange, AmountRange, CustomerType, SavedFilter } from './OrderFilterPanel';
 
+export { OrderFiltersInline } from './OrderFiltersInline';
+export type { OrderFiltersInlineState, OrderStatusFilter, DateRangeFilter, PaymentMethodFilter, OrderTypeFilter, AmountRangeFilter } from './OrderFiltersInline';
+
 export { OrderListCard } from './OrderListCard';
 export type { OrderListCardProps } from './OrderListCard';
 
@@ -21,3 +24,6 @@ export type { OrderDetailDrawerProps } from './OrderDetailDrawer';
 
 export { RefundModal } from './RefundModal';
 export type { RefundModalProps, RefundRequest, RefundType, RefundReason, RefundDestination } from './RefundModal';
+
+export { ExchangeRefundModal } from './ExchangeRefundModal';
+export type { ExchangeRefundModalProps, ExchangeRefundRequest, ExchangeMode } from './ExchangeRefundModal';

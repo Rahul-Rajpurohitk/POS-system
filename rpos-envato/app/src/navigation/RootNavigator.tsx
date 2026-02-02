@@ -2,9 +2,12 @@ import React from 'react';
 import { NavigationContainer, LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuthStore } from '@/store';
+import { useDriverStore } from '@/store/driverStore';
 import type { RootStackParamList } from './types';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
+import DriverNavigator from './DriverNavigator';
+import CustomerNavigator from './CustomerNavigator';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -74,21 +77,76 @@ const linking: LinkingOptions<RootStackParamList> = {
           },
         },
       },
+      Driver: {
+        screens: {
+          DriverHome: 'driver',
+          DeliveryMap: 'driver/map',
+          DeliveryHistory: 'driver/history',
+          DriverProfile: 'driver/profile',
+        },
+      },
+      Customer: {
+        screens: {
+          CustomerHome: 'order',
+          Menu: 'order/menu',
+          Cart: 'order/cart',
+          CustomerOrders: 'order/history',
+          CustomerProfile: 'order/profile',
+        },
+      },
+      Tracking: 'track/:trackingToken',
     },
   },
 };
 
 export function RootNavigator() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
+  const { profile } = useDriverStore();
+
+  // Determine user type based on role
+  const isDriver = user?.role === 'driver';
+  const isCustomer = user?.role === 'customer';
+
+  // Get the appropriate navigator based on user role
+  const getNavigatorForRole = () => {
+    if (!isAuthenticated) {
+      return <Stack.Screen name="Auth" component={AuthNavigator} />;
+    }
+
+    // Driver role -> Driver App
+    if (isDriver) {
+      return (
+        <>
+          <Stack.Screen name="Driver" component={DriverNavigator} />
+          <Stack.Screen name="Main" component={MainNavigator} />
+        </>
+      );
+    }
+
+    // Customer role -> Customer App
+    if (isCustomer) {
+      return (
+        <>
+          <Stack.Screen name="Customer" component={CustomerNavigator} />
+          <Stack.Screen name="Main" component={MainNavigator} />
+        </>
+      );
+    }
+
+    // Default: POS Admin (admin/manager/staff)
+    return (
+      <>
+        <Stack.Screen name="Main" component={MainNavigator} />
+        <Stack.Screen name="Driver" component={DriverNavigator} />
+        <Stack.Screen name="Customer" component={CustomerNavigator} />
+      </>
+    );
+  };
 
   return (
     <NavigationContainer linking={linking}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {isAuthenticated ? (
-          <Stack.Screen name="Main" component={MainNavigator} />
-        ) : (
-          <Stack.Screen name="Auth" component={AuthNavigator} />
-        )}
+        {getNavigatorForRole()}
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
-import { FlatList, ActivityIndicator, ScrollView as RNScrollView } from 'react-native';
+import React, { useState, useMemo, useCallback } from 'react';
+import { FlatList, ActivityIndicator, ScrollView as RNScrollView, Alert } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { YStack, XStack, Text, ScrollView, Input as TamaguiInput, Separator } from 'tamagui';
 import {
-  Search, User, Ticket, Trash2, RefreshCw, Grid, AlertTriangle,
-  ShoppingCart, CheckCircle, CreditCard, Package,
-  ChevronRight, ArrowLeft,
+  Search, User, Ticket, Trash2, RefreshCw, AlertTriangle,
+  ShoppingCart, CheckCircle, Package, X,
+  ChevronRight, ArrowLeft, Save,
 } from '@tamagui/lucide-icons';
 import { Button, Card, Modal, Badge } from '@/components/ui';
 import { ProductItem } from '@/components/product';
@@ -101,6 +102,8 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
     getVat,
     getTotal,
     getPayment,
+    isEditingOrder,
+    getEditingOrderId,
   } = useCartStore();
 
   const { isTablet, isDesktop } = usePlatform();
@@ -110,9 +113,16 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [customerModalVisible, setCustomerModalVisible] = useState(false);
   const [couponModalVisible, setCouponModalVisible] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>('cash');
+  const [savingOrder, setSavingOrder] = useState(false);
   const [viewMode, setViewMode] = useState<'categories' | 'products'>('categories');
+  const [stockAlertDismissed, setStockAlertDismissed] = useState(false);
+
+  // Reset stock alert when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      setStockAlertDismissed(false);
+    }, [])
+  );
 
   // Fetch business settings from API
   const { data: appSettings } = useAppSettings();
@@ -185,9 +195,19 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
     return filtered;
   }, [searchQuery, selectedCategory, products]);
 
-  // Get low stock products count for warnings
-  const lowStockCount = useMemo(() => {
-    return products.filter((p) => (p.quantity ?? p.stock ?? 0) < 10).length;
+  // Get low stock and out of stock products count for warnings
+  const { lowStockCount, outOfStockCount } = useMemo(() => {
+    let lowStock = 0;
+    let outOfStock = 0;
+    products.forEach((p) => {
+      const qty = p.quantity ?? p.stock ?? 0;
+      if (qty === 0) {
+        outOfStock++;
+      } else if (qty < 10) {
+        lowStock++;
+      }
+    });
+    return { lowStockCount: lowStock, outOfStockCount: outOfStock };
   }, [products]);
 
   // Filter valid coupons (not expired)
@@ -195,52 +215,86 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
     return coupons.filter((c: { expiredAt?: string }) => !isCouponExpired(c.expiredAt));
   }, [coupons]);
 
-  // Handle checkout
-  const handleCheckout = async () => {
+  // Handle checkout - Navigate to Payment screen
+  const handleCheckout = () => {
     if (items.length === 0) return;
 
-    setLoading(true);
+    const editingOrderId = getEditingOrderId();
 
-    const order: Order = {
-      id: generateLocalId(),
-      number: generateLocalOrderNumber(),
-      items: items.map((item, index) => ({
-        id: `item-${index}`,
-        product: item.product,
-        quantity: item.quantity,
-      })),
-      payment: getPayment(),
-      customer: customer || undefined,
-      coupon: coupon || undefined,
-      createdBy: 'current-user',
-      createdAt: new Date().toISOString(),
-    };
+    // Navigate to Payment screen in Orders stack
+    // The cart data is already in Zustand store, Payment screen will read from there
+    navigation.navigate('Orders', {
+      screen: 'Payment',
+      params: {
+        orderId: editingOrderId || undefined,
+        fromPOS: true,
+      },
+    });
+  };
+
+  // Handle save order (save with OPEN status - awaiting payment)
+  const handleSaveOrder = async () => {
+    if (items.length === 0) return;
+
+    setSavingOrder(true);
 
     try {
       if (settings.isOfflineMode) {
         // Save locally for sync later
-        addOrderToQueue(order);
-      } else {
-        // Send to server
-        await post('/orders', {
-          items: order.items.map((i) => ({
-            productId: i.product.id,
-            quantity: i.quantity,
+        const order: Order = {
+          id: generateLocalId(),
+          number: generateLocalOrderNumber(),
+          items: items.map((item, index) => ({
+            id: `item-${index}`,
+            product: item.product,
+            quantity: item.quantity,
           })),
-          customerId: order.customer?.id,
-          couponId: order.coupon?.id,
-          payment: order.payment,
-          paymentMethod,
+          payment: getPayment(),
+          customer: customer || undefined,
+          coupon: coupon || undefined,
+          createdBy: 'current-user',
+          createdAt: new Date().toISOString(),
+          status: 'open',
+        };
+        addOrderToQueue(order);
+        Alert.alert('Order Saved', 'Order saved locally. Will sync when online.');
+      } else {
+        // Send to server with OPEN status
+        const response = await post<{ success: boolean; data: any; message?: string }>('/orders', {
+          items: items.map((item) => ({
+            productId: item.product.id,
+            quantity: item.quantity,
+          })),
+          customerId: customer?.id,
+          couponId: coupon?.id,
+          orderType: 'walk_in',
+          status: 'open', // Set status to OPEN (awaiting payment)
         });
+
+        // post() returns response.data directly, so response.success not response.data.success
+        if (response.success) {
+          const orderNumber = response.data?.number || response.data?.orderNumber || 'new';
+          Alert.alert(
+            'Order Saved',
+            `Order #${orderNumber} saved successfully.\nStatus: Open (awaiting payment)`,
+            [{ text: 'OK' }]
+          );
+        } else {
+          throw new Error(response.message || 'Failed to save order');
+        }
       }
 
-      // Clear cart after successful order
+      // Clear cart after successful save
       clear();
-      // TODO: Show receipt modal
-    } catch (error) {
-      console.error('Checkout failed:', error);
+    } catch (error: any) {
+      console.error('Save order failed:', error);
+      Alert.alert(
+        'Save Failed',
+        error?.response?.data?.message || error?.message || 'Failed to save order. Please try again.',
+        [{ text: 'OK' }]
+      );
     } finally {
-      setLoading(false);
+      setSavingOrder(false);
     }
   };
 
@@ -264,7 +318,9 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
         >
           <XStack alignItems="center" gap="$2">
             <ShoppingCart size={18} color={THEME.primary} />
-            <Text fontSize="$4" fontWeight="600" color="$color">Order</Text>
+            <Text fontSize="$4" fontWeight="600" color="$color">
+              {isEditingOrder() ? 'Editing Order' : 'Order'}
+            </Text>
             <Badge variant="primary" size="sm">{items.length}</Badge>
           </XStack>
           {items.length > 0 && (
@@ -279,6 +335,24 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
             </YStack>
           )}
         </XStack>
+
+        {/* Editing Order Banner */}
+        {isEditingOrder() && (
+          <XStack
+            padding="$2"
+            backgroundColor="#FEF3C7"
+            borderBottomWidth={1}
+            borderBottomColor="#F59E0B40"
+            alignItems="center"
+            justifyContent="center"
+            gap="$2"
+          >
+            <AlertTriangle size={14} color="#D97706" />
+            <Text fontSize={11} color="#D97706" fontWeight="500">
+              Editing saved order - Complete checkout to update
+            </Text>
+          </XStack>
+        )}
 
         {/* Compact Customer & Coupon Selection */}
         <XStack padding="$2" gap="$2" borderBottomWidth={1} borderBottomColor="$borderColor">
@@ -385,67 +459,59 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
             </Text>
           </XStack>
 
-          {/* Payment Method Selection */}
+          {/* Action Buttons - Save & Checkout */}
           <XStack gap="$2">
+            {/* Save Order Button */}
             <YStack
               flex={1}
-              padding="$2"
-              borderRadius="$2"
-              backgroundColor={paymentMethod === 'card' ? THEME.primary : '$backgroundHover'}
+              backgroundColor={items.length === 0 ? '$borderColor' : '#F97316'}
+              paddingVertical="$3"
+              borderRadius="$3"
               alignItems="center"
-              cursor="pointer"
-              borderWidth={1}
-              borderColor={paymentMethod === 'card' ? THEME.primary : 'transparent'}
-              hoverStyle={{ backgroundColor: paymentMethod === 'card' ? THEME.primary : '#EEF2FF' }}
-              onPress={() => setPaymentMethod('card')}
+              justifyContent="center"
+              cursor={items.length === 0 ? 'not-allowed' : 'pointer'}
+              opacity={items.length === 0 ? 0.5 : 1}
+              hoverStyle={items.length > 0 ? { opacity: 0.9 } : {}}
+              pressStyle={items.length > 0 ? { transform: [{ scale: 0.98 }] } : {}}
+              onPress={items.length > 0 ? handleSaveOrder : undefined}
             >
-              <CreditCard size={16} color={paymentMethod === 'card' ? 'white' : THEME.primary} />
-              <Text fontSize="$1" fontWeight="500" color={paymentMethod === 'card' ? 'white' : THEME.primary}>Card</Text>
+              {savingOrder ? (
+                <XStack alignItems="center" gap="$2">
+                  <ActivityIndicator color="white" size="small" />
+                  <Text color="white" fontWeight="600" fontSize="$2">Saving...</Text>
+                </XStack>
+              ) : (
+                <XStack alignItems="center" gap="$2">
+                  <Save size={16} color="white" />
+                  <Text color="white" fontWeight="600" fontSize="$2">
+                    Save
+                  </Text>
+                </XStack>
+              )}
             </YStack>
-            <YStack
-              flex={1}
-              padding="$2"
-              borderRadius="$2"
-              backgroundColor={paymentMethod === 'cash' ? THEME.success : '$backgroundHover'}
-              alignItems="center"
-              cursor="pointer"
-              borderWidth={1}
-              borderColor={paymentMethod === 'cash' ? THEME.success : 'transparent'}
-              hoverStyle={{ backgroundColor: paymentMethod === 'cash' ? THEME.success : '#ECFDF5' }}
-              onPress={() => setPaymentMethod('cash')}
-            >
-              <Text fontSize="$3" color={paymentMethod === 'cash' ? 'white' : THEME.success}>$</Text>
-              <Text fontSize="$1" fontWeight="500" color={paymentMethod === 'cash' ? 'white' : THEME.success}>Cash</Text>
-            </YStack>
-          </XStack>
 
-          {/* Checkout Button */}
-          <YStack
-            backgroundColor={items.length === 0 ? '$borderColor' : '#0D9488'}
-            paddingVertical="$3"
-            borderRadius="$3"
-            alignItems="center"
-            justifyContent="center"
-            cursor={items.length === 0 ? 'not-allowed' : 'pointer'}
-            opacity={items.length === 0 ? 0.5 : 1}
-            hoverStyle={items.length > 0 ? { opacity: 0.9 } : {}}
-            pressStyle={items.length > 0 ? { transform: [{ scale: 0.98 }] } : {}}
-            onPress={items.length > 0 ? handleCheckout : undefined}
-          >
-            {loading ? (
-              <XStack alignItems="center" gap="$2">
-                <ActivityIndicator color="white" size="small" />
-                <Text color="white" fontWeight="600" fontSize="$3">Processing...</Text>
-              </XStack>
-            ) : (
+            {/* Checkout Button - Navigates to Payment screen */}
+            <YStack
+              flex={2}
+              backgroundColor={items.length === 0 ? '$borderColor' : '#0D9488'}
+              paddingVertical="$3"
+              borderRadius="$3"
+              alignItems="center"
+              justifyContent="center"
+              cursor={items.length === 0 ? 'not-allowed' : 'pointer'}
+              opacity={items.length === 0 ? 0.5 : 1}
+              hoverStyle={items.length > 0 ? { opacity: 0.9 } : {}}
+              pressStyle={items.length > 0 ? { transform: [{ scale: 0.98 }] } : {}}
+              onPress={items.length > 0 ? handleCheckout : undefined}
+            >
               <XStack alignItems="center" gap="$2">
                 <CheckCircle size={18} color="white" />
                 <Text color="white" fontWeight="600" fontSize="$3">
-                  Complete Sale
+                  {isEditingOrder() ? 'Update & Pay' : 'Checkout'}
                 </Text>
               </XStack>
-            )}
-          </YStack>
+            </YStack>
+          </XStack>
         </YStack>
       </YStack>
 
@@ -574,35 +640,48 @@ export default function POSScreen({ navigation }: MainTabScreenProps<'POS'>) {
               )}
             </XStack>
 
-            {/* Low Stock Warning */}
-            {lowStockCount > 0 && (
+            {/* Low Stock Warning - dismissible, re-shows on screen focus */}
+            {!stockAlertDismissed && (lowStockCount > 0 || outOfStockCount > 0) && (
               <XStack
-                backgroundColor="#FEF3C7"
+                backgroundColor={outOfStockCount > 0 ? '#FEE2E2' : '#FEF3C7'}
                 paddingHorizontal="$4"
                 paddingVertical="$3"
                 borderRadius="$3"
                 alignItems="center"
                 gap="$3"
                 borderWidth={1}
-                borderColor="#FCD34D"
+                borderColor={outOfStockCount > 0 ? '#FECACA' : '#FCD34D'}
               >
                 <YStack
                   width={32}
                   height={32}
                   borderRadius={16}
-                  backgroundColor="#FDE68A"
+                  backgroundColor={outOfStockCount > 0 ? '#FECACA' : '#FDE68A'}
                   alignItems="center"
                   justifyContent="center"
                 >
-                  <AlertTriangle size={18} color="#D97706" />
+                  <AlertTriangle size={18} color={outOfStockCount > 0 ? '#DC2626' : '#D97706'} />
                 </YStack>
                 <YStack flex={1}>
-                  <Text fontSize="$3" fontWeight="600" color="#92400E">
-                    Low Stock Alert
+                  <Text fontSize="$3" fontWeight="600" color={outOfStockCount > 0 ? '#991B1B' : '#92400E'}>
+                    Stock Alert
                   </Text>
-                  <Text fontSize="$2" color="#B45309">
-                    {lowStockCount} product{lowStockCount > 1 ? 's' : ''} running low
+                  <Text fontSize="$2" color={outOfStockCount > 0 ? '#B91C1C' : '#B45309'}>
+                    {lowStockCount > 0 && outOfStockCount > 0
+                      ? `${lowStockCount} low stock, ${outOfStockCount} out of stock`
+                      : lowStockCount > 0
+                      ? `${lowStockCount} product${lowStockCount > 1 ? 's' : ''} running low`
+                      : `${outOfStockCount} product${outOfStockCount > 1 ? 's' : ''} out of stock`}
                   </Text>
+                </YStack>
+                <YStack
+                  padding="$1"
+                  borderRadius="$2"
+                  cursor="pointer"
+                  hoverStyle={{ backgroundColor: outOfStockCount > 0 ? '#FECACA' : '#FDE68A' }}
+                  onPress={() => setStockAlertDismissed(true)}
+                >
+                  <X size={18} color={outOfStockCount > 0 ? '#DC2626' : '#D97706'} />
                 </YStack>
               </XStack>
             )}

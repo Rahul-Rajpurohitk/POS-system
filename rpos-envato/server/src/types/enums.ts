@@ -2,6 +2,8 @@ export enum Role {
   ADMIN = 'admin',
   MANAGER = 'manager',
   STAFF = 'staff',
+  DRIVER = 'driver',
+  CUSTOMER = 'customer',
 }
 
 export enum AuthType {
@@ -54,6 +56,7 @@ export enum QueueProvider {
  */
 export enum OrderStatus {
   DRAFT = 'draft',           // Order being created, not finalized
+  OPEN = 'open',             // Order saved, awaiting payment (light orange)
   PENDING = 'pending',       // Order created, awaiting payment
   PROCESSING = 'processing', // Payment received, being prepared
   COMPLETED = 'completed',   // Order fulfilled
@@ -62,6 +65,8 @@ export enum OrderStatus {
   PARTIALLY_REFUNDED = 'partially_refunded', // Partial refund
   ON_HOLD = 'on_hold',       // Order on hold (stock issue, etc.)
   FAILED = 'failed',         // Payment failed
+  OUT_FOR_DELIVERY = 'out_for_delivery', // Order out for delivery
+  DELIVERED = 'delivered',   // Order delivered
 }
 
 /**
@@ -179,4 +184,77 @@ export enum CashDrawerAction {
   CASH_IN = 'cash_in',
   CASH_OUT = 'cash_out',
   COUNT = 'count',
+}
+
+/**
+ * Order Type - How the order was placed
+ */
+export enum OrderType {
+  WALK_IN = 'walk_in',           // Customer walked into the store
+  PHONE = 'phone',               // Phone order
+  ONLINE = 'online',             // Online order (website/app)
+  DOORDASH = 'doordash',         // DoorDash partner
+  UBER_EATS = 'uber_eats',       // Uber Eats partner
+  GRUBHUB = 'grubhub',           // Grubhub partner
+  POSTMATES = 'postmates',       // Postmates partner
+  SKIP_THE_DISHES = 'skip_the_dishes', // Skip the Dishes partner
+  DELIVEROO = 'deliveroo',       // Deliveroo partner
+  OTHER_PARTNER = 'other_partner', // Other delivery partner
+}
+
+// ============ DELIVERY MANAGEMENT ENUMS ============
+
+/**
+ * Driver Status - Availability states for delivery drivers
+ */
+export enum DriverStatus {
+  OFFLINE = 'offline',           // Driver not working
+  AVAILABLE = 'available',       // Driver ready to accept deliveries
+  BUSY = 'busy',                 // Driver currently on a delivery
+  ON_BREAK = 'on_break',         // Driver on scheduled break
+}
+
+/**
+ * Vehicle Type - Driver transportation method
+ */
+export enum VehicleType {
+  WALKING = 'walking',           // On foot (short distances)
+  BICYCLE = 'bicycle',           // Bicycle delivery
+  E_SCOOTER = 'e_scooter',       // Electric scooter
+  MOTORCYCLE = 'motorcycle',     // Motorcycle/moped
+  CAR = 'car',                   // Car delivery
+}
+
+/**
+ * Delivery Status - Complete delivery lifecycle
+ */
+export enum DeliveryStatus {
+  PENDING = 'pending',           // Order placed, awaiting store acceptance
+  ACCEPTED = 'accepted',         // Store accepted, awaiting driver assignment
+  ASSIGNED = 'assigned',         // Driver assigned, not yet started
+  PICKING_UP = 'picking_up',     // Driver at store/picking up order
+  PICKED_UP = 'picked_up',       // Driver has the order
+  ON_THE_WAY = 'on_the_way',     // En route to customer
+  NEARBY = 'nearby',             // Within 200m of destination
+  DELIVERED = 'delivered',       // Successfully delivered
+  CANCELLED = 'cancelled',       // Delivery cancelled
+  FAILED = 'failed',             // Delivery attempt failed
+}
+
+/**
+ * Delivery Zone Type - Zone definition method
+ */
+export enum DeliveryZoneType {
+  RADIUS = 'radius',             // Circular zone by radius
+  POLYGON = 'polygon',           // Custom polygon boundary
+}
+
+/**
+ * Online Order Queue Status - Order acceptance queue states
+ */
+export enum OnlineOrderQueueStatus {
+  PENDING = 'pending',           // Awaiting store acceptance
+  ACCEPTED = 'accepted',         // Store accepted order
+  EXPIRED = 'expired',           // Timed out (15 min default)
+  REJECTED = 'rejected',         // Store rejected order
 }

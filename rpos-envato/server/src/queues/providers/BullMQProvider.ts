@@ -94,6 +94,7 @@ export class BullMQProvider implements IQueueProvider {
     }
 
     const job = await queue.add(jobName, data, {
+      jobId: options?.jobId,
       delay: options?.delay,
       attempts: options?.attempts ?? 3,
       backoff: options?.backoff,
@@ -211,6 +212,45 @@ export class BullMQProvider implements IQueueProvider {
       completed: counts.completed || 0,
       failed: counts.failed || 0,
       delayed: counts.delayed || 0,
+    };
+  }
+
+  async removeJob(queueName: string, jobId: string): Promise<boolean> {
+    const queue = this.queues.get(queueName);
+    if (!queue) {
+      throw new Error(`Queue ${queueName} not found`);
+    }
+
+    const job = await queue.getJob(jobId);
+    if (!job) {
+      return false;
+    }
+
+    await job.remove();
+    console.log(`[${queueName}] Job ${jobId} removed`);
+    return true;
+  }
+
+  async getJob<T extends JobData>(queueName: string, jobId: string): Promise<Job<T> | null> {
+    const queue = this.queues.get(queueName);
+    if (!queue) {
+      throw new Error(`Queue ${queueName} not found`);
+    }
+
+    const bullJob = await queue.getJob(jobId);
+    if (!bullJob) {
+      return null;
+    }
+
+    return {
+      id: bullJob.id!,
+      name: bullJob.name,
+      data: bullJob.data as T,
+      attemptsMade: bullJob.attemptsMade,
+      progress: () => bullJob.progress as number,
+      updateProgress: async (progress: number) => {
+        await bullJob.updateProgress(progress);
+      },
     };
   }
 

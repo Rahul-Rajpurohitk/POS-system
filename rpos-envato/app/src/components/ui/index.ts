@@ -14,6 +14,13 @@ export type { ModalProps, ConfirmModalProps } from './Modal';
 export { Badge } from './Badge';
 export type { BadgeProps, BadgeVariant } from './Badge';
 
+export { AnimatedCapsule, SimpleCapsule } from './AnimatedCapsule';
+export type {
+  AnimatedCapsuleProps,
+  SimpleCapsuleProps,
+  ExpansionDirection,
+} from './AnimatedCapsule';
+
 // Loading and Empty States
 export {
   Skeleton,

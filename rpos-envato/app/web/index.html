@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>POS Universal</title>
+    <style>
+      html, body, #root { height: 100%; margin: 0; }
+      body { overflow: hidden; }
+      #root { display: flex; flex: 1; }
+    </style>
+    <script>
+      // Polyfill import.meta before bundle loads
+      if (typeof window.importMeta === 'undefined') {
+        window.importMeta = { env: { MODE: 'development', DEV: true, PROD: false } };
+      }
+      // Proxy to handle import.meta access
+      Object.defineProperty(window, 'import', {
+        value: { meta: window.importMeta },
+        writable: false
+      });
+    </script>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>

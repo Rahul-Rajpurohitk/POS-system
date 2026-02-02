@@ -4,6 +4,8 @@ module.exports = function (api) {
   const isTest = process.env.NODE_ENV === 'test';
 
   const plugins = [
+    // Transform import.meta for web compatibility
+    'babel-plugin-transform-import-meta',
     [
       'module-resolver',
       {
