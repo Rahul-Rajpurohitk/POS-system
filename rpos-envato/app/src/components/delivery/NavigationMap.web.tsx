@@ -269,6 +269,7 @@ export interface NavigationMapRef {
   recenter: () => void;
   fitRoute: () => void;
   getZoom: () => number | null;
+  panTo: (location: Coordinate) => void;
 }
 
 export interface NavigationMapProps {
@@ -374,6 +375,15 @@ export const NavigationMap = forwardRef<NavigationMapRef, NavigationMapProps>(fu
     },
     getZoom: () => {
       return mapRef.current?.getZoom() ?? null;
+    },
+    panTo: (location: Coordinate) => {
+      if (mapRef.current) {
+        mapRef.current.setView(
+          [location.latitude, location.longitude],
+          16,
+          { animate: true }
+        );
+      }
     },
   }), [storeLocation, route]);
 

@@ -1,31 +1,26 @@
 /**
- * OrderTrackingScreen - Apple-level delivery tracking with floating capsule UI
+ * OrderTrackingScreen - Premium Delivery Command Center
  *
  * Design Philosophy:
- * - Strategic positioning based on F-pattern reading
- * - No component overlaps - clear visual hierarchy
- * - Glassmorphism effects for depth
- * - Spring-based micro-interactions
- * - Full map interactivity preserved
+ * - Bottom-anchored panels that expand UPWARD (like Apple Maps)
+ * - Feature-rich expansions with full order/driver details
+ * - Real-time analytics backed by database
+ * - Driver location tracking with route visualization
  *
  * Layout Architecture:
  * ┌─────────────────────────────────────────────────────────────┐
- * │ [Stats Bar - Full Width]                    [Drivers] [⟳] │
+ * │ [Stats]              MAP                    [Quick Actions] │
+ * │                                                             │
+ * │                    (Full Screen)                            │
+ * │                                                             │
+ * │                                                             │
  * ├─────────────────────────────────────────────────────────────┤
- * │                                                      [+]   │
- * │ ┌─────────┐                                          [-]   │
- * │ │         │           MAP                            [◎]   │
- * │ │ Orders  │                                                │
- * │ │  Panel  │                                                │
- * │ │         │                                                │
- * │ └─────────┘  [🚶 🚴 🚗 🚌]                                 │
- * │                                                            │
- * │         [═══════ Selected Order Panel ═══════]             │
+ * │ [Deliveries Panel - Expands Up]  [Drivers Panel - Expands Up]│
  * └─────────────────────────────────────────────────────────────┘
  */
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { FlatList, Linking, Alert, Platform, Dimensions, StyleSheet, Pressable } from 'react-native';
+import { FlatList, Linking, Alert, Platform, Dimensions, StyleSheet, Pressable, TextInput } from 'react-native';
 import { YStack, XStack, Text, ScrollView, Spinner } from 'tamagui';
 import {
   MapPin, Truck, Clock, Phone, User, Package, RefreshCw,
@@ -33,7 +28,8 @@ import {
   X, Target, Users, Play, Send, UserCheck, Zap, MapPinned, Activity,
   ChevronRight, ChevronLeft, LayoutGrid, List, Filter, Plus, Minus, Crosshair,
   Route, Eye, EyeOff, Settings, Locate, Search, Bell, TrendingUp, Timer,
-  DollarSign, Award, AlertTriangle, Info, Star, Flame, Calendar,
+  DollarSign, Award, AlertTriangle, Info, Star, Flame, Calendar, Copy,
+  MessageCircle, Navigation2, History, Heart, ShoppingBag, FileText, ExternalLink,
 } from '@tamagui/lucide-icons';
 import Animated, {
   useAnimatedStyle,
@@ -46,10 +42,10 @@ import Animated, {
   Easing,
   FadeIn,
   FadeOut,
+  SlideInUp,
+  SlideOutDown,
   SlideInRight,
   SlideOutRight,
-  SlideInLeft,
-  SlideOutLeft,
   ZoomIn,
   ZoomOut,
 } from 'react-native-reanimated';
@@ -79,16 +75,14 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 // ============================================
 
 const COLORS = {
-  primary: '#007AFF', // Apple blue
-  success: '#34C759', // Apple green
-  warning: '#FF9500', // Apple orange
-  error: '#FF3B30', // Apple red
-  purple: '#AF52DE', // Apple purple
-  cyan: '#32ADE6', // Apple cyan
-  pink: '#FF2D55', // Apple pink
-  indigo: '#5856D6', // Apple indigo
-
-  // Neutral palette
+  primary: '#007AFF',
+  success: '#34C759',
+  warning: '#FF9500',
+  error: '#FF3B30',
+  purple: '#AF52DE',
+  cyan: '#32ADE6',
+  pink: '#FF2D55',
+  indigo: '#5856D6',
   gray: {
     50: '#F9FAFB',
     100: '#F2F2F7',
@@ -101,16 +95,13 @@ const COLORS = {
     800: '#3A3A3C',
     900: '#1C1C1E',
   },
-
-  // Glass effects
   glass: {
-    light: 'rgba(255, 255, 255, 0.85)',
-    medium: 'rgba(255, 255, 255, 0.75)',
+    light: 'rgba(255, 255, 255, 0.92)',
+    medium: 'rgba(255, 255, 255, 0.85)',
     dark: 'rgba(0, 0, 0, 0.6)',
   },
 };
 
-// Spring configurations (Apple-like)
 const SPRING_CONFIG = {
   smooth: { damping: 20, stiffness: 200, mass: 0.8 },
   bouncy: { damping: 12, stiffness: 180, mass: 0.6 },
@@ -118,33 +109,13 @@ const SPRING_CONFIG = {
   gentle: { damping: 28, stiffness: 120, mass: 1 },
 };
 
-// Shadow presets
 const SHADOWS = {
-  small: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  medium: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  large: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.16,
-    shadowRadius: 24,
-    elevation: 12,
-  },
+  small: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 4 },
+  medium: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 8 },
+  large: { shadowColor: '#000', shadowOffset: { width: 0, height: -8 }, shadowOpacity: 0.15, shadowRadius: 24, elevation: 12 },
 };
 
-// Status configurations
-const DELIVERY_STATUS_CONFIG = {
+const DELIVERY_STATUS_CONFIG: Record<string, { color: string; label: string; bgColor: string; icon: string }> = {
   pending: { color: COLORS.warning, label: 'Pending', bgColor: '#FFF3E0', icon: '⏳' },
   assigned: { color: COLORS.primary, label: 'Assigned', bgColor: '#E3F2FD', icon: '📋' },
   preparing: { color: COLORS.indigo, label: 'Preparing', bgColor: '#EDE7F6', icon: '👨‍🍳' },
@@ -158,18 +129,14 @@ const DELIVERY_STATUS_CONFIG = {
 
 type DeliveryStatusFilter = 'active' | 'on_the_way' | 'preparing' | 'delivered';
 
-// Status transitions
 const STATUS_TRANSITIONS: Record<string, { next: string; label: string; icon: string }[]> = {
-  pending: [{ next: 'preparing', label: 'Start Preparing', icon: 'play' }],
-  open: [{ next: 'preparing', label: 'Start Preparing', icon: 'play' }],
-  preparing: [{ next: 'assigned', label: 'Ready for Pickup', icon: 'check' }],
-  assigned: [{ next: 'picked_up', label: 'Mark Picked Up', icon: 'truck' }],
-  picked_up: [{ next: 'on_the_way', label: 'On The Way', icon: 'navigation' }],
-  on_the_way: [
-    { next: 'nearby', label: 'Nearby', icon: 'mappin' },
-    { next: 'delivered', label: 'Delivered', icon: 'check' },
-  ],
-  nearby: [{ next: 'delivered', label: 'Mark Delivered', icon: 'check' }],
+  pending: [{ next: 'preparing', label: 'Start Prep', icon: 'play' }],
+  open: [{ next: 'preparing', label: 'Start Prep', icon: 'play' }],
+  preparing: [{ next: 'assigned', label: 'Ready', icon: 'check' }],
+  assigned: [{ next: 'picked_up', label: 'Picked Up', icon: 'truck' }],
+  picked_up: [{ next: 'on_the_way', label: 'En Route', icon: 'navigation' }],
+  on_the_way: [{ next: 'nearby', label: 'Nearby', icon: 'mappin' }, { next: 'delivered', label: 'Delivered', icon: 'check' }],
+  nearby: [{ next: 'delivered', label: 'Delivered', icon: 'check' }],
 };
 
 // ============================================
@@ -191,18 +158,8 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   const R = 6371000;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-function formatCompactTime(dateString: string): string {
-  if (!dateString) return '';
-  const date = new Date(dateString.endsWith('Z') ? dateString : dateString + 'Z');
-  if (isNaN(date.getTime())) return '';
-  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function formatRelativeTime(dateString: string): string {
@@ -217,8 +174,14 @@ function formatRelativeTime(dateString: string): string {
   return `${Math.floor(diffHr / 24)}d ago`;
 }
 
+function formatTime(dateString: string): string {
+  if (!dateString) return '';
+  const date = new Date(dateString.endsWith('Z') ? dateString : dateString + 'Z');
+  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
 // ============================================
-// Floating Glass Capsule Component
+// Glass Capsule Component
 // ============================================
 
 interface GlassCapsuleProps {
@@ -231,27 +194,11 @@ interface GlassCapsuleProps {
 
 function GlassCapsule({ children, style, onPress, isActive, accentColor }: GlassCapsuleProps) {
   const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const handlePressIn = () => {
-    if (onPress) scale.value = withSpring(0.96, SPRING_CONFIG.quick);
-  };
-
-  const handlePressOut = () => {
-    if (onPress) scale.value = withSpring(1, SPRING_CONFIG.quick);
-  };
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   const content = (
     <Animated.View
-      style={[
-        styles.glassCapsule,
-        isActive && { borderColor: accentColor || COLORS.primary, borderWidth: 2 },
-        animatedStyle,
-        style,
-      ]}
+      style={[styles.glassCapsule, isActive && { borderColor: accentColor || COLORS.primary, borderWidth: 2 }, animatedStyle, style]}
     >
       {children}
     </Animated.View>
@@ -259,377 +206,33 @@ function GlassCapsule({ children, style, onPress, isActive, accentColor }: Glass
 
   if (onPress) {
     return (
-      <Pressable onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={() => { scale.value = withSpring(0.96, SPRING_CONFIG.quick); }}
+        onPressOut={() => { scale.value = withSpring(1, SPRING_CONFIG.quick); }}
+      >
         {content}
       </Pressable>
     );
   }
-
   return content;
 }
 
 // ============================================
-// Map Control Button
+// Bottom Panel Component (Expands Upward)
 // ============================================
 
-interface MapControlButtonProps {
-  icon: React.ReactNode;
-  onPress: () => void;
-  isActive?: boolean;
-  size?: 'sm' | 'md';
-}
-
-function MapControlButton({ icon, onPress, isActive, size = 'md' }: MapControlButtonProps) {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => { scale.value = withSpring(0.9, SPRING_CONFIG.quick); }}
-      onPressOut={() => { scale.value = withSpring(1, SPRING_CONFIG.quick); }}
-    >
-      <Animated.View
-        style={[
-          styles.mapControlButton,
-          size === 'sm' && { width: 36, height: 36 },
-          isActive && { backgroundColor: COLORS.primary + '15' },
-          animatedStyle,
-        ]}
-      >
-        {icon}
-      </Animated.View>
-    </Pressable>
-  );
-}
-
-// ============================================
-// Status Pill Component
-// ============================================
-
-interface StatusPillProps {
-  label: string;
-  count: number;
-  color: string;
-  isActive: boolean;
-  onPress: () => void;
-}
-
-function StatusPill({ label, count, color, isActive, onPress }: StatusPillProps) {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => { scale.value = withSpring(0.95, SPRING_CONFIG.quick); }}
-      onPressOut={() => { scale.value = withSpring(1, SPRING_CONFIG.quick); }}
-    >
-      <Animated.View
-        style={[
-          styles.statusPill,
-          isActive && { backgroundColor: color + '20', borderColor: color },
-          animatedStyle,
-        ]}
-      >
-        <Text fontSize={11} fontWeight={isActive ? '700' : '500'} color={isActive ? color : COLORS.gray[500]}>
-          {label}
-        </Text>
-        <YStack
-          backgroundColor={isActive ? color : COLORS.gray[300]}
-          paddingHorizontal={6}
-          paddingVertical={2}
-          borderRadius={10}
-          marginLeft={4}
-        >
-          <Text fontSize={10} fontWeight="700" color={isActive ? 'white' : COLORS.gray[600]}>
-            {count}
-          </Text>
-        </YStack>
-      </Animated.View>
-    </Pressable>
-  );
-}
-
-// ============================================
-// Compact Order Card
-// ============================================
-
-interface CompactOrderCardProps {
-  order: Order;
-  currency: Currency;
-  isSelected: boolean;
-  onPress: () => void;
-  onUpdateStatus?: (orderId: string, status: string) => void;
-  onAssignDriver?: (orderId: string) => void;
-  isUpdating?: boolean;
-}
-
-function CompactOrderCard({
-  order,
-  currency,
-  isSelected,
-  onPress,
-  onUpdateStatus,
-  onAssignDriver,
-  isUpdating,
-}: CompactOrderCardProps) {
-  const status = order.status || 'pending';
-  const statusConfig = DELIVERY_STATUS_CONFIG[status as keyof typeof DELIVERY_STATUS_CONFIG] || DELIVERY_STATUS_CONFIG.pending;
-  const customerName = order.customer?.name || order.guestName || 'Guest';
-  const customerPhone = order.customer?.phone || order.guestPhone;
-  const itemCount = order.items?.reduce((sum, i) => sum + (i.quantity || 1), 0) || 0;
-  const total = order.payment?.total || order.total || 0;
-  const needsDriver = ['pending', 'open', 'preparing'].includes(status) && !order.driverId;
-  const availableTransitions = STATUS_TRANSITIONS[status] || [];
-
-  const scale = useSharedValue(1);
-  const borderOpacity = useSharedValue(isSelected ? 1 : 0);
-
-  useEffect(() => {
-    borderOpacity.value = withTiming(isSelected ? 1 : 0, { duration: 200 });
-  }, [isSelected]);
-
-  const cardStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const borderStyle = useAnimatedStyle(() => ({
-    opacity: borderOpacity.value,
-  }));
-
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => { scale.value = withSpring(0.98, SPRING_CONFIG.quick); }}
-      onPressOut={() => { scale.value = withSpring(1, SPRING_CONFIG.quick); }}
-    >
-      <Animated.View style={[styles.orderCard, cardStyle]}>
-        {/* Selection indicator */}
-        <Animated.View style={[styles.orderCardBorder, borderStyle]} />
-
-        {/* Header row */}
-        <XStack alignItems="center" justifyContent="space-between" marginBottom={6}>
-          <XStack alignItems="center" gap={8}>
-            <Text fontSize={14} fontWeight="700" color={COLORS.gray[900]}>
-              {formatOrderNumber(order)}
-            </Text>
-            <XStack
-              backgroundColor={statusConfig.bgColor}
-              paddingHorizontal={8}
-              paddingVertical={3}
-              borderRadius={12}
-              alignItems="center"
-              gap={4}
-            >
-              <Text fontSize={10}>{statusConfig.icon}</Text>
-              <Text fontSize={10} fontWeight="600" color={statusConfig.color}>
-                {statusConfig.label}
-              </Text>
-            </XStack>
-          </XStack>
-          <Text fontSize={15} fontWeight="700" color={COLORS.gray[900]}>
-            {formatCurrency(total, currency)}
-          </Text>
-        </XStack>
-
-        {/* Customer & items row */}
-        <XStack alignItems="center" justifyContent="space-between">
-          <XStack alignItems="center" gap={6} flex={1}>
-            <YStack
-              width={24}
-              height={24}
-              borderRadius={12}
-              backgroundColor={COLORS.primary + '15'}
-              alignItems="center"
-              justifyContent="center"
-            >
-              <Text fontSize={10} fontWeight="600" color={COLORS.primary}>
-                {customerName.charAt(0).toUpperCase()}
-              </Text>
-            </YStack>
-            <Text fontSize={12} color={COLORS.gray[700]} numberOfLines={1} flex={1}>
-              {customerName}
-            </Text>
-          </XStack>
-          <XStack alignItems="center" gap={8}>
-            <XStack alignItems="center" gap={4}>
-              <Package size={12} color={COLORS.gray[400]} />
-              <Text fontSize={11} color={COLORS.gray[500]}>{itemCount}</Text>
-            </XStack>
-            <Text fontSize={10} color={COLORS.gray[400]}>
-              {formatRelativeTime(order.createdAt)}
-            </Text>
-          </XStack>
-        </XStack>
-
-        {/* Address row - always show if available */}
-        {order.deliveryAddress && !isSelected && (
-          <XStack alignItems="flex-start" gap={6} marginTop={8}>
-            <MapPin size={12} color={COLORS.gray[400]} style={{ marginTop: 2 }} />
-            <Text fontSize={11} color={COLORS.gray[500]} numberOfLines={1} flex={1}>
-              {order.deliveryAddress}
-            </Text>
-          </XStack>
-        )}
-
-        {/* Action row when selected - minimal */}
-        {isSelected && (
-          <Animated.View
-            entering={FadeIn.duration(150)}
-            exiting={FadeOut.duration(100)}
-            style={styles.orderCardActions}
-          >
-            <XStack gap={8} alignItems="center">
-              {needsDriver && onAssignDriver && (
-                <Pressable
-                  onPress={() => onAssignDriver(order.id)}
-                  style={[styles.actionButton, styles.actionButtonPrimary]}
-                >
-                  <UserCheck size={12} color="white" />
-                  <Text fontSize={10} fontWeight="600" color="white">Assign</Text>
-                </Pressable>
-              )}
-              {availableTransitions.slice(0, 2).map((transition) => (
-                <Pressable
-                  key={transition.next}
-                  onPress={() => !isUpdating && onUpdateStatus?.(order.id, transition.next)}
-                  style={[styles.actionButton, transition.next === 'delivered' && styles.actionButtonSuccess]}
-                  disabled={isUpdating}
-                >
-                  <Text fontSize={10} fontWeight="600" color={transition.next === 'delivered' ? COLORS.success : COLORS.gray[600]}>
-                    {isUpdating ? '...' : transition.label}
-                  </Text>
-                </Pressable>
-              ))}
-              {customerPhone && (
-                <Pressable
-                  onPress={() => Linking.openURL(`tel:${customerPhone}`)}
-                  style={styles.callButton}
-                >
-                  <Phone size={12} color={COLORS.success} />
-                </Pressable>
-              )}
-            </XStack>
-          </Animated.View>
-        )}
-      </Animated.View>
-    </Pressable>
-  );
-}
-
-// ============================================
-// Driver Card (Compact)
-// ============================================
-
-interface DriverCardProps {
-  driver: any;
-  onSelect: () => void;
-  isSelected?: boolean;
-}
-
-function DriverCard({ driver, onSelect, isSelected }: DriverCardProps) {
-  const isOnline = driver.isAvailable || driver.status === 'available';
-  const driverName = driver.user?.firstName || driver.user?.name?.split(' ')[0] || 'Driver';
-  const scale = useSharedValue(1);
-
-  return (
-    <Pressable
-      onPress={onSelect}
-      onPressIn={() => { scale.value = withSpring(0.95, SPRING_CONFIG.quick); }}
-      onPressOut={() => { scale.value = withSpring(1, SPRING_CONFIG.quick); }}
-      disabled={!isOnline}
-    >
-      <Animated.View
-        style={[
-          styles.driverCard,
-          isSelected && styles.driverCardSelected,
-          !isOnline && styles.driverCardOffline,
-          { transform: [{ scale: scale.value }] },
-        ]}
-      >
-        <YStack
-          width={40}
-          height={40}
-          borderRadius={20}
-          backgroundColor={isOnline ? COLORS.success + '20' : COLORS.gray[200]}
-          alignItems="center"
-          justifyContent="center"
-          position="relative"
-        >
-          <Text fontSize={16} fontWeight="600" color={isOnline ? COLORS.success : COLORS.gray[500]}>
-            {driverName.charAt(0).toUpperCase()}
-          </Text>
-          {/* Online indicator */}
-          <YStack
-            position="absolute"
-            bottom={0}
-            right={0}
-            width={12}
-            height={12}
-            borderRadius={6}
-            backgroundColor={isOnline ? COLORS.success : COLORS.gray[400]}
-            borderWidth={2}
-            borderColor="white"
-          />
-        </YStack>
-        <YStack flex={1} gap={2}>
-          <Text fontSize={13} fontWeight="600" color={COLORS.gray[800]}>
-            {driverName}
-          </Text>
-          <XStack alignItems="center" gap={4}>
-            <Text fontSize={11} color={COLORS.gray[500]}>
-              {driver.vehicleType === 'bicycle' ? '🚴' : driver.vehicleType === 'motorcycle' ? '🏍️' : '🚗'}
-            </Text>
-            <Text fontSize={10} color={COLORS.gray[500]}>
-              {driver.deliveriesToday || 0} today
-            </Text>
-          </XStack>
-        </YStack>
-        {isOnline && (
-          <YStack
-            backgroundColor={COLORS.success + '15'}
-            paddingHorizontal={8}
-            paddingVertical={4}
-            borderRadius={8}
-          >
-            <Text fontSize={10} fontWeight="600" color={COLORS.success}>Ready</Text>
-          </YStack>
-        )}
-      </Animated.View>
-    </Pressable>
-  );
-}
-
-// ============================================
-// Expandable Panel Component
-// ============================================
-
-interface ExpandablePanelProps {
+interface BottomPanelProps {
   isExpanded: boolean;
   onToggle: () => void;
-  collapsedHeight?: number;
-  expandedHeight?: number;
+  collapsedHeight: number;
+  expandedHeight: number;
   headerContent: React.ReactNode;
   expandedContent: React.ReactNode;
   style?: any;
 }
 
-function ExpandablePanel({
-  isExpanded,
-  onToggle,
-  collapsedHeight = 56,
-  expandedHeight = 400,
-  headerContent,
-  expandedContent,
-  style,
-}: ExpandablePanelProps) {
+function BottomPanel({ isExpanded, onToggle, collapsedHeight, expandedHeight, headerContent, expandedContent, style }: BottomPanelProps) {
   const animatedHeight = useSharedValue(collapsedHeight);
   const expandProgress = useSharedValue(0);
 
@@ -638,59 +241,514 @@ function ExpandablePanel({
     expandProgress.value = withTiming(isExpanded ? 1 : 0, { duration: 250 });
   }, [isExpanded, expandedHeight, collapsedHeight]);
 
-  const containerStyle = useAnimatedStyle(() => ({
-    height: animatedHeight.value,
-  }));
-
-  const contentStyle = useAnimatedStyle(() => ({
-    opacity: expandProgress.value,
-  }));
-
-  const chevronStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${interpolate(expandProgress.value, [0, 1], [0, 180])}deg` }],
-  }));
-
-  // Calculate content height (total - header)
-  const contentHeight = expandedHeight - collapsedHeight;
+  const containerStyle = useAnimatedStyle(() => ({ height: animatedHeight.value }));
+  const contentStyle = useAnimatedStyle(() => ({ opacity: expandProgress.value }));
+  const chevronStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${interpolate(expandProgress.value, [0, 1], [180, 0])}deg` }] }));
 
   return (
-    <Animated.View style={[styles.expandablePanel, containerStyle, style]}>
-      {/* Header (always visible, clickable to toggle) */}
+    <Animated.View style={[styles.bottomPanel, containerStyle, style]}>
+      {/* Drag handle */}
       <Pressable onPress={onToggle}>
-        <XStack
-          height={collapsedHeight}
-          minHeight={collapsedHeight}
-          maxHeight={collapsedHeight}
-          alignItems="center"
-          justifyContent="space-between"
-          paddingHorizontal={16}
-          borderBottomWidth={isExpanded ? 1 : 0}
-          borderBottomColor={COLORS.gray[100]}
-        >
-          <XStack flex={1} alignItems="center" gap={12}>
-            {headerContent}
-          </XStack>
+        <YStack alignItems="center" paddingVertical={8}>
+          <YStack width={36} height={4} borderRadius={2} backgroundColor={COLORS.gray[300]} />
+        </YStack>
+        <XStack height={collapsedHeight - 16} alignItems="center" justifyContent="space-between" paddingHorizontal={20}>
+          {headerContent}
           <Animated.View style={chevronStyle}>
-            <ChevronDown size={18} color={COLORS.gray[400]} />
+            <ChevronUp size={20} color={COLORS.gray[400]} />
           </Animated.View>
         </XStack>
       </Pressable>
 
-      {/* Expanded content - only shows when expanded */}
+      {/* Expanded content */}
       {isExpanded && (
-        <Animated.View
-          style={[
-            {
-              height: contentHeight,
-              overflow: 'hidden',
-            },
-            contentStyle
-          ]}
-        >
+        <Animated.View style={[{ flex: 1, overflow: 'hidden' }, contentStyle]}>
           {expandedContent}
         </Animated.View>
       )}
     </Animated.View>
+  );
+}
+
+// ============================================
+// Filter Tab Component
+// ============================================
+
+interface FilterTabProps {
+  label: string;
+  count: number;
+  isActive: boolean;
+  color: string;
+  onPress: () => void;
+}
+
+function FilterTab({ label, count, isActive, color, onPress }: FilterTabProps) {
+  return (
+    <Pressable onPress={onPress} style={[styles.filterTab, isActive && { backgroundColor: color + '15', borderColor: color }]}>
+      <Text fontSize={12} fontWeight={isActive ? '700' : '500'} color={isActive ? color : COLORS.gray[600]}>
+        {label}
+      </Text>
+      <YStack backgroundColor={isActive ? color : COLORS.gray[300]} paddingHorizontal={6} paddingVertical={2} borderRadius={8} marginLeft={6}>
+        <Text fontSize={10} fontWeight="700" color={isActive ? 'white' : COLORS.gray[600]}>{count}</Text>
+      </YStack>
+    </Pressable>
+  );
+}
+
+// ============================================
+// Order Card with Rich Expansion
+// ============================================
+
+interface RichOrderCardProps {
+  order: Order;
+  currency: Currency;
+  isSelected: boolean;
+  onSelect: () => void;
+  onUpdateStatus?: (orderId: string, status: string) => void;
+  onAssignDriver?: (orderId: string) => void;
+  onLocateOnMap?: (order: Order) => void;
+  isUpdating?: boolean;
+  assignedDriver?: any;
+}
+
+function RichOrderCard({ order, currency, isSelected, onSelect, onUpdateStatus, onAssignDriver, onLocateOnMap, isUpdating, assignedDriver }: RichOrderCardProps) {
+  const status = order.status || 'pending';
+  const statusConfig = DELIVERY_STATUS_CONFIG[status] || DELIVERY_STATUS_CONFIG.pending;
+  const customerName = order.customer?.name || order.guestName || 'Guest';
+  const customerPhone = order.customer?.phone;
+  const customerEmail = order.customer?.email;
+  const itemCount = order.items?.reduce((sum, i) => sum + (i.quantity || 1), 0) || 0;
+  const total = order.payment?.total || order.total || 0;
+  const subtotal = order.payment?.subTotal || order.payment?.subtotal || order.subTotal || 0;
+  const tax = order.payment?.tax || order.payment?.vat || order.tax || 0;
+  const deliveryFee = order.deliveryFee || 0;
+  const needsDriver = ['pending', 'open', 'preparing'].includes(status) && !order.driverId;
+  const availableTransitions = STATUS_TRANSITIONS[status] || [];
+
+  const scale = useSharedValue(1);
+  const cardStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  return (
+    <Pressable
+      onPress={onSelect}
+      onPressIn={() => { scale.value = withSpring(0.98, SPRING_CONFIG.quick); }}
+      onPressOut={() => { scale.value = withSpring(1, SPRING_CONFIG.quick); }}
+    >
+      <Animated.View style={[styles.richOrderCard, isSelected && styles.richOrderCardSelected, cardStyle]}>
+        {/* Header Row */}
+        <XStack alignItems="center" justifyContent="space-between">
+          <XStack alignItems="center" gap={10}>
+            <Text fontSize={16} fontWeight="800" color={COLORS.gray[900]}>{formatOrderNumber(order)}</Text>
+            <XStack backgroundColor={statusConfig.bgColor} paddingHorizontal={10} paddingVertical={4} borderRadius={12} alignItems="center" gap={4}>
+              <Text fontSize={11}>{statusConfig.icon}</Text>
+              <Text fontSize={11} fontWeight="600" color={statusConfig.color}>{statusConfig.label}</Text>
+            </XStack>
+          </XStack>
+          <Text fontSize={17} fontWeight="800" color={COLORS.gray[900]}>{formatCurrency(total, currency)}</Text>
+        </XStack>
+
+        {/* Customer Row */}
+        <XStack alignItems="center" justifyContent="space-between" marginTop={10}>
+          <XStack alignItems="center" gap={10} flex={1}>
+            <YStack width={36} height={36} borderRadius={18} backgroundColor={COLORS.primary + '15'} alignItems="center" justifyContent="center">
+              <Text fontSize={14} fontWeight="700" color={COLORS.primary}>{customerName.charAt(0).toUpperCase()}</Text>
+            </YStack>
+            <YStack flex={1}>
+              <Text fontSize={14} fontWeight="600" color={COLORS.gray[800]} numberOfLines={1}>{customerName}</Text>
+              {customerPhone && <Text fontSize={11} color={COLORS.gray[500]}>{customerPhone}</Text>}
+            </YStack>
+          </XStack>
+          <XStack alignItems="center" gap={12}>
+            <XStack alignItems="center" gap={4}>
+              <Package size={14} color={COLORS.gray[400]} />
+              <Text fontSize={12} fontWeight="600" color={COLORS.gray[600]}>{itemCount} items</Text>
+            </XStack>
+            <Text fontSize={11} color={COLORS.gray[400]}>{formatRelativeTime(order.createdAt)}</Text>
+          </XStack>
+        </XStack>
+
+        {/* Address (collapsed view) */}
+        {order.deliveryAddress && !isSelected && (
+          <XStack alignItems="flex-start" gap={8} marginTop={10} backgroundColor={COLORS.gray[50]} padding={10} borderRadius={10}>
+            <MapPin size={14} color={COLORS.gray[500]} style={{ marginTop: 1 }} />
+            <Text fontSize={12} color={COLORS.gray[600]} numberOfLines={1} flex={1}>{order.deliveryAddress}</Text>
+          </XStack>
+        )}
+
+        {/* EXPANDED CONTENT */}
+        {isSelected && (
+          <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(100)}>
+            {/* Divider */}
+            <YStack height={1} backgroundColor={COLORS.gray[100]} marginVertical={14} />
+
+            {/* Address Section */}
+            {order.deliveryAddress && (
+              <YStack marginBottom={14}>
+                <XStack alignItems="center" gap={6} marginBottom={8}>
+                  <MapPin size={14} color={COLORS.primary} />
+                  <Text fontSize={12} fontWeight="600" color={COLORS.gray[700]}>Delivery Address</Text>
+                </XStack>
+                <YStack backgroundColor={COLORS.gray[50]} padding={12} borderRadius={12}>
+                  <Text fontSize={13} color={COLORS.gray[800]} lineHeight={20}>{order.deliveryAddress}</Text>
+                  {order.notes && (
+                    <XStack alignItems="flex-start" gap={6} marginTop={8} paddingTop={8} borderTopWidth={1} borderTopColor={COLORS.gray[200]}>
+                      <FileText size={12} color={COLORS.gray[400]} />
+                      <Text fontSize={11} color={COLORS.gray[500]} fontStyle="italic" flex={1}>{order.notes}</Text>
+                    </XStack>
+                  )}
+                  <Pressable onPress={() => onLocateOnMap?.(order)} style={styles.locateButton}>
+                    <Navigation2 size={12} color={COLORS.primary} />
+                    <Text fontSize={11} fontWeight="600" color={COLORS.primary}>View on Map</Text>
+                  </Pressable>
+                </YStack>
+              </YStack>
+            )}
+
+            {/* Items Section */}
+            <YStack marginBottom={14}>
+              <XStack alignItems="center" gap={6} marginBottom={8}>
+                <ShoppingBag size={14} color={COLORS.indigo} />
+                <Text fontSize={12} fontWeight="600" color={COLORS.gray[700]}>Order Items ({itemCount})</Text>
+              </XStack>
+              <YStack backgroundColor={COLORS.gray[50]} borderRadius={12} overflow="hidden">
+                {order.items?.slice(0, 5).map((item, index) => (
+                  <XStack
+                    key={item.id || index}
+                    alignItems="center"
+                    justifyContent="space-between"
+                    padding={12}
+                    borderBottomWidth={index < Math.min(order.items!.length, 5) - 1 ? 1 : 0}
+                    borderBottomColor={COLORS.gray[200]}
+                  >
+                    <XStack alignItems="center" gap={10} flex={1}>
+                      <YStack width={24} height={24} borderRadius={6} backgroundColor={COLORS.indigo + '15'} alignItems="center" justifyContent="center">
+                        <Text fontSize={11} fontWeight="700" color={COLORS.indigo}>{item.quantity || 1}</Text>
+                      </YStack>
+                      <Text fontSize={13} color={COLORS.gray[800]} numberOfLines={1} flex={1}>{item.product?.name || 'Product'}</Text>
+                    </XStack>
+                    <Text fontSize={13} fontWeight="600" color={COLORS.gray[700]}>
+                      {formatCurrency((item.product?.sellingPrice || 0) * (item.quantity || 1), currency)}
+                    </Text>
+                  </XStack>
+                ))}
+                {order.items && order.items.length > 5 && (
+                  <XStack padding={10} justifyContent="center">
+                    <Text fontSize={11} color={COLORS.gray[500]}>+{order.items.length - 5} more items</Text>
+                  </XStack>
+                )}
+              </YStack>
+            </YStack>
+
+            {/* Payment Breakdown */}
+            <YStack marginBottom={14}>
+              <XStack alignItems="center" gap={6} marginBottom={8}>
+                <DollarSign size={14} color={COLORS.success} />
+                <Text fontSize={12} fontWeight="600" color={COLORS.gray[700]}>Payment</Text>
+              </XStack>
+              <YStack backgroundColor={COLORS.gray[50]} padding={12} borderRadius={12} gap={6}>
+                <XStack justifyContent="space-between">
+                  <Text fontSize={12} color={COLORS.gray[500]}>Subtotal</Text>
+                  <Text fontSize={12} color={COLORS.gray[700]}>{formatCurrency(subtotal, currency)}</Text>
+                </XStack>
+                <XStack justifyContent="space-between">
+                  <Text fontSize={12} color={COLORS.gray[500]}>Tax</Text>
+                  <Text fontSize={12} color={COLORS.gray[700]}>{formatCurrency(tax, currency)}</Text>
+                </XStack>
+                {deliveryFee > 0 && (
+                  <XStack justifyContent="space-between">
+                    <Text fontSize={12} color={COLORS.gray[500]}>Delivery</Text>
+                    <Text fontSize={12} color={COLORS.gray[700]}>{formatCurrency(deliveryFee, currency)}</Text>
+                  </XStack>
+                )}
+                <YStack height={1} backgroundColor={COLORS.gray[200]} marginVertical={4} />
+                <XStack justifyContent="space-between">
+                  <Text fontSize={13} fontWeight="700" color={COLORS.gray[800]}>Total</Text>
+                  <Text fontSize={13} fontWeight="700" color={COLORS.gray[800]}>{formatCurrency(total, currency)}</Text>
+                </XStack>
+              </YStack>
+            </YStack>
+
+            {/* Assigned Driver (if any) */}
+            {assignedDriver && (
+              <YStack marginBottom={14}>
+                <XStack alignItems="center" gap={6} marginBottom={8}>
+                  <Truck size={14} color={COLORS.success} />
+                  <Text fontSize={12} fontWeight="600" color={COLORS.gray[700]}>Assigned Driver</Text>
+                </XStack>
+                <XStack backgroundColor={COLORS.success + '10'} padding={12} borderRadius={12} alignItems="center" gap={12}>
+                  <YStack width={40} height={40} borderRadius={20} backgroundColor={COLORS.success} alignItems="center" justifyContent="center">
+                    <Text fontSize={16} fontWeight="700" color="white">
+                      {(assignedDriver.user?.firstName || 'D').charAt(0).toUpperCase()}
+                    </Text>
+                  </YStack>
+                  <YStack flex={1}>
+                    <Text fontSize={14} fontWeight="600" color={COLORS.gray[800]}>{assignedDriver.user?.firstName || 'Driver'}</Text>
+                    <XStack alignItems="center" gap={6}>
+                      <Text fontSize={11} color={COLORS.gray[500]}>
+                        {assignedDriver.vehicleType === 'bicycle' ? '🚴' : assignedDriver.vehicleType === 'motorcycle' ? '🏍️' : '🚗'}
+                      </Text>
+                      <Star size={10} color={COLORS.warning} fill={COLORS.warning} />
+                      <Text fontSize={11} color={COLORS.gray[500]}>{assignedDriver.averageRating?.toFixed(1) || '4.8'}</Text>
+                    </XStack>
+                  </YStack>
+                  <Pressable onPress={() => assignedDriver.user?.phone && Linking.openURL(`tel:${assignedDriver.user.phone}`)} style={styles.driverCallBtn}>
+                    <Phone size={16} color={COLORS.success} />
+                  </Pressable>
+                </XStack>
+              </YStack>
+            )}
+
+            {/* Timeline */}
+            <YStack marginBottom={14}>
+              <XStack alignItems="center" gap={6} marginBottom={8}>
+                <History size={14} color={COLORS.cyan} />
+                <Text fontSize={12} fontWeight="600" color={COLORS.gray[700]}>Timeline</Text>
+              </XStack>
+              <YStack backgroundColor={COLORS.gray[50]} padding={12} borderRadius={12}>
+                {[
+                  { time: order.createdAt, label: 'Order placed', done: true },
+                  { time: order.delivery?.acceptedAt, label: 'Accepted', done: !!order.delivery?.acceptedAt || ['assigned', 'preparing', 'picked_up', 'on_the_way', 'nearby', 'delivered', 'completed'].includes(status) },
+                  { time: undefined, label: 'Preparing', done: ['preparing', 'assigned', 'picked_up', 'on_the_way', 'nearby', 'delivered', 'completed'].includes(status) },
+                  { time: order.delivery?.pickedUpAt, label: 'Picked up', done: ['picked_up', 'on_the_way', 'nearby', 'delivered', 'completed'].includes(status) },
+                  { time: order.delivery?.deliveredAt, label: 'Delivered', done: ['delivered', 'completed'].includes(status) },
+                ].map((step, i) => (
+                  <XStack key={i} alignItems="center" gap={10} marginBottom={i < 4 ? 8 : 0}>
+                    <YStack width={20} height={20} borderRadius={10} backgroundColor={step.done ? COLORS.success : COLORS.gray[200]} alignItems="center" justifyContent="center">
+                      {step.done && <CheckCircle size={12} color="white" />}
+                    </YStack>
+                    <Text fontSize={12} color={step.done ? COLORS.gray[800] : COLORS.gray[400]} flex={1}>{step.label}</Text>
+                    {step.time && step.done && <Text fontSize={10} color={COLORS.gray[400]}>{formatTime(step.time as string)}</Text>}
+                  </XStack>
+                ))}
+              </YStack>
+            </YStack>
+
+            {/* Actions */}
+            <XStack gap={10} flexWrap="wrap">
+              {/* Contact buttons */}
+              {customerPhone && (
+                <Pressable onPress={() => Linking.openURL(`tel:${customerPhone}`)} style={styles.actionBtnGreen}>
+                  <Phone size={14} color={COLORS.success} />
+                  <Text fontSize={12} fontWeight="600" color={COLORS.success}>Call</Text>
+                </Pressable>
+              )}
+              {customerPhone && (
+                <Pressable onPress={() => Linking.openURL(`sms:${customerPhone}`)} style={styles.actionBtnOutline}>
+                  <MessageCircle size={14} color={COLORS.gray[600]} />
+                  <Text fontSize={12} fontWeight="600" color={COLORS.gray[600]}>SMS</Text>
+                </Pressable>
+              )}
+
+              {/* Assign Driver */}
+              {needsDriver && onAssignDriver && (
+                <Pressable onPress={() => onAssignDriver(order.id)} style={styles.actionBtnPrimary}>
+                  <UserCheck size={14} color="white" />
+                  <Text fontSize={12} fontWeight="600" color="white">Assign Driver</Text>
+                </Pressable>
+              )}
+
+              {/* Status transitions */}
+              {availableTransitions.map((transition) => (
+                <Pressable
+                  key={transition.next}
+                  onPress={() => !isUpdating && onUpdateStatus?.(order.id, transition.next)}
+                  style={[styles.actionBtnOutline, transition.next === 'delivered' && styles.actionBtnGreen]}
+                  disabled={isUpdating}
+                >
+                  {transition.next === 'delivered' ? <CheckCircle size={14} color={COLORS.success} /> : <Play size={14} color={COLORS.gray[600]} />}
+                  <Text fontSize={12} fontWeight="600" color={transition.next === 'delivered' ? COLORS.success : COLORS.gray[600]}>
+                    {isUpdating ? '...' : transition.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </XStack>
+          </Animated.View>
+        )}
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+// ============================================
+// Driver Card with Rich Expansion
+// ============================================
+
+interface RichDriverCardProps {
+  driver: any;
+  isSelected: boolean;
+  onSelect: () => void;
+  onLocateOnMap?: (driver: any) => void;
+  onAssign?: (driverId: string) => void;
+  isAssigning?: boolean;
+}
+
+function RichDriverCard({ driver, isSelected, onSelect, onLocateOnMap, onAssign, isAssigning }: RichDriverCardProps) {
+  const isOnline = driver.isAvailable || driver.status === 'available';
+  const driverName = driver.user?.firstName || driver.user?.name?.split(' ')[0] || 'Driver';
+  const hasActiveDelivery = !!driver.activeDeliveryId;
+
+  const scale = useSharedValue(1);
+  const cardStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  return (
+    <Pressable
+      onPress={onSelect}
+      onPressIn={() => { scale.value = withSpring(0.98, SPRING_CONFIG.quick); }}
+      onPressOut={() => { scale.value = withSpring(1, SPRING_CONFIG.quick); }}
+    >
+      <Animated.View style={[styles.richDriverCard, isSelected && styles.richDriverCardSelected, !isOnline && styles.richDriverCardOffline, cardStyle]}>
+        {/* Header Row */}
+        <XStack alignItems="center" justifyContent="space-between">
+          <XStack alignItems="center" gap={12}>
+            <YStack position="relative">
+              <YStack width={48} height={48} borderRadius={24} backgroundColor={isOnline ? COLORS.success + '20' : COLORS.gray[200]} alignItems="center" justifyContent="center">
+                <Text fontSize={18} fontWeight="700" color={isOnline ? COLORS.success : COLORS.gray[500]}>{driverName.charAt(0).toUpperCase()}</Text>
+              </YStack>
+              <YStack position="absolute" bottom={0} right={0} width={14} height={14} borderRadius={7} backgroundColor={isOnline ? COLORS.success : COLORS.gray[400]} borderWidth={2} borderColor="white" />
+            </YStack>
+            <YStack>
+              <Text fontSize={15} fontWeight="700" color={COLORS.gray[800]}>{driverName}</Text>
+              <XStack alignItems="center" gap={6}>
+                <Text fontSize={12} color={COLORS.gray[500]}>
+                  {driver.vehicleType === 'bicycle' ? '🚴' : driver.vehicleType === 'motorcycle' ? '🏍️' : driver.vehicleType === 'walking' ? '🚶' : '🚗'}
+                </Text>
+                <Star size={10} color={COLORS.warning} fill={COLORS.warning} />
+                <Text fontSize={12} color={COLORS.gray[600]}>{driver.averageRating?.toFixed(1) || '4.8'}</Text>
+              </XStack>
+            </YStack>
+          </XStack>
+          <YStack alignItems="flex-end" gap={4}>
+            <YStack backgroundColor={isOnline ? COLORS.success + '15' : COLORS.gray[100]} paddingHorizontal={10} paddingVertical={4} borderRadius={8}>
+              <Text fontSize={11} fontWeight="600" color={isOnline ? COLORS.success : COLORS.gray[500]}>{isOnline ? 'Online' : 'Offline'}</Text>
+            </YStack>
+            {hasActiveDelivery && (
+              <XStack alignItems="center" gap={4}>
+                <YStack width={6} height={6} borderRadius={3} backgroundColor={COLORS.warning} />
+                <Text fontSize={10} color={COLORS.warning}>On delivery</Text>
+              </XStack>
+            )}
+          </YStack>
+        </XStack>
+
+        {/* EXPANDED CONTENT */}
+        {isSelected && (
+          <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(100)}>
+            <YStack height={1} backgroundColor={COLORS.gray[100]} marginVertical={14} />
+
+            {/* Stats Row */}
+            <XStack gap={8} marginBottom={14}>
+              <YStack flex={1} backgroundColor={COLORS.gray[50]} padding={12} borderRadius={12} alignItems="center">
+                <Text fontSize={20} fontWeight="800" color={COLORS.gray[800]}>{driver.deliveriesToday || 0}</Text>
+                <Text fontSize={10} color={COLORS.gray[500]}>Today</Text>
+              </YStack>
+              <YStack flex={1} backgroundColor={COLORS.gray[50]} padding={12} borderRadius={12} alignItems="center">
+                <Text fontSize={20} fontWeight="800" color={COLORS.gray[800]}>{driver.totalDeliveries || 0}</Text>
+                <Text fontSize={10} color={COLORS.gray[500]}>Total</Text>
+              </YStack>
+              <YStack flex={1} backgroundColor={COLORS.success + '10'} padding={12} borderRadius={12} alignItems="center">
+                <Text fontSize={20} fontWeight="800" color={COLORS.success}>{driver.onTimePercent || 98}%</Text>
+                <Text fontSize={10} color={COLORS.success}>On-Time</Text>
+              </YStack>
+              <YStack flex={1} backgroundColor={COLORS.cyan + '10'} padding={12} borderRadius={12} alignItems="center">
+                <Text fontSize={20} fontWeight="800" color={COLORS.cyan}>~{driver.avgDeliveryTime || 24}</Text>
+                <Text fontSize={10} color={COLORS.cyan}>Avg Min</Text>
+              </YStack>
+            </XStack>
+
+            {/* Active Delivery */}
+            {hasActiveDelivery && driver.activeDelivery && (
+              <YStack marginBottom={14}>
+                <XStack alignItems="center" gap={6} marginBottom={8}>
+                  <Truck size={14} color={COLORS.warning} />
+                  <Text fontSize={12} fontWeight="600" color={COLORS.gray[700]}>Current Delivery</Text>
+                </XStack>
+                <YStack backgroundColor={COLORS.warning + '10'} padding={12} borderRadius={12}>
+                  <XStack alignItems="center" justifyContent="space-between">
+                    <XStack alignItems="center" gap={8}>
+                      <Text fontSize={14} fontWeight="700" color={COLORS.gray[800]}>
+                        #{driver.activeDelivery.orderNumber || driver.activeDelivery.id?.slice(-5)}
+                      </Text>
+                      <YStack backgroundColor={COLORS.warning + '20'} paddingHorizontal={8} paddingVertical={2} borderRadius={6}>
+                        <Text fontSize={10} fontWeight="600" color={COLORS.warning}>{driver.activeDelivery.status || 'En Route'}</Text>
+                      </YStack>
+                    </XStack>
+                    <Text fontSize={13} fontWeight="600" color={COLORS.gray[700]}>{driver.activeDelivery.customerName || 'Customer'}</Text>
+                  </XStack>
+                  <XStack alignItems="center" gap={6} marginTop={8}>
+                    <MapPin size={12} color={COLORS.gray[500]} />
+                    <Text fontSize={11} color={COLORS.gray[600]} numberOfLines={1} flex={1}>{driver.activeDelivery.address || 'Address'}</Text>
+                  </XStack>
+                </YStack>
+              </YStack>
+            )}
+
+            {/* Recent Deliveries */}
+            {driver.recentDeliveries && driver.recentDeliveries.length > 0 && (
+              <YStack marginBottom={14}>
+                <XStack alignItems="center" gap={6} marginBottom={8}>
+                  <History size={14} color={COLORS.cyan} />
+                  <Text fontSize={12} fontWeight="600" color={COLORS.gray[700]}>Recent Deliveries</Text>
+                </XStack>
+                <YStack backgroundColor={COLORS.gray[50]} borderRadius={12} overflow="hidden">
+                  {driver.recentDeliveries.slice(0, 3).map((delivery: any, index: number) => (
+                    <XStack key={delivery.id || index} alignItems="center" justifyContent="space-between" padding={12} borderBottomWidth={index < 2 ? 1 : 0} borderBottomColor={COLORS.gray[200]}>
+                      <XStack alignItems="center" gap={8}>
+                        <CheckCircle size={14} color={COLORS.success} />
+                        <Text fontSize={12} color={COLORS.gray[700]}>{delivery.customerName || 'Customer'}</Text>
+                      </XStack>
+                      <Text fontSize={10} color={COLORS.gray[400]}>{formatRelativeTime(delivery.completedAt)}</Text>
+                    </XStack>
+                  ))}
+                </YStack>
+              </YStack>
+            )}
+
+            {/* Frequent Customers */}
+            {driver.frequentCustomers && driver.frequentCustomers.length > 0 && (
+              <YStack marginBottom={14}>
+                <XStack alignItems="center" gap={6} marginBottom={8}>
+                  <Heart size={14} color={COLORS.pink} />
+                  <Text fontSize={12} fontWeight="600" color={COLORS.gray[700]}>Frequent Customers</Text>
+                </XStack>
+                <XStack gap={8} flexWrap="wrap">
+                  {driver.frequentCustomers.slice(0, 4).map((customer: any, index: number) => (
+                    <YStack key={index} backgroundColor={COLORS.gray[50]} padding={10} borderRadius={10} alignItems="center" minWidth={70}>
+                      <YStack width={32} height={32} borderRadius={16} backgroundColor={COLORS.pink + '15'} alignItems="center" justifyContent="center" marginBottom={4}>
+                        <Text fontSize={12} fontWeight="600" color={COLORS.pink}>{customer.name?.charAt(0) || 'C'}</Text>
+                      </YStack>
+                      <Text fontSize={10} color={COLORS.gray[700]} numberOfLines={1}>{customer.name || 'Customer'}</Text>
+                      <Text fontSize={9} color={COLORS.gray[500]}>{customer.deliveryCount || 0}x</Text>
+                    </YStack>
+                  ))}
+                </XStack>
+              </YStack>
+            )}
+
+            {/* Actions */}
+            <XStack gap={10}>
+              {isOnline && onLocateOnMap && (
+                <Pressable onPress={() => onLocateOnMap(driver)} style={styles.actionBtnPrimary}>
+                  <MapPin size={14} color="white" />
+                  <Text fontSize={12} fontWeight="600" color="white">Locate on Map</Text>
+                </Pressable>
+              )}
+              {isOnline && !hasActiveDelivery && onAssign && (
+                <Pressable onPress={() => onAssign(driver.id)} style={styles.actionBtnGreen} disabled={isAssigning}>
+                  <UserCheck size={14} color={COLORS.success} />
+                  <Text fontSize={12} fontWeight="600" color={COLORS.success}>{isAssigning ? 'Assigning...' : 'Assign'}</Text>
+                </Pressable>
+              )}
+              {driver.user?.phone && (
+                <Pressable onPress={() => Linking.openURL(`tel:${driver.user.phone}`)} style={styles.actionBtnOutline}>
+                  <Phone size={14} color={COLORS.gray[600]} />
+                  <Text fontSize={12} fontWeight="600" color={COLORS.gray[600]}>Call</Text>
+                </Pressable>
+              )}
+            </XStack>
+          </Animated.View>
+        )}
+      </Animated.View>
+    </Pressable>
   );
 }
 
@@ -705,46 +763,34 @@ interface OrderTrackingScreenProps {
 export default function OrderTrackingScreen({ onBack }: OrderTrackingScreenProps) {
   const { settings } = useSettingsStore();
   const { data: appSettings } = useAppSettings();
-
-  // Map ref for external controls
   const mapRef = useRef<NavigationMapRef>(null);
 
-  // UI State
+  // State
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedDriver, setSelectedDriver] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState<DeliveryStatusFilter>('active');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [storeCoordinates, setStoreCoordinates] = useState<Coordinate | null>(null);
   const [isGeocodingStore, setIsGeocodingStore] = useState(false);
-  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
 
   // Panel states
-  const [isOrdersPanelExpanded, setIsOrdersPanelExpanded] = useState(true);
-  const [isDriversPanelOpen, setIsDriversPanelOpen] = useState(false);
+  const [isOrdersPanelExpanded, setIsOrdersPanelExpanded] = useState(false);
+  const [isDriversPanelExpanded, setIsDriversPanelExpanded] = useState(false);
   const [driverAssignOrderId, setDriverAssignOrderId] = useState<string | null>(null);
 
-  // Capsule states
-  const [isStatsExpanded, setIsStatsExpanded] = useState(false);
-  const [showDeliveryZones, setShowDeliveryZones] = useState(false);
-  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showAlertsCapsule, setShowAlertsCapsule] = useState(true);
-
   // API Hooks
-  const { data: primaryDeliveryZone, zones: allDeliveryZones } = usePrimaryDeliveryZone();
+  const { data: primaryDeliveryZone } = usePrimaryDeliveryZone();
   const { data: deliveryStats } = useDeliveryStats();
-  const { data: availableDrivers, isLoading: isLoadingDrivers, refetch: refetchDrivers } = useAvailableDrivers();
+  const { data: availableDrivers, refetch: refetchDrivers } = useAvailableDrivers();
   const { data: deliveryHistory, refetch: refetchHistory } = useDeliveryHistory({ status: 'delivered', limit: 50 });
-  const { data: ordersData, isLoading, refetch } = useOrders({ limit: 100 });
+  const { data: ordersData, refetch } = useOrders({ limit: 100 });
 
   // Mutations
   const updateStatusMutation = useUpdateDeliveryStatus();
   const autoAssignMutation = useAutoAssignDriver();
   const assignDriverMutation = useAssignDriver();
 
-  // Delivery radius
   const deliveryRadiusMeters = primaryDeliveryZone?.radiusMeters ?? 8000;
-
-  // Navigation hook - uses 'car' as default, actual vehicle determined by driver assignment
   const navigation = useNavigation({ vehicleType: 'car', showAlternatives: true });
 
   // Filter delivery orders
@@ -755,74 +801,36 @@ export default function OrderTrackingScreen({ onBack }: OrderTrackingScreenProps
     let filtered = allOrders.filter((order: Order) => {
       const orderType = order.orderType || 'walk_in';
       const isDeliveryType = deliveryTypes.includes(orderType);
-
-      if (statusFilter === 'delivered') {
-        return (isDeliveryType || order.isDelivery) && ['completed', 'delivered'].includes(order.status || '');
-      }
-
+      if (statusFilter === 'delivered') return (isDeliveryType || order.isDelivery) && ['completed', 'delivered'].includes(order.status || '');
       const isNotCompleted = !['completed', 'delivered', 'cancelled', 'refunded'].includes(order.status || '');
       return isDeliveryType || (order.isDelivery && isNotCompleted);
     });
 
-    // Zone filter
-    if (selectedZoneId && allDeliveryZones) {
-      const selectedZone = allDeliveryZones.find(z => z.id === selectedZoneId);
-      if (selectedZone?.centerLatitude && selectedZone?.centerLongitude) {
-        filtered = filtered.filter((order: Order) => {
-          if (!order.deliveryLatitude || !order.deliveryLongitude) return true;
-          const distance = calculateDistance(
-            selectedZone.centerLatitude,
-            selectedZone.centerLongitude,
-            order.deliveryLatitude,
-            order.deliveryLongitude
-          );
-          return distance <= selectedZone.radiusMeters;
-        });
-      }
-    }
-
-    // Status filter
-    if (statusFilter === 'on_the_way') {
-      return filtered.filter((o: Order) => ['on_the_way', 'picked_up', 'nearby'].includes(o.status || ''));
-    } else if (statusFilter === 'preparing') {
-      return filtered.filter((o: Order) => ['pending', 'open', 'assigned', 'preparing'].includes(o.status || ''));
-    } else if (statusFilter === 'delivered') {
-      return filtered.sort((a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      ).slice(0, 50);
-    }
-
+    if (statusFilter === 'on_the_way') return filtered.filter((o: Order) => ['on_the_way', 'picked_up', 'nearby'].includes(o.status || ''));
+    if (statusFilter === 'preparing') return filtered.filter((o: Order) => ['pending', 'open', 'assigned', 'preparing'].includes(o.status || ''));
+    if (statusFilter === 'delivered') return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 50);
     return filtered;
-  }, [ordersData, statusFilter, selectedZoneId, allDeliveryZones]);
+  }, [ordersData, statusFilter]);
 
-  // Stats calculation
+  // Stats
   const stats = useMemo(() => {
     const allOrders = ordersData ?? [];
     const deliveryTypes = ['delivery', 'doordash', 'uber_eats', 'grubhub', 'postmates', 'deliveroo', 'skip_the_dishes'];
-
-    const allDeliveryOrders = allOrders.filter((order: Order) => {
-      const orderType = order.orderType || 'walk_in';
-      return deliveryTypes.includes(orderType) || order.isDelivery;
-    });
-
-    const activeOrders = allDeliveryOrders.filter((o: Order) =>
-      !['completed', 'delivered', 'cancelled', 'refunded'].includes(o.status || '')
-    );
-
+    const allDeliveryOrders = allOrders.filter((o: Order) => deliveryTypes.includes(o.orderType || '') || o.isDelivery);
+    const activeOrders = allDeliveryOrders.filter((o: Order) => !['completed', 'delivered', 'cancelled', 'refunded'].includes(o.status || ''));
     const availableCount = availableDrivers?.filter((d: any) => d.isAvailable || d.status === 'available')?.length ?? 0;
-    const historyCount = deliveryHistory?.length ?? deliveryStats?.completedToday ?? 0;
 
     return {
       total: activeOrders.length,
       onTheWay: allDeliveryOrders.filter((o: Order) => ['on_the_way', 'picked_up', 'nearby'].includes(o.status || '')).length,
       preparing: allDeliveryOrders.filter((o: Order) => ['pending', 'open', 'assigned', 'preparing'].includes(o.status || '')).length,
-      completedToday: historyCount,
+      completedToday: deliveryHistory?.length ?? deliveryStats?.completedToday ?? 0,
       availableDrivers: availableCount,
       totalDrivers: availableDrivers?.length ?? 0,
     };
   }, [ordersData, deliveryStats, availableDrivers, deliveryHistory]);
 
-  // Store address
+  // Store geocoding
   const storeAddress = useMemo(() => {
     const parts = [];
     if (appSettings?.businessAddress) parts.push(appSettings.businessAddress);
@@ -833,41 +841,22 @@ export default function OrderTrackingScreen({ onBack }: OrderTrackingScreenProps
     return parts.length > 0 ? parts.join(', ') : null;
   }, [appSettings]);
 
-  // Geocode store
   useEffect(() => {
-    const geocodeStore = async () => {
-      if (storeAddress) {
-        setIsGeocodingStore(true);
-        try {
-          const result = await geocodeAddress(storeAddress);
-          if (result) {
-            setStoreCoordinates({ latitude: result.latitude, longitude: result.longitude });
-          }
-        } catch (error) {
-          console.error('Geocode error:', error);
-        } finally {
-          setIsGeocodingStore(false);
-        }
-      }
-    };
-    geocodeStore();
+    if (storeAddress) {
+      setIsGeocodingStore(true);
+      geocodeAddress(storeAddress).then((result) => {
+        if (result) setStoreCoordinates({ latitude: result.latitude, longitude: result.longitude });
+      }).finally(() => setIsGeocodingStore(false));
+    }
   }, [storeAddress]);
 
-  // Calculate route when order selected
+  // Route calculation
   useEffect(() => {
-    const calculateRoute = async () => {
-      if (selectedOrder && storeCoordinates) {
-        const customerCoord = selectedOrder.deliveryLatitude && selectedOrder.deliveryLongitude
-          ? { latitude: selectedOrder.deliveryLatitude, longitude: selectedOrder.deliveryLongitude }
-          : null;
-        if (customerCoord) {
-          await navigation.calculateRoute(storeCoordinates, customerCoord);
-        }
-      } else {
-        navigation.clearRoute();
-      }
-    };
-    calculateRoute();
+    if (selectedOrder && storeCoordinates && selectedOrder.deliveryLatitude && selectedOrder.deliveryLongitude) {
+      navigation.calculateRoute(storeCoordinates, { latitude: selectedOrder.deliveryLatitude, longitude: selectedOrder.deliveryLongitude });
+    } else {
+      navigation.clearRoute();
+    }
   }, [selectedOrder, storeCoordinates]);
 
   // Handlers
@@ -881,46 +870,43 @@ export default function OrderTrackingScreen({ onBack }: OrderTrackingScreenProps
     try {
       await updateStatusMutation.mutateAsync({ deliveryId: orderId, status: newStatus });
       refetch();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update status');
-    }
+    } catch { Alert.alert('Error', 'Failed to update status'); }
   };
 
   const handleAssignDriver = (orderId: string) => {
     setDriverAssignOrderId(orderId);
-    setIsDriversPanelOpen(true);
+    setIsDriversPanelExpanded(true);
   };
 
-  const handleAutoAssign = async (orderId: string) => {
-    try {
-      await autoAssignMutation.mutateAsync(orderId);
-      setIsDriversPanelOpen(false);
-      setDriverAssignOrderId(null);
-      refetch();
-      refetchDrivers();
-    } catch (error) {
-      Alert.alert('Error', 'No available drivers');
-    }
-  };
-
-  const handleSelectDriver = async (driverId: string) => {
+  const handleSelectDriverForAssign = async (driverId: string) => {
     if (!driverAssignOrderId) return;
     try {
       await assignDriverMutation.mutateAsync({ deliveryId: driverAssignOrderId, driverId });
-      setIsDriversPanelOpen(false);
       setDriverAssignOrderId(null);
+      setIsDriversPanelExpanded(false);
       refetch();
       refetchDrivers();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to assign driver');
+    } catch { Alert.alert('Error', 'Failed to assign driver'); }
+  };
+
+  const handleLocateOrderOnMap = (order: Order) => {
+    if (order.deliveryLatitude && order.deliveryLongitude) {
+      mapRef.current?.panTo({ latitude: order.deliveryLatitude, longitude: order.deliveryLongitude });
     }
   };
 
-  // Map control handlers
-  const handleZoomIn = () => mapRef.current?.zoomIn();
-  const handleZoomOut = () => mapRef.current?.zoomOut();
-  const handleRecenter = () => mapRef.current?.recenter();
-  const handleFitRoute = () => mapRef.current?.fitRoute();
+  const handleLocateDriverOnMap = (driver: any) => {
+    if (driver.currentLatitude && driver.currentLongitude) {
+      mapRef.current?.panTo({ latitude: driver.currentLatitude, longitude: driver.currentLongitude });
+      // If driver has active delivery, show the route
+      if (driver.activeDelivery && storeCoordinates) {
+        const dest = driver.activeDelivery.deliveryLatitude && driver.activeDelivery.deliveryLongitude
+          ? { latitude: driver.activeDelivery.deliveryLatitude, longitude: driver.activeDelivery.deliveryLongitude }
+          : null;
+        if (dest) navigation.calculateRoute({ latitude: driver.currentLatitude, longitude: driver.currentLongitude }, dest);
+      }
+    }
+  };
 
   const selectedCustomerLocation = useMemo(() => {
     if (selectedOrder?.deliveryLatitude && selectedOrder?.deliveryLongitude) {
@@ -929,9 +915,8 @@ export default function OrderTrackingScreen({ onBack }: OrderTrackingScreenProps
     return undefined;
   }, [selectedOrder]);
 
-  // ============================================
-  // RENDER
-  // ============================================
+  const PANEL_COLLAPSED_HEIGHT = 70;
+  const PANEL_EXPANDED_HEIGHT = SCREEN_HEIGHT * 0.65;
 
   return (
     <YStack flex={1} backgroundColor={COLORS.gray[100]}>
@@ -960,391 +945,188 @@ export default function OrderTrackingScreen({ onBack }: OrderTrackingScreenProps
           </YStack>
         )}
 
-        {/* ============================================ */}
-        {/* FLOATING UI LAYER - Feature-Rich Capsules */}
-        {/* ============================================ */}
-
-        {/* ROW 1: Stats + Quick Actions + Drivers (all in one row) */}
-        <XStack
-          position="absolute"
-          top={16}
-          left={16}
-          right={16}
-          zIndex={100}
-          justifyContent="space-between"
-          alignItems="flex-start"
-        >
-          {/* LEFT: Activity Stats Capsule */}
-          <GlassCapsule style={styles.statsCapsule}>
-            <XStack alignItems="center" gap={10}>
-              <YStack position="relative">
-                <YStack
-                  width={34}
-                  height={34}
-                  borderRadius={17}
-                  backgroundColor={stats.total > 0 ? COLORS.primary + '15' : COLORS.gray[100]}
-                  alignItems="center"
-                  justifyContent="center"
-                >
-                  <Activity size={16} color={stats.total > 0 ? COLORS.primary : COLORS.gray[400]} />
-                </YStack>
-                {stats.total > 0 && (
-                  <YStack
-                    position="absolute"
-                    top={-2}
-                    right={-2}
-                    width={10}
-                    height={10}
-                    borderRadius={5}
-                    backgroundColor={COLORS.error}
-                    borderWidth={2}
-                    borderColor="white"
-                  />
-                )}
+        {/* TOP BAR: Stats & Quick Actions */}
+        <XStack position="absolute" top={16} left={16} right={16} zIndex={100} justifyContent="space-between" alignItems="flex-start">
+          {/* Stats Capsule */}
+          <GlassCapsule style={styles.topCapsule}>
+            <XStack alignItems="center" gap={12}>
+              <YStack alignItems="center">
+                <Text fontSize={22} fontWeight="800" color={COLORS.gray[900]}>{stats.total}</Text>
+                <Text fontSize={9} color={COLORS.gray[500]}>Active</Text>
               </YStack>
-
-              <YStack>
-                <Text fontSize={18} fontWeight="800" color={COLORS.gray[900]}>{stats.total}</Text>
-                <Text fontSize={8} color={COLORS.gray[500]} marginTop={-2}>Active</Text>
-              </YStack>
-
-              <YStack width={1} height={24} backgroundColor={COLORS.gray[200]} />
-
-              <XStack gap={8}>
+              <YStack width={1} height={30} backgroundColor={COLORS.gray[200]} />
+              <XStack gap={10}>
                 <YStack alignItems="center">
-                  <XStack alignItems="center" gap={2}>
-                    <Truck size={10} color={COLORS.warning} />
-                    <Text fontSize={12} fontWeight="700" color={COLORS.warning}>{stats.onTheWay}</Text>
+                  <XStack alignItems="center" gap={3}>
+                    <Truck size={12} color={COLORS.warning} />
+                    <Text fontSize={14} fontWeight="700" color={COLORS.warning}>{stats.onTheWay}</Text>
                   </XStack>
-                  <Text fontSize={7} color={COLORS.gray[400]}>Route</Text>
+                  <Text fontSize={8} color={COLORS.gray[400]}>En Route</Text>
                 </YStack>
                 <YStack alignItems="center">
-                  <XStack alignItems="center" gap={2}>
-                    <Package size={10} color={COLORS.indigo} />
-                    <Text fontSize={12} fontWeight="700" color={COLORS.indigo}>{stats.preparing}</Text>
+                  <XStack alignItems="center" gap={3}>
+                    <Package size={12} color={COLORS.indigo} />
+                    <Text fontSize={14} fontWeight="700" color={COLORS.indigo}>{stats.preparing}</Text>
                   </XStack>
-                  <Text fontSize={7} color={COLORS.gray[400]}>Prep</Text>
+                  <Text fontSize={8} color={COLORS.gray[400]}>Preparing</Text>
                 </YStack>
                 <YStack alignItems="center">
-                  <XStack alignItems="center" gap={2}>
-                    <CheckCircle size={10} color={COLORS.success} />
-                    <Text fontSize={12} fontWeight="700" color={COLORS.success}>{stats.completedToday}</Text>
+                  <XStack alignItems="center" gap={3}>
+                    <CheckCircle size={12} color={COLORS.success} />
+                    <Text fontSize={14} fontWeight="700" color={COLORS.success}>{stats.completedToday}</Text>
                   </XStack>
-                  <Text fontSize={7} color={COLORS.gray[400]}>Done</Text>
+                  <Text fontSize={8} color={COLORS.gray[400]}>Done</Text>
                 </YStack>
               </XStack>
             </XStack>
           </GlassCapsule>
 
-          {/* CENTER: Quick Actions Capsule */}
-          <GlassCapsule style={styles.quickActionsCapsule}>
-            <XStack alignItems="center" gap={6}>
-              <Pressable
-                onPress={handleRefresh}
-                style={[styles.quickActionBtn, isRefreshing && styles.quickActionBtnActive]}
-              >
-                <RefreshCw size={16} color={isRefreshing ? COLORS.primary : COLORS.gray[600]} />
+          {/* Quick Actions */}
+          <GlassCapsule style={styles.topCapsule}>
+            <XStack alignItems="center" gap={8}>
+              <Pressable onPress={handleRefresh} style={[styles.quickBtn, isRefreshing && styles.quickBtnActive]}>
+                <RefreshCw size={18} color={isRefreshing ? COLORS.primary : COLORS.gray[600]} />
               </Pressable>
-              <Pressable onPress={handleRecenter} style={styles.quickActionBtn}>
-                <Locate size={16} color={COLORS.gray[600]} />
+              <Pressable onPress={() => mapRef.current?.recenter()} style={styles.quickBtn}>
+                <Locate size={18} color={COLORS.gray[600]} />
               </Pressable>
-              <Pressable
-                onPress={() => setShowDeliveryZones(!showDeliveryZones)}
-                style={[styles.quickActionBtn, showDeliveryZones && styles.quickActionBtnActive]}
-              >
-                <MapPinned size={16} color={showDeliveryZones ? COLORS.primary : COLORS.gray[600]} />
-              </Pressable>
-            </XStack>
-          </GlassCapsule>
-
-          {/* RIGHT: Drivers Capsule (with inline dropdown) */}
-          <YStack>
-            <GlassCapsule
-              style={styles.driversCapsule}
-              onPress={() => setIsDriversPanelOpen(!isDriversPanelOpen)}
-              isActive={isDriversPanelOpen}
-              accentColor={COLORS.success}
-            >
-              <XStack alignItems="center" gap={8}>
-                {/* Avatars */}
-                <XStack>
-                  {availableDrivers?.slice(0, 3).map((driver: any, index: number) => {
-                    const isOnline = driver.isAvailable || driver.status === 'available';
-                    const initial = (driver.user?.firstName || driver.user?.name || 'D').charAt(0).toUpperCase();
-                    return (
-                      <YStack
-                        key={driver.id}
-                        width={26}
-                        height={26}
-                        borderRadius={13}
-                        backgroundColor={isOnline ? COLORS.success : COLORS.gray[300]}
-                        alignItems="center"
-                        justifyContent="center"
-                        borderWidth={2}
-                        borderColor="white"
-                        marginLeft={index > 0 ? -8 : 0}
-                        zIndex={3 - index}
-                      >
-                        <Text fontSize={10} fontWeight="700" color="white">{initial}</Text>
-                      </YStack>
-                    );
-                  })}
-                  {(!availableDrivers || availableDrivers.length === 0) && (
-                    <YStack width={26} height={26} borderRadius={13} backgroundColor={COLORS.gray[200]} alignItems="center" justifyContent="center">
-                      <Users size={12} color={COLORS.gray[400]} />
-                    </YStack>
-                  )}
-                </XStack>
-
-                <YStack>
-                  <XStack alignItems="baseline" gap={2}>
-                    <Text fontSize={14} fontWeight="800" color={COLORS.success}>{stats.availableDrivers}</Text>
-                    <Text fontSize={9} color={COLORS.gray[400]}>/{stats.totalDrivers}</Text>
-                  </XStack>
-                  <Text fontSize={8} color={COLORS.gray[500]} marginTop={-2}>Online</Text>
-                </YStack>
-
-                <ChevronDown size={12} color={COLORS.gray[400]} style={{ transform: [{ rotate: isDriversPanelOpen ? '180deg' : '0deg' }] }} />
-              </XStack>
-            </GlassCapsule>
-
-            {/* Inline Drivers Dropdown */}
-            {isDriversPanelOpen && (
-              <Animated.View entering={FadeIn.duration(150)} exiting={FadeOut.duration(100)} style={styles.driversDropdown}>
-                <YStack backgroundColor="white" borderRadius={16} padding={12} marginTop={8} {...SHADOWS.large}>
-                  {/* Stats row */}
-                  <XStack gap={8} marginBottom={12}>
-                    <YStack flex={1} backgroundColor={COLORS.success + '15'} padding={10} borderRadius={10} alignItems="center">
-                      <Text fontSize={16} fontWeight="700" color={COLORS.success}>{stats.availableDrivers}</Text>
-                      <Text fontSize={9} color={COLORS.success}>Available</Text>
-                    </YStack>
-                    <YStack flex={1} backgroundColor={COLORS.gray[100]} padding={10} borderRadius={10} alignItems="center">
-                      <Text fontSize={16} fontWeight="700" color={COLORS.gray[600]}>{stats.totalDrivers - stats.availableDrivers}</Text>
-                      <Text fontSize={9} color={COLORS.gray[500]}>Offline</Text>
-                    </YStack>
-                  </XStack>
-
-                  {/* Auto-assign (when assigning) */}
-                  {driverAssignOrderId && (
-                    <Pressable onPress={() => handleAutoAssign(driverAssignOrderId)} style={styles.autoAssignBtn}>
-                      <Target size={16} color={COLORS.primary} />
-                      <Text fontSize={12} fontWeight="600" color={COLORS.primary} flex={1}>Auto-Assign</Text>
-                      <ChevronRight size={14} color={COLORS.primary} />
-                    </Pressable>
-                  )}
-
-                  {/* Driver list */}
-                  <YStack gap={6} maxHeight={200}>
-                    <ScrollView showsVerticalScrollIndicator={false}>
-                      {availableDrivers?.map((driver: any) => {
-                        const isOnline = driver.isAvailable || driver.status === 'available';
-                        const driverName = driver.user?.firstName || 'Driver';
-                        return (
-                          <Pressable
-                            key={driver.id}
-                            onPress={() => driverAssignOrderId ? handleSelectDriver(driver.id) : null}
-                            style={[styles.driverListItem, !isOnline && { opacity: 0.5 }]}
-                            disabled={!isOnline}
-                          >
-                            <YStack width={32} height={32} borderRadius={16} backgroundColor={isOnline ? COLORS.success : COLORS.gray[300]} alignItems="center" justifyContent="center" position="relative">
-                              <Text fontSize={12} fontWeight="600" color="white">{driverName.charAt(0).toUpperCase()}</Text>
-                              <YStack position="absolute" bottom={0} right={0} width={10} height={10} borderRadius={5} backgroundColor={isOnline ? COLORS.success : COLORS.gray[400]} borderWidth={2} borderColor="white" />
-                            </YStack>
-                            <YStack flex={1}>
-                              <Text fontSize={12} fontWeight="600" color={COLORS.gray[800]}>{driverName}</Text>
-                              <Text fontSize={9} color={COLORS.gray[500]}>{driver.vehicleType === 'bicycle' ? '🚴' : driver.vehicleType === 'motorcycle' ? '🏍️' : '🚗'} {driver.deliveriesToday || 0} today</Text>
-                            </YStack>
-                            {isOnline && (
-                              <YStack backgroundColor={COLORS.success + '15'} paddingHorizontal={8} paddingVertical={4} borderRadius={8}>
-                                <Text fontSize={9} fontWeight="600" color={COLORS.success}>Ready</Text>
-                              </YStack>
-                            )}
-                          </Pressable>
-                        );
-                      })}
-                    </ScrollView>
-                  </YStack>
-                </YStack>
-              </Animated.View>
-            )}
-          </YStack>
-        </XStack>
-
-        {/* ROW 2: Metrics + Urgent Orders */}
-        <XStack
-          position="absolute"
-          top={72}
-          right={16}
-          zIndex={95}
-          gap={10}
-        >
-          {/* Urgent Orders Alert (if any orders waiting > 15min) */}
-          {stats.preparing > 0 && (
-            <Animated.View entering={ZoomIn.springify().damping(18)}>
-              <GlassCapsule style={styles.urgentCapsule}>
-                <XStack alignItems="center" gap={8}>
-                  <YStack
-                    width={30}
-                    height={30}
-                    borderRadius={15}
-                    backgroundColor={COLORS.error + '20'}
-                    alignItems="center"
-                    justifyContent="center"
-                  >
-                    <AlertTriangle size={14} color={COLORS.error} />
-                  </YStack>
-                  <YStack>
-                    <Text fontSize={12} fontWeight="700" color={COLORS.error}>{stats.preparing}</Text>
-                    <Text fontSize={8} color={COLORS.gray[500]}>Waiting</Text>
-                  </YStack>
-                </XStack>
-              </GlassCapsule>
-            </Animated.View>
-          )}
-
-          {/* Metrics Capsule */}
-          <GlassCapsule style={styles.perfCapsule}>
-            <XStack alignItems="center" gap={10}>
-              <YStack alignItems="center">
-                <XStack alignItems="center" gap={2}>
-                  <Timer size={11} color={COLORS.cyan} />
-                  <Text fontSize={13} fontWeight="700" color={COLORS.gray[800]}>~24</Text>
-                </XStack>
-                <Text fontSize={7} color={COLORS.gray[400]}>Avg min</Text>
-              </YStack>
-
-              <YStack width={1} height={18} backgroundColor={COLORS.gray[200]} />
-
-              <YStack alignItems="center">
-                <XStack alignItems="center" gap={2}>
-                  <DollarSign size={11} color={COLORS.success} />
-                  <Text fontSize={13} fontWeight="700" color={COLORS.gray[800]}>
-                    {formatCurrency(deliveryOrders.reduce((sum, o) => sum + (o.payment?.total || o.total || 0), 0), settings.currency).replace(/^\$/, '')}
-                  </Text>
-                </XStack>
-                <Text fontSize={7} color={COLORS.gray[400]}>Revenue</Text>
-              </YStack>
-
-              <YStack width={1} height={18} backgroundColor={COLORS.gray[200]} />
-
-              <YStack alignItems="center">
-                <XStack alignItems="center" gap={2}>
-                  <Text fontSize={13} fontWeight="700" color={COLORS.success}>98%</Text>
-                  <Award size={9} color={COLORS.success} />
-                </XStack>
-                <Text fontSize={7} color={COLORS.gray[400]}>On-Time</Text>
-              </YStack>
-
-              <YStack width={1} height={18} backgroundColor={COLORS.gray[200]} />
-
-              <YStack alignItems="center">
-                <XStack alignItems="center" gap={2}>
-                  <Star size={9} color={COLORS.warning} fill={COLORS.warning} />
-                  <Text fontSize={13} fontWeight="700" color={COLORS.gray[800]}>4.8</Text>
-                </XStack>
-                <Text fontSize={7} color={COLORS.gray[400]}>Rating</Text>
-              </YStack>
             </XStack>
           </GlassCapsule>
         </XStack>
 
-        {/* LEFT: Deliveries Panel */}
-        <YStack
-          position="absolute"
-          top={72}
-          left={16}
-          bottom={24}
-          width={380}
-          zIndex={90}
-        >
-          <ExpandablePanel
-            isExpanded={isOrdersPanelExpanded}
-            onToggle={() => {
-              const newExpanded = !isOrdersPanelExpanded;
-              setIsOrdersPanelExpanded(newExpanded);
-              // Clear selected order when collapsing panel
-              if (!newExpanded) {
-                setSelectedOrder(null);
+        {/* BOTTOM PANELS */}
+        <XStack position="absolute" bottom={0} left={0} right={0} zIndex={100} gap={12} paddingHorizontal={12} paddingBottom={12}>
+          {/* Deliveries Panel */}
+          <YStack flex={1}>
+            <BottomPanel
+              isExpanded={isOrdersPanelExpanded}
+              onToggle={() => {
+                const newExpanded = !isOrdersPanelExpanded;
+                setIsOrdersPanelExpanded(newExpanded);
+                if (!newExpanded) setSelectedOrder(null);
+                if (newExpanded) setIsDriversPanelExpanded(false);
+              }}
+              collapsedHeight={PANEL_COLLAPSED_HEIGHT}
+              expandedHeight={PANEL_EXPANDED_HEIGHT}
+              headerContent={
+                <XStack alignItems="center" gap={10} flex={1}>
+                  <Truck size={20} color={COLORS.primary} />
+                  <Text fontSize={16} fontWeight="700" color={COLORS.gray[800]}>Deliveries</Text>
+                  <YStack backgroundColor={COLORS.primary} paddingHorizontal={8} paddingVertical={3} borderRadius={10}>
+                    <Text fontSize={11} fontWeight="700" color="white">{deliveryOrders.length}</Text>
+                  </YStack>
+                </XStack>
               }
-            }}
-            collapsedHeight={56}
-            expandedHeight={SCREEN_HEIGHT - 140}
-            headerContent={
-              <XStack alignItems="center" gap={12} flex={1}>
-                {/* Title & Count */}
-                <XStack alignItems="center" gap={6}>
-                  <Truck size={16} color={COLORS.primary} />
-                  <Text fontSize={15} fontWeight="700" color={COLORS.gray[800]}>Deliveries</Text>
-                  <YStack backgroundColor={COLORS.primary} paddingHorizontal={6} paddingVertical={2} borderRadius={8}>
-                    <Text fontSize={10} fontWeight="700" color="white">{deliveryOrders.length}</Text>
-                  </YStack>
-                </XStack>
-
-                {/* Spacer */}
-                <YStack flex={1} />
-
-                {/* Status Filters - Clean text pills */}
-                <XStack backgroundColor={COLORS.gray[100]} borderRadius={8} padding={3} gap={2}>
-                  {[
-                    { key: 'active', label: 'All' },
-                    { key: 'on_the_way', label: 'Route' },
-                    { key: 'preparing', label: 'Prep' },
-                    { key: 'delivered', label: 'Done' },
-                  ].map((filter) => (
-                    <Pressable
-                      key={filter.key}
-                      onPress={(e) => { e.stopPropagation(); setStatusFilter(filter.key as DeliveryStatusFilter); }}
-                      style={[
-                        styles.segmentedFilterItem,
-                        statusFilter === filter.key && styles.segmentedFilterItemActive,
-                      ]}
-                    >
-                      <Text
-                        fontSize={11}
-                        fontWeight={statusFilter === filter.key ? '600' : '500'}
-                        color={statusFilter === filter.key ? COLORS.gray[800] : COLORS.gray[500]}
-                      >
-                        {filter.label}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </XStack>
-              </XStack>
-            }
-            expandedContent={
-              <YStack flex={1} overflow="hidden">
-                {/* Orders List */}
+              expandedContent={
                 <YStack flex={1}>
+                  {/* Filter Tabs */}
+                  <XStack paddingHorizontal={16} paddingVertical={10} gap={8}>
+                    <FilterTab label="All" count={stats.total + stats.completedToday} isActive={statusFilter === 'active'} color={COLORS.primary} onPress={() => setStatusFilter('active')} />
+                    <FilterTab label="En Route" count={stats.onTheWay} isActive={statusFilter === 'on_the_way'} color={COLORS.warning} onPress={() => setStatusFilter('on_the_way')} />
+                    <FilterTab label="Preparing" count={stats.preparing} isActive={statusFilter === 'preparing'} color={COLORS.indigo} onPress={() => setStatusFilter('preparing')} />
+                    <FilterTab label="Completed" count={stats.completedToday} isActive={statusFilter === 'delivered'} color={COLORS.success} onPress={() => setStatusFilter('delivered')} />
+                  </XStack>
+
+                  {/* Orders List */}
                   <FlatList
                     data={deliveryOrders}
                     keyExtractor={(item) => item.id}
-                    contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 16, paddingTop: 8 }}
+                    contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 20 }}
                     showsVerticalScrollIndicator={false}
                     renderItem={({ item }) => (
-                      <CompactOrderCard
+                      <RichOrderCard
                         order={item}
                         currency={settings.currency}
                         isSelected={selectedOrder?.id === item.id}
-                        onPress={() => setSelectedOrder(selectedOrder?.id === item.id ? null : item)}
+                        onSelect={() => setSelectedOrder(selectedOrder?.id === item.id ? null : item)}
                         onUpdateStatus={handleStatusUpdate}
                         onAssignDriver={handleAssignDriver}
+                        onLocateOnMap={handleLocateOrderOnMap}
                         isUpdating={updateStatusMutation.isPending}
+                        assignedDriver={item.driverId ? availableDrivers?.find((d: any) => d.id === item.driverId) : null}
                       />
                     )}
                     ListEmptyComponent={
                       <YStack alignItems="center" paddingVertical={40}>
                         <Package size={40} color={COLORS.gray[300]} />
-                        <Text color={COLORS.gray[500]} marginTop={12} fontSize={14}>No deliveries</Text>
-                        <Text color={COLORS.gray[400]} fontSize={12}>Orders will appear here</Text>
+                        <Text color={COLORS.gray[500]} marginTop={12}>No deliveries</Text>
                       </YStack>
                     }
                   />
                 </YStack>
-              </YStack>
-            }
-          />
-        </YStack>
+              }
+            />
+          </YStack>
 
+          {/* Drivers Panel */}
+          <YStack flex={1}>
+            <BottomPanel
+              isExpanded={isDriversPanelExpanded}
+              onToggle={() => {
+                const newExpanded = !isDriversPanelExpanded;
+                setIsDriversPanelExpanded(newExpanded);
+                if (!newExpanded) { setSelectedDriver(null); setDriverAssignOrderId(null); }
+                if (newExpanded) setIsOrdersPanelExpanded(false);
+              }}
+              collapsedHeight={PANEL_COLLAPSED_HEIGHT}
+              expandedHeight={PANEL_EXPANDED_HEIGHT}
+              headerContent={
+                <XStack alignItems="center" gap={10} flex={1}>
+                  <Users size={20} color={COLORS.success} />
+                  <Text fontSize={16} fontWeight="700" color={COLORS.gray[800]}>Drivers</Text>
+                  <XStack alignItems="baseline" gap={2}>
+                    <Text fontSize={16} fontWeight="800" color={COLORS.success}>{stats.availableDrivers}</Text>
+                    <Text fontSize={11} color={COLORS.gray[400]}>/{stats.totalDrivers}</Text>
+                  </XStack>
+                  {driverAssignOrderId && (
+                    <YStack backgroundColor={COLORS.warning + '20'} paddingHorizontal={8} paddingVertical={3} borderRadius={8}>
+                      <Text fontSize={10} fontWeight="600" color={COLORS.warning}>Assigning...</Text>
+                    </YStack>
+                  )}
+                </XStack>
+              }
+              expandedContent={
+                <YStack flex={1}>
+                  {/* Stats Row */}
+                  <XStack paddingHorizontal={16} paddingVertical={10} gap={10}>
+                    <YStack flex={1} backgroundColor={COLORS.success + '15'} padding={12} borderRadius={12} alignItems="center">
+                      <Text fontSize={22} fontWeight="800" color={COLORS.success}>{stats.availableDrivers}</Text>
+                      <Text fontSize={10} color={COLORS.success}>Available</Text>
+                    </YStack>
+                    <YStack flex={1} backgroundColor={COLORS.gray[100]} padding={12} borderRadius={12} alignItems="center">
+                      <Text fontSize={22} fontWeight="800" color={COLORS.gray[600]}>{stats.totalDrivers - stats.availableDrivers}</Text>
+                      <Text fontSize={10} color={COLORS.gray[500]}>Offline</Text>
+                    </YStack>
+                  </XStack>
+
+                  {/* Drivers List */}
+                  <FlatList
+                    data={availableDrivers}
+                    keyExtractor={(item: any) => item.id}
+                    contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 20 }}
+                    showsVerticalScrollIndicator={false}
+                    renderItem={({ item }) => (
+                      <RichDriverCard
+                        driver={item}
+                        isSelected={selectedDriver?.id === item.id}
+                        onSelect={() => setSelectedDriver(selectedDriver?.id === item.id ? null : item)}
+                        onLocateOnMap={handleLocateDriverOnMap}
+                        onAssign={driverAssignOrderId ? handleSelectDriverForAssign : undefined}
+                        isAssigning={assignDriverMutation.isPending}
+                      />
+                    )}
+                    ListEmptyComponent={
+                      <YStack alignItems="center" paddingVertical={40}>
+                        <Users size={40} color={COLORS.gray[300]} />
+                        <Text color={COLORS.gray[500]} marginTop={12}>No drivers available</Text>
+                      </YStack>
+                    }
+                  />
+                </YStack>
+              }
+            />
+          </YStack>
+        </XStack>
       </YStack>
     </YStack>
   );
@@ -1355,364 +1137,138 @@ export default function OrderTrackingScreen({ onBack }: OrderTrackingScreenProps
 // ============================================
 
 const styles = StyleSheet.create({
-  // Glass capsule base
   glassCapsule: {
     backgroundColor: COLORS.glass.light,
-    borderRadius: 24,
+    borderRadius: 20,
     overflow: 'hidden',
     ...SHADOWS.medium,
-    ...(Platform.OS === 'web' ? {
-      backdropFilter: 'blur(20px)',
-      WebkitBackdropFilter: 'blur(20px)',
-    } : {}),
+    ...(Platform.OS === 'web' ? { backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' } : {}),
   },
 
-  // Map control button
-  mapControlButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  // Status pill
-  statusPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    height: 32,
-    borderWidth: 1,
-    borderColor: COLORS.gray[200],
-    backgroundColor: 'white',
-  },
-
-  // Expandable panel
-  expandablePanel: {
+  bottomPanel: {
     backgroundColor: COLORS.glass.light,
-    borderRadius: 24,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     overflow: 'hidden',
     ...SHADOWS.large,
-    ...(Platform.OS === 'web' ? {
-      backdropFilter: 'blur(20px)',
-      WebkitBackdropFilter: 'blur(20px)',
-    } : {}),
+    ...(Platform.OS === 'web' ? { backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' } : {}),
   },
 
-  // Order card
-  orderCard: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
-    position: 'relative',
-    overflow: 'hidden',
-    ...SHADOWS.small,
+  topCapsule: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
 
-  orderCardBorder: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    pointerEvents: 'none',
-  },
-
-  orderCardActions: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.gray[100],
-  },
-
-  // Action buttons
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: COLORS.gray[100],
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-
-  actionButtonPrimary: {
-    backgroundColor: COLORS.primary,
-  },
-
-  actionButtonSuccess: {
-    backgroundColor: COLORS.success + '15',
-  },
-
-  // Driver card
-  driverCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: 'white',
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.gray[200],
-  },
-
-  driverCardSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primary + '05',
-  },
-
-  driverCardOffline: {
-    opacity: 0.5,
-  },
-
-  // Expanded order card style
-  orderCardExpanded: {
-    backgroundColor: 'white',
-    borderColor: COLORS.primary + '30',
-    borderWidth: 1,
-  },
-
-  // Inline phone button in expanded card
-  inlinePhoneButton: {
+  quickBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.success + '15',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
     backgroundColor: COLORS.gray[100],
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  // Floating capsule styles
-  statsCapsule: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-
-  driversCapsule: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-
-  quickActionsCapsule: {
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-  },
-
-  metricsCapsule: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-
-  quickActionButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  quickActionButtonActive: {
+  quickBtnActive: {
     backgroundColor: COLORS.primary + '15',
   },
 
-  // Search capsule
-  searchCapsule: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-
-  searchInput: {
-    flex: 1,
-    fontSize: 13,
-    color: COLORS.gray[800],
-    marginLeft: 8,
-    padding: 0,
-  },
-
-  // Alerts capsule
-  alertsCapsule: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-
-  alertBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: COLORS.error,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'white',
-  },
-
-  // Performance capsule
-  perfCapsule: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-
-  // Time tracker
-  timeTrackerCapsule: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-
-  // Mini stat item
-  miniStat: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-  },
-
-  miniStatDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: COLORS.gray[200],
-  },
-
-  // Quick filter chips
-  quickFilterChip: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: COLORS.gray[100],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  quickFilterChipActive: {
-    backgroundColor: COLORS.primary + '15',
-    borderWidth: 1,
-    borderColor: COLORS.primary + '30',
-  },
-
-  // Text-based filter chip (for "All" and "Zones")
-  quickFilterChipText: {
+  filterTab: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 13,
-    backgroundColor: COLORS.gray[100],
-  },
-
-  quickFilterChipTextActive: {
-    backgroundColor: COLORS.gray[700],
-  },
-
-  // Quick action buttons
-  quickActionBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.gray[100],
-  },
-
-  quickActionBtnActive: {
-    backgroundColor: COLORS.primary + '15',
-  },
-
-  // Urgent orders capsule
-  urgentCapsule: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: COLORS.error + '30',
-  },
-
-  // Drivers dropdown (inline)
-  driversDropdown: {
-    position: 'absolute',
-    top: '100%',
-    right: 0,
-    width: 280,
-    zIndex: 200,
-  },
-
-  // Driver list item in dropdown
-  driverListItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 10,
     borderRadius: 12,
-    marginBottom: 4,
-    backgroundColor: COLORS.gray[50],
-  },
-
-  // Auto-assign button in dropdown
-  autoAssignBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: COLORS.primary + '10',
-    marginBottom: 12,
-  },
-
-  // Live indicator animation helper
-  liveIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.success,
-  },
-
-  // Floating time tracker
-  timeTracker: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-
-  // Call button (compact)
-  callButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: COLORS.success + '15',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  // Segmented filter (iOS style)
-  segmentedFilterItem: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-  },
-
-  segmentedFilterItemActive: {
+    borderWidth: 1,
+    borderColor: COLORS.gray[200],
     backgroundColor: 'white',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
+  },
+
+  richOrderCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 10,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    ...SHADOWS.small,
+  },
+
+  richOrderCardSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary + '02',
+  },
+
+  richDriverCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 10,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    ...SHADOWS.small,
+  },
+
+  richDriverCardSelected: {
+    borderColor: COLORS.success,
+    backgroundColor: COLORS.success + '02',
+  },
+
+  richDriverCardOffline: {
+    opacity: 0.7,
+  },
+
+  locateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: COLORS.primary + '10',
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+
+  driverCallBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.success + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  actionBtnPrimary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: COLORS.primary,
+    borderRadius: 10,
+  },
+
+  actionBtnGreen: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: COLORS.success + '15',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.success + '30',
+  },
+
+  actionBtnOutline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: COLORS.gray[100],
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.gray[200],
   },
 });
